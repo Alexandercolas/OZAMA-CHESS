@@ -1,0 +1,594 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>OZAMA CHESS â€” Perfil</title>
+  <link href="https://fonts.googleapis.com/css2family=Cinzel:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold:     #D4AF37;
+      --bg:       #07070E;
+      --surface:  #0E0E1A;
+      --surface2: #13131F;
+      --text:     rgba(255,255,255,0.85);
+      --dim:      rgba(255,255,255,0.35);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Rajdhani', sans-serif;
+      min-height: 100vh;
+      padding: 0 0 60px;
+    }
+
+    /* â”€â”€ Topbar â”€â”€ */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 24px;
+      background: rgba(7,7,14,0.97);
+      border-bottom: 1px solid rgba(212,175,55,0.15);
+    }
+
+    .topbar-logo {
+      font-family: 'Cinzel', serif;
+      font-size: 16px; font-weight: 900;
+      color: var(--gold); letter-spacing: 4px;
+      text-decoration: none;
+    }
+
+    .topbar-nav { display: flex; align-items: center; gap: 16px; }
+    .topbar-nav a {
+      color: var(--dim); text-decoration: none;
+      font-size: 11px; font-weight: 600; letter-spacing: 2px;
+      transition: color 0.2s;
+    }
+    .topbar-nav a:hover { color: var(--gold); }
+
+    /* â”€â”€ Hero del perfil â”€â”€ */
+    .profile-hero {
+      background: linear-gradient(160deg, #0E0E1A 0%, #0A0A14 100%);
+      border-bottom: 1px solid rgba(212,175,55,0.1);
+      padding: 40px 24px 32px;
+      display: flex; flex-direction: column; align-items: center; gap: 16px;
+    }
+
+    .avatar-ring {
+      width: 88px; height: 88px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold), #8B6914);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Cinzel', serif;
+      font-size: 36px; font-weight: 900; color: #0A0A0A;
+      box-shadow: 0 0 30px rgba(212,175,55,0.3);
+      flex-shrink: 0;
+    }
+    .avatar-0 { background: linear-gradient(135deg, #1A3A6B, #D4AF37); }
+    .avatar-1 { background: linear-gradient(135deg, #C0392B, #D4AF37); }
+    .avatar-2 { background: linear-gradient(135deg, #226F54, #D4AF37); }
+    .avatar-3 { background: linear-gradient(135deg, #5B2A86, #D4AF37); }
+    .avatar-4 { background: linear-gradient(135deg, #0F766E, #D4AF37); }
+    .avatar-5 { background: linear-gradient(135deg, #7A3417, #D4AF37); }
+
+    .profile-name {
+      font-family: 'Cinzel', serif;
+      font-size: 24px; font-weight: 700; color: var(--gold);
+      letter-spacing: 2px;
+    }
+
+    .profile-meta {
+      display: flex; align-items: center; gap: 12px;
+      font-size: 13px; color: var(--dim);
+    }
+
+    .profile-country { font-size: 20px; }
+
+    .elo-display {
+      background: rgba(212,175,55,0.1);
+      border: 1px solid rgba(212,175,55,0.3);
+      border-radius: 20px; padding: 6px 18px;
+      font-family: 'Cinzel', serif;
+      font-size: 14px; font-weight: 700; color: var(--gold);
+      letter-spacing: 2px;
+    }
+
+    /* â”€â”€ Stats grid â”€â”€ */
+    .container { max-width: 800px; margin: 0 auto; padding: 28px 20px 0; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid rgba(212,175,55,0.1);
+      border-radius: 14px;
+      padding: 18px 14px;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+    .stat-card:hover { border-color: rgba(212,175,55,0.3); }
+
+    .stat-value {
+      font-family: 'Cinzel', serif;
+      font-size: 28px; font-weight: 900; color: var(--gold);
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 2px; color: var(--dim);
+      text-transform: uppercase; margin-top: 6px;
+    }
+
+    .stat-card.wins   .stat-value { color: #2ecc71; }
+    .stat-card.losses .stat-value { color: #e74c3c; }
+    .stat-card.draws  .stat-value { color: rgba(255,255,255,0.5); }
+
+    /* â”€â”€ SecciÃ³n historial â”€â”€ */
+    .section-title {
+      font-family: 'Cinzel', serif;
+      font-size: 13px; font-weight: 700;
+      color: var(--gold); letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(212,175,55,0.1);
+    }
+
+    /* â”€â”€ Lista de partidas â”€â”€ */
+    .match-list { display: flex; flex-direction: column; gap: 8px; }
+
+    .match-row {
+      background: var(--surface);
+      border: 1px solid rgba(212,175,55,0.08);
+      border-radius: 12px;
+      padding: 14px 18px;
+      display: flex; align-items: center; gap: 14px;
+      transition: border-color 0.2s;
+    }
+    .match-row:hover { border-color: rgba(212,175,55,0.2); }
+
+    .match-result-badge {
+      width: 40px; height: 40px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .badge-win  { background: rgba(46,204,113,0.15); border: 1px solid rgba(46,204,113,0.3); }
+    .badge-loss { background: rgba(231,76,60,0.15);  border: 1px solid rgba(231,76,60,0.3); }
+    .badge-draw { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); }
+
+    .match-info { flex: 1; min-width: 0; }
+
+    .match-vs {
+      font-size: 14px; font-weight: 700; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .match-detail {
+      font-size: 11px; color: var(--dim);
+      letter-spacing: 1px; margin-top: 3px;
+    }
+
+    .match-elo-change {
+      font-size: 13px; font-weight: 700;
+      letter-spacing: 1px; flex-shrink: 0;
+      text-align: right;
+    }
+    .elo-up   { color: #2ecc71; }
+    .elo-down { color: #e74c3c; }
+    .elo-flat { color: var(--dim); }
+
+    .match-date {
+      font-size: 10px; color: var(--dim);
+      letter-spacing: 1px; flex-shrink: 0;
+      text-align: right; min-width: 60px;
+    }
+
+    /* â”€â”€ Loading / empty â”€â”€ */
+    .loading {
+      text-align: center; padding: 40px 20px;
+      color: var(--dim); font-size: 13px; letter-spacing: 2px;
+    }
+
+    .spinner {
+      width: 32px; height: 32px;
+      border: 3px solid rgba(212,175,55,0.15);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-msg {
+      text-align: center; padding: 32px 20px;
+      color: var(--dim); font-size: 12px; letter-spacing: 2px;
+    }
+
+    /* â”€â”€ Edit paÃ­s â”€â”€ */
+    .edit-section {
+      background: var(--surface);
+      border: 1px solid rgba(212,175,55,0.1);
+      border-radius: 14px; padding: 20px;
+      margin-bottom: 28px;
+      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    }
+
+    .edit-label {
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 2px; color: var(--dim);
+      text-transform: uppercase; flex-shrink: 0;
+    }
+
+    .avatar-picker {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .avatar-choice {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1px solid rgba(212,175,55,0.25);
+      color: white;
+      font-size: 11px;
+      font-weight: 900;
+      cursor: pointer;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .avatar-choice:hover,
+    .avatar-choice.active {
+      transform: translateY(-1px);
+      border-color: var(--gold);
+      box-shadow: 0 0 12px rgba(212,175,55,0.25);
+    }
+
+    .edit-select {
+      flex: 1; min-width: 160px;
+      padding: 8px 12px;
+      background: var(--surface2);
+      border: 1px solid rgba(212,175,55,0.2);
+      border-radius: 8px; color: var(--text);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 14px; outline: none; cursor: pointer;
+      appearance: none;
+    }
+    .edit-select:focus { border-color: var(--gold); }
+    .edit-select option { background: #13131F; }
+
+    .btn-save {
+      padding: 9px 20px;
+      background: linear-gradient(135deg, var(--gold), #8B6914);
+      border: none; border-radius: 8px; color: #0A0A0A;
+      font-family: 'Cinzel', serif; font-size: 11px; font-weight: 700;
+      letter-spacing: 2px; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-save:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(212,175,55,0.3); }
+
+    .save-msg {
+      font-size: 11px; color: #2ecc71;
+      letter-spacing: 1px; display: none;
+    }
+
+    /* â”€â”€ PaginaciÃ³n â”€â”€ */
+    .pagination {
+      display: flex; justify-content: center; gap: 8px; margin-top: 20px;
+    }
+
+    .page-btn {
+      padding: 7px 14px;
+      background: var(--surface);
+      border: 1px solid rgba(212,175,55,0.15);
+      border-radius: 8px; color: var(--dim);
+      font-size: 12px; font-weight: 600; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .page-btn:hover, .page-btn.active {
+      border-color: var(--gold); color: var(--gold);
+      background: rgba(212,175,55,0.08);
+    }
+    .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* â”€â”€ No logueado â”€â”€ */
+    .not-logged {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; min-height: 60vh; gap: 16px; text-align: center;
+    }
+    .not-logged h2 { font-family: 'Cinzel', serif; color: var(--gold); letter-spacing: 3px; }
+    .not-logged p  { color: var(--dim); font-size: 13px; }
+    .btn-login {
+      padding: 12px 28px;
+      background: linear-gradient(135deg, var(--gold), #8B6914);
+      border: none; border-radius: 50px; color: #0A0A0A;
+      font-family: 'Cinzel', serif; font-size: 12px; font-weight: 700;
+      letter-spacing: 3px; cursor: pointer; text-decoration: none;
+      transition: all 0.2s; display: inline-block;
+    }
+    .btn-login:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212,175,55,0.3); }
+
+    @media (max-width: 600px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .match-date { display: none; }
+      .profile-hero { padding: 28px 16px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Topbar -->
+  <nav class="topbar">
+    <a href="/lobby.html" class="topbar-logo">â™Ÿ OZAMA CHESS</a>
+    <div class="topbar-nav">
+      <a href="/lobby.html">â† Lobby</a>
+      <a href="/login.html" id="nav-logout" onclick="logout(); return false;">Cerrar sesiÃ³n</a>
+    </div>
+  </nav>
+
+  <!-- Contenido principal -->
+  <div id="main-content"></div>
+
+  <script>
+    const _token = localStorage.getItem('ozama-token');
+    const _user  = JSON.parse(localStorage.getItem('ozama-user') || 'null');
+
+    function getFlag(country) {
+      if (!country || country === 'OTHER') return 'ðŸŒ';
+      const code = String(country).trim().toLowerCase();
+      if (!/^[a-z]{2}$/.test(code)) return 'ðŸŒ';
+      return `<img src="https://flagcdn.com/32x24/${code}.png" alt="${code.toUpperCase()}" style="width:28px;height:20px;border-radius:2px;object-fit:cover;vertical-align:middle;" onerror="this.outerHTML='ðŸŒ'"/>`;
+    }
+
+    function avatarClass(avatar) {
+      const index = Number.isFinite(Number(avatar))  Number(avatar) : 0;
+      return `avatar-${Math.abs(index) % 6}`;
+    }
+
+    function selectAvatar(avatar) {
+      const value = Math.abs(Number(avatar) || 0) % 6;
+      const input = document.getElementById('avatar-select');
+      const ring = document.getElementById('avatar-ring');
+      if (input) input.value = value;
+      if (ring) ring.className = `avatar-ring ${avatarClass(value)}`;
+      document.querySelectorAll('.avatar-choice').forEach((btn) => {
+        btn.classList.toggle('active', Number(btn.dataset.avatar) === value);
+      });
+    }
+
+    function logout() {
+      localStorage.removeItem('ozama-token');
+      localStorage.removeItem('ozama-user');
+      window.location.href = '/login.html';
+    }
+
+    function formatDate(d) {
+      if (!d) return '';
+      const date = new Date(d);
+      return date.toLocaleDateString('es-DO', { day:'2-digit', month:'short' });
+    }
+
+    function renderNotLogged() {
+      document.getElementById('main-content').innerHTML = `
+        <div class="not-logged">
+          <div style="font-size:52px;">â™Ÿ</div>
+          <h2>ACCESO REQUERIDO</h2>
+          <p>Necesitas una cuenta para ver tu perfil.</p>
+          <a href="/login.html" class="btn-login">Iniciar SesiÃ³n</a>
+        </div>
+      `;
+    }
+
+    function renderProfile(user, history, total, page) {
+      const gamesPlayed = (user.stats.wins || 0) + (user.stats.losses || 0) + (user.stats.draws || 0);
+      const winRate = gamesPlayed > 0 ? Math.round((user.stats.wins || 0) / gamesPlayed * 100) : 0;
+      const avatar = Math.abs(Number(user.avatar) || 0) % 6;
+
+      const matchRows = history.length === 0 ?
+         `<div class="empty-msg">â™Ÿ Sin partidas registradas aÃºn</div>`
+        : history.map(m => {
+            const isWhite = m.whitePlayer.userId === user._id || m.whitePlayer.userId === user.id;
+            const myColor = isWhite ? 'w' : 'b';
+            const rivalPlayer = isWhite ? m.blackPlayer : m.whitePlayer;
+            const rival   = rivalPlayer.name;
+            const result  = m.result;
+            const movesCount = Array.isArray(m.moves) ? m.moves.length : 0;
+
+            let won, badge, icon, eloClass, eloText, resultText;
+            if (result === 'draw') {
+              won = null; badge = 'badge-draw'; icon = 'ðŸ¤';
+              eloClass = 'elo-flat'; eloText = 'Â±0'; resultText = 'Tablas';
+            } else if ((result === 'white_win' && myColor === 'w') || (result === 'black_win' && myColor === 'b')) {
+              won = true; badge = 'badge-win'; icon = 'ðŸ†';
+              const change = myColor === 'w' ? m.eloChange.white : m.eloChange.black;
+              eloClass = 'elo-up'; eloText = change != null ? `+${change}` : '+'; resultText = 'Victoria';
+            } else {
+              won = false; badge = 'badge-loss'; icon = 'ðŸ˜”';
+              const change = myColor === 'w' ? m.eloChange.white : m.eloChange.black;
+              eloClass = 'elo-down'; eloText = change != null ? `${change}` : '-'; resultText = result === 'abandoned' ? 'Abandono' : 'Derrota';
+            }
+
+            return `
+              <div class="match-row">
+                <div class="match-result-badge ${badge}">${icon}</div>
+                <div class="match-info">
+                  <div class="match-vs">${getFlag(rivalPlayer.country)} vs ${rival || 'Desconocido'}</div>
+                  <div class="match-detail">${resultText} · ${myColor === 'w' ? 'Blancas' : 'Negras'} · ${movesCount} movidas · Sala ${m.roomCode || ''}</div>
+                </div>
+                <div class="match-elo-change ${eloClass}">${eloText}</div>
+                <div class="match-date">${formatDate(m.createdAt)}</div>
+              </div>
+            `;
+          }).join('');
+
+      const totalPages = Math.ceil(total / 10);
+      const paginationHtml = totalPages > 1 ? `
+        <div class="pagination">
+          <button class="page-btn" onclick="loadPage(${page - 1})" ${page <= 1 ? 'disabled' : ''}>â† Ant</button>
+          <button class="page-btn active">${page} / ${totalPages}</button>
+          <button class="page-btn" onclick="loadPage(${page + 1})" ${page >= totalPages ? 'disabled' : ''}>Sig â†’</button>
+        </div>
+      ` : '';
+
+      document.getElementById('main-content').innerHTML = `
+        <!-- Hero -->
+        <div class="profile-hero">
+          <div class="avatar-ring ${avatarClass(avatar)}" id="avatar-ring">${(user.username || '')[0].toUpperCase()}</div>
+          <div class="profile-name">${user.username}</div>
+          <div class="profile-meta">
+            <span class="profile-country">${getFlag(user.country)}</span>
+            <span>${user.country || 'DO'}</span>
+          </div>
+          <div class="elo-display">ELO ${user.elo ? user.elo : 1200}</div>
+        </div>
+
+        <div class="container">
+
+          <!-- Stats -->
+          <div class="stats-grid">
+            <div class="stat-card wins">
+              <div class="stat-value">${user.stats.wins || 0}</div>
+              <div class="stat-label">Victorias</div>
+            </div>
+            <div class="stat-card losses">
+              <div class="stat-value">${user.stats.losses || 0}</div>
+              <div class="stat-label">Derrotas</div>
+            </div>
+            <div class="stat-card draws">
+              <div class="stat-value">${user.stats.draws || 0}</div>
+              <div class="stat-label">Tablas</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">${winRate}%</div>
+              <div class="stat-label">% Victorias</div>
+            </div>
+          </div>
+
+          <!-- Editar perfil -->
+          <div class="edit-section">
+            <span class="edit-label">Avatar</span>
+            <input type="hidden" id="avatar-select" value="${avatar}">
+            <div class="avatar-picker">
+              ${[0,1,2,3,4,5].map(i => `
+                <button type="button" class="avatar-choice ${avatarClass(i)} ${i === avatar ? 'active' : ''}" data-avatar="${i}" onclick="selectAvatar(${i})">${(user.username || '')[0].toUpperCase()}</button>
+              `).join('')}
+            </div>
+            <span class="edit-label">PaÃ­s</span>
+            <select class="edit-select" id="country-select">
+              <option value="DO" ${user.country==='DO' ? 'selected' : ''}>ðŸ‡©ðŸ‡´ RepÃºblica Dominicana</option>
+              <option value="US" ${user.country==='US' ? 'selected' : ''}>ðŸ‡ºðŸ‡¸ Estados Unidos</option>
+              <option value="ES" ${user.country==='ES' ? 'selected' : ''}>ðŸ‡ªðŸ‡¸ EspaÃ±a</option>
+              <option value="MX" ${user.country==='MX' ? 'selected' : ''}>ðŸ‡²ðŸ‡½ MÃ©xico</option>
+              <option value="CO" ${user.country==='CO' ? 'selected' : ''}>ðŸ‡¨ðŸ‡´ Colombia</option>
+              <option value="VE" ${user.country==='VE' ? 'selected' : ''}>ðŸ‡»ðŸ‡ª Venezuela</option>
+              <option value="PR" ${user.country==='PR' ? 'selected' : ''}>ðŸ‡µðŸ‡· Puerto Rico</option>
+              <option value="CU" ${user.country==='CU' ? 'selected' : ''}>ðŸ‡¨ðŸ‡º Cuba</option>
+              <option value="HT" ${user.country==='HT' ? 'selected' : ''}>ðŸ‡­ðŸ‡¹ HaitÃ­</option>
+              <option value="BR" ${user.country==='BR' ? 'selected' : ''}>ðŸ‡§ðŸ‡· Brasil</option>
+              <option value="AR" ${user.country==='AR' ? 'selected' : ''}>ðŸ‡¦ðŸ‡· Argentina</option>
+              <option value="OTHER" ${user.country==='OTHER' ? 'selected' : ''}>ðŸŒ Otro</option>
+            </select>
+            <button class="btn-save" onclick="saveProfile()">Guardar</button>
+            <span class="save-msg" id="save-msg">âœ… Guardado</span>
+          </div>
+
+          <!-- Historial -->
+          <div class="section-title">Historial de Partidas</div>
+          <div class="match-list" id="match-list">${matchRows}</div>
+          ${paginationHtml}
+
+        </div>
+      `;
+    }
+
+    async function loadPage(page = 1) {
+      try {
+        const res = await fetch(`/api/user/history?page=${page}&limit=10`, {
+          headers: { Authorization: `Bearer ${_token}` }
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+
+        const userRes = await fetch('/api/user/me', {
+          headers: { Authorization: `Bearer ${_token}` }
+        });
+        const userData = await userRes.json();
+
+        renderProfile(userData.user, data.matches, data.total, page);
+      } catch (err) {
+        document.getElementById('match-list').innerHTML =
+          '<div class="empty-msg">No se pudo cargar el historial.</div>';
+      }
+    }
+
+    async function saveProfile() {
+      const country = document.getElementById('country-select').value;
+      const avatar = Number(document.getElementById('avatar-select').value || 0);
+      try {
+        const res = await fetch('/api/user/me', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${_token}`,
+          },
+          body: JSON.stringify({ country, avatar }),
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+
+        // Actualizar localStorage
+        const updatedUser = { ..._user, country: data.user.country, avatar: data.user.avatar };
+        localStorage.setItem('ozama-user', JSON.stringify(updatedUser));
+
+        const msg = document.getElementById('save-msg');
+        if (msg) { msg.style.display = 'inline'; setTimeout(() => { msg.style.display = 'none'; }, 2000); }
+      } catch (err) {
+        alert('Error al guardar.');
+      }
+    }
+
+    // â”€â”€ Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    async function init() {
+      if (!_token || !_user) { renderNotLogged(); return; }
+
+      // Mostrar loading
+      document.getElementById('main-content').innerHTML = `
+        <div class="loading">
+          <div class="spinner"></div>
+          Cargando perfilâ€¦
+        </div>
+      `;
+
+      try {
+        const [userRes, histRes] = await Promise.all([
+          fetch('/api/user/me',         { headers: { Authorization: `Bearer ${_token}` } }),
+          fetch('/api/user/history?page=1&limit=10', { headers: { Authorization: `Bearer ${_token}` } }),
+        ]);
+
+        if (!userRes.ok) { renderNotLogged(); return; }
+
+        const userData = await userRes.json();
+        const histData = histRes.ok ? await histRes.json() : { matches: [], total: 0 };
+
+        renderProfile(userData.user, histData.matches, histData.total, 1);
+      } catch (err) {
+        document.getElementById('main-content').innerHTML =
+          '<div class="loading">Error cargando el perfil. Recarga la pÃ¡gina.</div>';
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
+
+

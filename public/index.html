@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>OZAMA CHESS — Ajedrez Online Dominicano</title>
+  <link href="https://fonts.googleapis.com/css2family=Cinzel:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --gold: #D4AF37; --bg: #07070E; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: white; font-family: 'Rajdhani', sans-serif; overflow-x: hidden; }
+
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 40px;
+      background: rgba(7,7,14,0.92);
+      border-bottom: 1px solid rgba(212,175,55,0.12);
+      backdrop-filter: blur(10px);
+    }
+    .nav-logo { font-family:'Cinzel',serif; font-size:18px; font-weight:900; color:var(--gold); letter-spacing:4px; text-decoration:none; }
+    .nav-links { display:flex; align-items:center; gap:20px; }
+    .nav-links a { color:rgba(255,255,255,0.5); text-decoration:none; font-size:12px; font-weight:600; letter-spacing:2px; transition:color 0.2s; }
+    .nav-links a:hover { color:var(--gold); }
+    .nav-btn { padding:8px 20px; background:linear-gradient(135deg,var(--gold),#8B6914); border:none; border-radius:50px; color:#0A0A0A; font-family:'Cinzel',serif; font-size:11px; font-weight:700; letter-spacing:2px; cursor:pointer; text-decoration:none; transition:all 0.2s; }
+    .nav-btn:hover { transform:translateY(-1px); box-shadow:0 4px 16px rgba(212,175,55,0.35); }
+
+    .hero { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:100px 24px 60px; position:relative; overflow:hidden; }
+    .hero-bg { position:absolute; inset:0; z-index:0; background: radial-gradient(ellipse 80% 50% at 50% 0%,rgba(26,58,107,0.3) 0%,transparent 60%), radial-gradient(ellipse 60% 40% at 20% 80%,rgba(192,57,43,0.15) 0%,transparent 50%), radial-gradient(ellipse 50% 50% at 80% 20%,rgba(212,175,55,0.08) 0%,transparent 50%); }
+    .grid-bg { position:absolute; inset:0; z-index:0; background-image:linear-gradient(rgba(212,175,55,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(212,175,55,0.03) 1px,transparent 1px); background-size:60px 60px; }
+    .hero-content { position:relative; z-index:1; max-width:780px; }
+    .hero-flag { display:flex; align-items:center; justify-content:center; gap:6px; margin-bottom:20px; }
+    .flag-stripe { height:3px; width:36px; border-radius:2px; }
+    .flag-stripe.blue { background:#1A3A6B; }
+    .flag-stripe.red  { background:#C0392B; }
+    .hero-badge { display:inline-block; background:rgba(212,175,55,0.1); border:1px solid rgba(212,175,55,0.3); border-radius:20px; padding:5px 16px; font-size:11px; font-weight:600; letter-spacing:3px; color:var(--gold); margin-bottom:24px; }
+    .hero-title { font-family:'Cinzel',serif; font-size:clamp(40px,8vw,72px); font-weight:900; color:var(--gold); letter-spacing:6px; line-height:1.1; text-shadow:0 0 60px rgba(212,175,55,0.3); margin-bottom:8px; }
+    .hero-subtitle { font-family:'Cinzel',serif; font-size:clamp(14px,2vw,18px); color:rgba(255,255,255,0.4); letter-spacing:4px; margin-bottom:28px; }
+    .hero-desc { font-size:16px; color:rgba(255,255,255,0.6); line-height:1.7; max-width:560px; margin:0 auto 40px; }
+    .hero-cta { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+    .btn-primary { padding:14px 36px; background:linear-gradient(135deg,var(--gold),#8B6914); border:none; border-radius:50px; color:#0A0A0A; font-family:'Cinzel',serif; font-size:13px; font-weight:700; letter-spacing:3px; cursor:pointer; text-decoration:none; transition:all 0.25s; display:inline-block; }
+    .btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(212,175,55,0.4); }
+    .btn-secondary { padding:14px 36px; background:transparent; border:1.5px solid rgba(212,175,55,0.4); border-radius:50px; color:var(--gold); font-family:'Cinzel',serif; font-size:13px; font-weight:700; letter-spacing:3px; cursor:pointer; text-decoration:none; transition:all 0.25s; display:inline-block; }
+    .btn-secondary:hover { border-color:var(--gold); background:rgba(212,175,55,0.06); transform:translateY(-2px); }
+    .hero-board { margin-top:60px; display:grid; grid-template-columns:repeat(8,1fr); width:min(480px,80vw); height:min(480px,80vw); border:3px solid rgba(212,175,55,0.4); border-radius:8px; overflow:hidden; box-shadow:0 0 60px rgba(212,175,55,0.15); opacity:0.6; }
+    .mini-sq { aspect-ratio:1; }
+    .mini-sq.light { background:#F0D9B5; }
+    .mini-sq.dark  { background:#7A5230; }
+
+    .features { padding:80px 24px; max-width:1000px; margin:0 auto; }
+    .section-label { text-align:center; font-family:'Cinzel',serif; font-size:11px; font-weight:600; letter-spacing:5px; color:var(--gold); text-transform:uppercase; margin-bottom:12px; }
+    .section-title { text-align:center; font-family:'Cinzel',serif; font-size:clamp(22px,4vw,32px); font-weight:900; color:white; letter-spacing:2px; margin-bottom:48px; }
+    .features-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:20px; }
+    .feature-card { background:#0E0E1A; border:1px solid rgba(212,175,55,0.12); border-radius:16px; padding:28px 24px; transition:all 0.25s; }
+    .feature-card:hover { border-color:rgba(212,175,55,0.3); transform:translateY(-4px); box-shadow:0 12px 30px rgba(0,0,0,0.3); }
+    .feature-icon { font-size:36px; margin-bottom:14px; }
+    .feature-title { font-family:'Cinzel',serif; font-size:14px; font-weight:700; color:var(--gold); letter-spacing:2px; margin-bottom:10px; }
+    .feature-desc { font-size:13px; color:rgba(255,255,255,0.45); line-height:1.6; }
+
+    .how { padding:80px 24px; background:rgba(255,255,255,0.02); border-top:1px solid rgba(212,175,55,0.08); border-bottom:1px solid rgba(212,175,55,0.08); }
+    .how-inner { max-width:800px; margin:0 auto; }
+    .steps { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:24px; }
+    .step { text-align:center; padding:20px 16px; }
+    .step-num { width:48px; height:48px; background:linear-gradient(135deg,var(--gold),#8B6914); border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Cinzel',serif; font-size:18px; font-weight:900; color:#0A0A0A; margin:0 auto 14px; }
+    .step-title { font-family:'Cinzel',serif; font-size:13px; font-weight:700; color:white; letter-spacing:1px; margin-bottom:8px; }
+    .step-desc { font-size:12px; color:rgba(255,255,255,0.4); line-height:1.5; }
+
+    /* ── LEADERBOARD ── */
+    .leaderboard-section {
+      padding: 80px 24px;
+      max-width: 700px; margin: 0 auto;
+    }
+
+    .lb-table {
+      background: #0E0E1A;
+      border: 1px solid rgba(212,175,55,0.15);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .lb-row {
+      display: grid;
+      grid-template-columns: 48px 1fr auto auto;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      transition: background 0.2s;
+    }
+    .lb-row:last-child { border-bottom: none; }
+    .lb-row:hover { background: rgba(212,175,55,0.04); }
+
+    .lb-row.top-1 { background: rgba(212,175,55,0.08); }
+    .lb-row.top-2 { background: rgba(192,192,192,0.05); }
+    .lb-row.top-3 { background: rgba(205,127,50,0.05); }
+
+    .lb-rank {
+      font-family: 'Cinzel', serif;
+      font-size: 16px; font-weight: 900;
+      text-align: center;
+    }
+    .lb-row.top-1 .lb-rank { color: #FFD700; }
+    .lb-row.top-2 .lb-rank { color: #C0C0C0; }
+    .lb-row.top-3 .lb-rank { color: #CD7F32; }
+    .lb-rank.other { color: rgba(255,255,255,0.25); font-size:13px; }
+
+    .lb-player { display: flex; align-items: center; gap: 10px; }
+    .lb-flag { font-size: 18px; }
+    .lb-name { font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.85); letter-spacing: 1px; }
+    .lb-row.top-1 .lb-name { color: var(--gold); }
+
+    .lb-stats { font-size: 11px; color: rgba(255,255,255,0.3); letter-spacing: 1px; }
+
+    .lb-elo {
+      font-family: 'Cinzel', serif;
+      font-size: 15px; font-weight: 700;
+      color: var(--gold); text-align: right;
+    }
+
+    .lb-loading {
+      text-align: center; padding: 40px;
+      color: rgba(255,255,255,0.3);
+      font-size: 12px; letter-spacing: 2px;
+    }
+
+    .lb-spinner {
+      width: 28px; height: 28px;
+      border: 2px solid rgba(212,175,55,0.15);
+      border-top-color: var(--gold);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .lb-empty { text-align:center; padding:40px; color:rgba(255,255,255,0.25); font-size:13px; }
+
+    .cta-section { padding:100px 24px; text-align:center; background:radial-gradient(ellipse 60% 60% at 50% 50%,rgba(212,175,55,0.06) 0%,transparent 70%); }
+    .cta-title { font-family:'Cinzel',serif; font-size:clamp(24px,4vw,40px); font-weight:900; color:var(--gold); letter-spacing:3px; margin-bottom:16px; }
+    .cta-sub { font-size:15px; color:rgba(255,255,255,0.4); margin-bottom:36px; }
+
+    footer { padding:24px 40px; border-top:1px solid rgba(212,175,55,0.1); display:flex; align-items:center; justify-content:space-between; font-size:11px; color:rgba(255,255,255,0.2); letter-spacing:2px; flex-wrap:wrap; gap:10px; }
+    footer span { color:var(--gold); }
+
+    @media (max-width:600px) {
+      nav { padding:12px 20px; }
+      .nav-links a:not(.nav-btn) { display:none; }
+      .hero { padding:90px 20px 50px; }
+      .hero-cta { flex-direction:column; align-items:center; }
+      footer { justify-content:center; text-align:center; }
+      .lb-row { grid-template-columns: 36px 1fr auto; }
+      .lb-stats { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="/" class="nav-logo">♟ OZAMA CHESS</a>
+    <div class="nav-links">
+      <a href="#features">Características</a>
+      <a href="#ranking">Ranking</a>
+      <a href="#como">Cómo Jugar</a>
+      <a href="/login.html" id="nav-profile" style="display:none;">Mi Perfil</a>
+      <a href="/login.html" class="nav-btn" id="nav-cta">Jugar Ahora</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <div class="grid-bg"></div>
+    <div class="hero-content">
+      <div class="hero-flag">
+        <div class="flag-stripe blue"></div>
+        <div class="flag-stripe red"></div>
+        <div class="flag-stripe blue"></div>
+      </div>
+      <div class="hero-badge">🇩🇴 DOMINICAN HERITAGE EDITION</div>
+      <h1 class="hero-title">OZAMA CHESS</h1>
+      <p class="hero-subtitle">AJEDREZ ONLINE EN TIEMPO REAL</p>
+      <p class="hero-desc">Juega ajedrez contra rivales de todo el mundo. Emparejamiento automático, invita amigos con un código, sigue tu ELO y construye tu historial de partidas.</p>
+      <div class="hero-cta">
+        <a href="/lobby.html" class="btn-primary" id="cta-play">⚡ Jugar Ahora</a>
+        <a href="/login.html" class="btn-secondary" id="cta-register">Crear Cuenta</a>
+      </div>
+      <div class="hero-board" id="hero-board"></div>
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <div class="section-label">Por qué Ozama Chess</div>
+    <h2 class="section-title">Todo lo que necesitas para jugar</h2>
+    <div class="features-grid">
+      <div class="feature-card"><div class="feature-icon">⚡</div><div class="feature-title">Juego Rápido</div><div class="feature-desc">Emparejamiento automático con un rival disponible en segundos. Sin esperas, sin complicaciones.</div></div>
+      <div class="feature-card"><div class="feature-icon">🔗</div><div class="feature-title">Invita Amigos</div><div class="feature-desc">Crea una sala privada y comparte el código o enlace directo. Tu amigo entra con un click.</div></div>
+      <div class="feature-card"><div class="feature-icon">📊</div><div class="feature-title">Sistema ELO</div><div class="feature-desc">Tu ELO sube o baja según tus resultados. Cada partida cuenta para tu ranking global.</div></div>
+      <div class="feature-card"><div class="feature-icon">💬</div><div class="feature-title">Chat en Partida</div><div class="feature-desc">Habla con tu rival durante el juego. Mensajes en tiempo real integrados en el tablero.</div></div>
+      <div class="feature-card"><div class="feature-icon">📜</div><div class="feature-title">Historial Completo</div><div class="feature-desc">Revisa todas tus partidas, resultados y evolución de ELO desde tu perfil personal.</div></div>
+      <div class="feature-card"><div class="feature-icon">🌎</div><div class="feature-title">Multijugador Global</div><div class="feature-desc">Juega contra cualquier persona del mundo. Banderas de país en cada perfil de jugador.</div></div>
+    </div>
+  </section>
+
+  <!-- LEADERBOARD -->
+  <section style="padding:80px 24px; background:rgba(255,255,255,0.02); border-top:1px solid rgba(212,175,55,0.08);" id="ranking">
+    <div class="leaderboard-section" style="padding:0;">
+      <div class="section-label">Los mejores jugadores</div>
+      <h2 class="section-title">🏆 Ranking Global</h2>
+
+      <div class="lb-table" id="lb-table">
+        <div class="lb-loading">
+          <div class="lb-spinner"></div>
+          Cargando ranking…
+        </div>
+      </div>
+
+      <div style="text-align:center; margin-top:20px;">
+        <a href="/login.html" class="btn-secondary" style="font-size:12px; padding:10px 24px;">
+          Crear cuenta para aparecer aquí →
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="how" id="como">
+    <div class="how-inner">
+      <div class="section-label">Simple y rápido</div>
+      <h2 class="section-title">¿Cómo empezar</h2>
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-title">Crea tu cuenta</div><div class="step-desc">Regístrate gratis con usuario y contraseña. Elige tu país.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-title">Elige tu modo</div><div class="step-desc">Juego rápido contra desconocido o sala privada con amigo.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-title">¡A jugar!</div><div class="step-desc">El tablero carga en segundos. Chat, movidas en tiempo real y sonidos.</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-title">Sube tu ELO</div><div class="step-desc">Gana partidas, mejora tu ranking y revisa tu historial en tu perfil.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-section">
+    <h2 class="cta-title">¿Listo para jugar</h2>
+    <p class="cta-sub">Únete a la comunidad de ajedrez dominicana más élite del mundo.</p>
+    <a href="/lobby.html" class="btn-primary" style="font-size:14px; padding:16px 44px;">♟ Empezar a Jugar</a>
+  </section>
+
+  <footer>
+    <div>♟ <span>OZAMA CHESS</span> — Dominican Heritage Edition</div>
+    <div>Hecho con ♥ en República Dominicana 🇩🇴</div>
+  </footer>
+
+  <script>
+    
+    const MEDALS = ['🥇','🥈','🥉'];
+
+    function getFlag(country) {
+      if (!country || country === 'OTHER') return '🌍';
+
+      const code = String(country).trim().toLowerCase();
+      if (!/^[a-z]{2}$/.test(code)) return '🌍';
+
+      return `<img src="https://flagcdn.com/32x24/${code}.png" alt="${code.toUpperCase()}" style="width:28px;height:20px;border-radius:2px;object-fit:cover;vertical-align:middle;" onerror="this.outerHTML='🌍'">`;
+    }
+
+    // Tablero decorativo
+    const board = document.getElementById('hero-board');
+    if (board) {
+      for (let r = 0; r < 8; r++)
+        for (let c = 0; c < 8; c++) {
+          const sq = document.createElement('div');
+          sq.className = 'mini-sq ' + ((r+c)%2===0  'light' : 'dark');
+          board.appendChild(sq);
+        }
+    }
+
+    // Sesión
+    const _user  = JSON.parse(localStorage.getItem('ozama-user') || 'null');
+    const _token = localStorage.getItem('ozama-token');
+
+    if (_user && _token) {
+      const navProfile  = document.getElementById('nav-profile');
+      const navCta      = document.getElementById('nav-cta');
+      const ctaRegister = document.getElementById('cta-register');
+      if (navProfile)  { navProfile.style.display='block'; navProfile.href='/profile.html'; navProfile.textContent=_user.username; }
+      if (navCta)      { navCta.textContent='♟ Jugar'; navCta.href='/lobby.html'; }
+      if (ctaRegister) { ctaRegister.textContent='Ver mi Perfil'; ctaRegister.href='/profile.html'; }
+    }
+
+    // Leaderboard
+    async function loadLeaderboard() {
+      try {
+        const res  = await fetch('/api/user/leaderboard');
+        const data = await res.json();
+        const players = data.players || [];
+        const table = document.getElementById('lb-table');
+
+        if (!players.length) {
+          table.innerHTML = '<div class="lb-empty">♟ Aún no hay jugadores registrados. ¡Sé el primero!</div>';
+          return;
+        }
+
+        table.innerHTML = players.slice(0, 10).map((p, i) => {
+          const rank    = i + 1;
+          const topCls  = rank <= 3  `top-${rank}` : '';
+          const medal   = rank <= 3  MEDALS[i] : rank;
+          const rankCls = rank > 3   'other' : '';
+          const flag = getFlag(p.country);
+          const wins    = p.stats.wins   || 0;
+          const losses  = p.stats.losses || 0;
+          const draws   = p.stats.draws  || 0;
+          const games   = wins + losses + draws;
+          const myRow   = _user && p.username === _user.username  'style="border-left:3px solid #D4AF37;"' : '';
+
+          return `
+            <div class="lb-row ${topCls}" ${myRow}>
+              <div class="lb-rank ${rankCls}">${medal}</div>
+              <div class="lb-player">
+                <span class="lb-flag">${flag}</span>
+                <div>
+                  <div class="lb-name">${p.username}</div>
+                  <div class="lb-stats">${games} partidas · ${wins}V ${losses}D</div>
+                </div>
+              </div>
+              <div class="lb-elo">${p.elo}</div>
+            </div>
+          `;
+        }).join('');
+
+      } catch (err) {
+        document.getElementById('lb-table').innerHTML =
+          '<div class="lb-empty">No se pudo cargar el ranking.</div>';
+      }
+    }
+
+    loadLeaderboard();
+  </script>
+</body>
+</html>

@@ -1,0 +1,621 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>OZAMA CHESS — Lobby</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: radial-gradient(ellipse at top, #1a1a1a 0%, #090909 100%);
+      color: white;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 30px 20px;
+    }
+
+    /* User bar */
+    .user-bar {
+      position: fixed; top: 0; left: 0; right: 0;
+      padding: 8px 20px;
+      background: rgba(10,10,15,0.95);
+      border-bottom: 1px solid rgba(212,175,55,0.2);
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 11px; letter-spacing: 1px; z-index: 100;
+    }
+    .user-bar-left { color: rgba(255,255,255,0.35); }
+    .user-bar-right { display: flex; align-items: center; gap: 12px; }
+    .user-bar-name { color: #D4AF37; font-weight: 700; letter-spacing: 2px; }
+    .user-bar-elo  { color: rgba(255,255,255,0.3); font-size: 10px; }
+    .user-bar a { color: rgba(212,175,55,0.5); text-decoration: none; font-size: 10px; transition: color 0.2s; }
+    .user-bar a:hover { color: #D4AF37; }
+
+    .logo {
+      font-size: 30px; font-weight: 900; color: #D4AF37;
+      letter-spacing: 7px;
+      text-shadow: 0 0 30px rgba(212,175,55,0.5);
+      text-align: center; margin-bottom: 6px;
+    }
+    .logo-sub {
+      font-size: 10px; color: rgba(255,255,255,0.2);
+      letter-spacing: 5px; text-align: center; margin-bottom: 36px;
+    }
+
+    .cards {
+      display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+      max-width: 960px; width: 100%;
+    }
+
+    .card {
+      background: #111118;
+      border: 1.5px solid rgba(212,175,55,0.2);
+      border-radius: 18px; padding: 28px 24px;
+      width: 280px;
+      display: flex; flex-direction: column; align-items: center; gap: 14px;
+      transition: border-color 0.25s;
+    }
+    .card:hover { border-color: rgba(212,175,55,0.4); }
+
+    /* Card destacada para Quick Match */
+    .card.card-featured {
+      border-color: rgba(212,175,55,0.5);
+      background: linear-gradient(160deg, #111118 60%, rgba(212,175,55,0.06));
+      box-shadow: 0 0 30px rgba(212,175,55,0.1);
+    }
+
+    .card-icon { font-size: 36px; }
+    .card-title {
+      font-size: 13px; font-weight: 800; letter-spacing: 3px;
+      color: #D4AF37; text-transform: uppercase; text-align: center;
+    }
+    .card-desc {
+      font-size: 12px; color: rgba(255,255,255,0.35);
+      text-align: center; line-height: 1.6;
+    }
+
+    .input-name {
+      width: 100%; padding: 10px 14px;
+      background: #1A1A28;
+      border: 1.5px solid rgba(212,175,55,0.2);
+      border-radius: 10px; color: white;
+      font-size: 14px; outline: none;
+    }
+    .input-name:focus { border-color: #D4AF37; }
+    .input-name[readonly] { opacity: 0.6; cursor: default; border-color: rgba(212,175,55,0.1); }
+
+    .input-code {
+      width: 100%; padding: 12px 14px;
+      background: #1A1A28;
+      border: 1.5px solid rgba(212,175,55,0.2);
+      border-radius: 10px; color: #D4AF37;
+      font-size: 20px; font-weight: 800; letter-spacing: 6px;
+      text-align: center; text-transform: uppercase; outline: none;
+    }
+    .input-code:focus { border-color: #D4AF37; }
+
+    .btn {
+      width: 100%; padding: 12px 20px; border: none;
+      border-radius: 50px; font-size: 12px; font-weight: 800;
+      letter-spacing: 2px; text-transform: uppercase; cursor: pointer;
+      transition: all 0.22s;
+    }
+    .btn-gold {
+      background: linear-gradient(135deg, #D4AF37, #8B6914); color: #0A0A0A;
+    }
+    .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212,175,55,0.4); }
+
+    .btn-outline {
+      background: transparent; color: #D4AF37;
+      border: 1.5px solid rgba(212,175,55,0.4);
+    }
+    .btn-outline:hover { border-color: #D4AF37; background: rgba(212,175,55,0.06); }
+
+    .btn-danger {
+      background: transparent; color: rgba(255,255,255,0.4);
+      border: 1.5px solid rgba(255,255,255,0.15);
+    }
+    .btn-danger:hover { color: #ef4444; border-color: #ef4444; }
+
+    .hidden { display: none !important; }
+
+    .code-display {
+      font-size: 28px; font-weight: 900; letter-spacing: 8px;
+      color: #D4AF37; text-shadow: 0 0 20px rgba(212,175,55,0.4);
+      text-align: center;
+    }
+
+    .waiting {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px; color: rgba(255,255,255,0.35); letter-spacing: 2px;
+    }
+    .dot { width: 6px; height: 6px; background: #D4AF37; border-radius: 50%; animation: pulse 1.2s ease-in-out infinite; }
+    .dot:nth-child(2){ animation-delay:.2s; }
+    .dot:nth-child(3){ animation-delay:.4s; }
+    @keyframes pulse { 0%,100%{opacity:.2;} 50%{opacity:1;} }
+
+    .divider { width: 40px; height: 1px; background: linear-gradient(90deg,transparent,#D4AF37,transparent); }
+
+    .error-msg { font-size: 11px; color: #ef4444; letter-spacing: 1px; text-align: center; min-height: 16px; }
+
+    .invite-link {
+      width: 100%; padding: 9px 10px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(212,175,55,0.18);
+      border-radius: 8px; color: rgba(255,255,255,0.55);
+      font-size: 11px; text-align: center; outline: none;
+    }
+
+    /* Matchmaking searching state */
+    .mm-searching {
+      display: flex; flex-direction: column; align-items: center; gap: 14px;
+      width: 100%;
+    }
+
+    .mm-spinner {
+      width: 48px; height: 48px;
+      border: 3px solid rgba(212,175,55,0.15);
+      border-top-color: #D4AF37;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .mm-status {
+      font-size: 12px; color: rgba(255,255,255,0.5);
+      letter-spacing: 2px; text-align: center;
+    }
+
+    .mm-timer {
+      font-size: 28px; font-weight: 900; color: #D4AF37;
+      letter-spacing: 2px;
+    }
+
+    /* ELO badge */
+    .elo-badge {
+      background: rgba(212,175,55,0.1);
+      border: 1px solid rgba(212,175,55,0.25);
+      border-radius: 20px; padding: 4px 12px;
+      font-size: 11px; font-weight: 700;
+      color: #D4AF37; letter-spacing: 2px;
+    }
+
+    .local-link {
+      margin-top: 28px; font-size: 12px; color: rgba(255,255,255,0.2);
+    }
+    .local-link a { color: rgba(212,175,55,0.45); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+  <!-- Barra de usuario -->
+  <div class="user-bar">
+    <span class="user-bar-left">OZAMA CHESS</span>
+    <div class="user-bar-right" id="user-bar-right">
+      <a href="/login.html">Iniciar sesión →</a>
+    </div>
+  </div>
+
+  <div style="height:44px;"></div>
+
+  <div class="logo">OZAMA CHESS ♟</div>
+  <div class="logo-sub">DOMINICAN HERITAGE EDITION</div>
+
+  <div class="cards">
+
+    <!-- JUEGO RÁPIDO -->
+    <div class="card card-featured">
+      <div class="card-icon">⚡</div>
+      <div class="card-title">Juego Rápido</div>
+      <div class="card-desc">Emparejamiento automático con un rival disponible.</div>
+
+      <!-- Estado inicial -->
+      <div id="mm-initial" style="width:100%;display:flex;flex-direction:column;gap:12px;">
+        <div id="mm-elo-badge" class="elo-badge hidden">ELO 1200</div>
+        <button class="btn btn-gold" onclick="startQuickMatch()">⚡ Buscar Rival</button>
+      </div>
+
+      <!-- Estado buscando -->
+      <div id="mm-searching" class="mm-searching hidden">
+        <div class="mm-spinner"></div>
+        <div class="mm-status">BUSCANDO RIVAL…</div>
+        <div class="mm-timer" id="mm-timer">0:00</div>
+        <button class="btn btn-danger" onclick="cancelQuickMatch()">Cancelar</button>
+      </div>
+
+      <div class="error-msg" id="mm-error"></div>
+    </div>
+
+    <!-- CREAR -->
+    <div class="card">
+      <div class="card-icon">⚪</div>
+      <div class="card-title">Crear Partida</div>
+      <div class="card-desc">Crea una sala y comparte el enlace.</div>
+
+      <div id="create-initial" style="width:100%;display:flex;flex-direction:column;gap:12px;">
+        <input class="input-name" id="create-name" type="text" maxlength="20" placeholder="Tu nombre"/>
+        <button class="btn btn-gold" onclick="createRoom()">Crear Sala</button>
+      </div>
+
+      <div id="create-waiting" class="hidden"
+        style="width:100%;display:flex;flex-direction:column;align-items:center;gap:14px;">
+        <div style="font-size:10px;color:rgba(255,255,255,0.25);letter-spacing:3px;">ENLACE DE INVITACIÓN</div>
+        <div class="code-display" id="room-code-display">----</div>
+        <input class="invite-link" id="invite-link" type="text" readonly value=""/>
+        <button class="btn btn-outline" onclick="copyCode()" id="copy-btn">📋 Copiar enlace</button>
+        <div class="divider"></div>
+        <div class="waiting">
+          <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+          <span>Esperando rival…</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- UNIRSE -->
+    <div class="card">
+      <div class="card-icon">⚫</div>
+      <div class="card-title">Unirse</div>
+      <div class="card-desc">Pega el enlace de invitación o el código.</div>
+
+      <input class="input-name" id="join-name" type="text" maxlength="20" placeholder="Tu nombre"/>
+      <input class="input-code" id="join-input" type="text" maxlength="160" placeholder="ENLACE O CÓDIGO"/>
+      <div class="error-msg" id="join-error"></div>
+      <button class="btn btn-gold" onclick="joinRoom()">Unirse</button>
+    </div>
+
+    <!-- DESAFIAR POR NOMBRE -->
+    <div class="card">
+      <div class="card-icon">⚔️</div>
+      <div class="card-title">Desafiar Jugador</div>
+      <div class="card-desc">Busca un jugador por nombre y desafíalo directamente.</div>
+
+      <div style="width:100%;display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;gap:8px;">
+          <input class="input-name" id="search-input" type="text"
+            maxlength="20" placeholder="Buscar usuario…"
+            style="flex:1;"
+          />
+          <button class="btn btn-gold" onclick="searchUser()" style="width:auto;padding:10px 16px;">🔍</button>
+        </div>
+
+        <!-- Resultado de búsqueda -->
+        <div id="search-result" class="hidden"
+          style="background:rgba(212,175,55,0.06);border:1px solid rgba(212,175,55,0.2);
+                 border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px;">
+          <div id="search-flag" style="font-size:20px;"></div>
+          <div style="flex:1;">
+            <div id="search-name" style="font-size:14px;font-weight:700;color:#D4AF37;"></div>
+            <div id="search-elo"  style="font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:1px;"></div>
+            <div id="search-status" style="font-size:10px;letter-spacing:1px;margin-top:2px;"></div>
+          </div>
+          <button class="btn btn-gold" id="challenge-btn" onclick="sendChallenge()"
+            style="width:auto;padding:8px 14px;font-size:11px;">
+            ⚔️ Desafiar
+          </button>
+        </div>
+
+        <div class="error-msg" id="search-error"></div>
+        <div id="challenge-status" style="font-size:11px;color:rgba(212,175,55,0.7);text-align:center;letter-spacing:1px;min-height:16px;"></div>
+      </div>
+    </div>
+
+
+  </div>
+
+  <div class="local-link">
+    ¿Sin rival? <a href="/game.html" onclick="startLocalGame(event)">Modo local →</a>
+    · IA:
+    <a href="/game.html" onclick="startBotGame(event, 'easy')">Fácil</a>
+    <a href="/game.html" onclick="startBotGame(event, 'medium')">Medio</a>
+    <a href="/game.html" onclick="startBotGame(event, 'hard')">Difícil</a>
+    <a href="/game.html" onclick="startBotGame(event, 'master')">Maestro</a>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const _token = localStorage.getItem('ozama-token');
+    const _user  = JSON.parse(localStorage.getItem('ozama-user') || 'null');
+
+    const socket = io({ auth: { token: _token || '' } });
+
+    let myRoomCode = null;
+    let myColor    = null;
+    let _mmInterval = null;
+    let _mmSeconds  = 0;
+
+    function initUserBar() {
+      const bar = document.getElementById('user-bar-right');
+      if (_user && _token) {
+        bar.innerHTML = `
+          <span class="user-bar-name">${_user.username}</span>
+          <span class="user-bar-elo">ELO ${_user.elo ?? 1200}</span>
+          <a href="/profile.html">Perfil</a>
+        `;
+        const badge = document.getElementById('mm-elo-badge');
+        if (badge) { badge.textContent = `ELO ${_user.elo ?? 1200}`; badge.classList.remove('hidden'); }
+
+        const nameVal = _user.username;
+        ['create-name','join-name'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) { el.value = nameVal; el.readOnly = true; }
+        });
+      } else {
+        bar.innerHTML = `<a href="/login.html">Iniciar sesión →</a>`;
+      }
+    }
+
+    function getInviteUrl(code) {
+      const url = new URL(window.location.href);
+      url.pathname = '/lobby.html';
+      url.searchParams.set('room', code);
+      return url.toString();
+    }
+
+    function extractRoomCode(value) {
+      const raw = String(value || '').trim();
+      if (!raw) return '';
+      try {
+        const url = new URL(raw, window.location.origin);
+        const room = url.searchParams.get('room');
+        if (room) return room.toUpperCase().trim();
+      } catch (_) {}
+      return raw.toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
+    }
+
+    // â”€â”€ QUICK MATCH â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function startQuickMatch() {
+      const name    = _user?.username || 'Jugador';
+      const country = _user?.country  || 'DO';
+      socket.emit('quick-match', { playerName: name, country });
+    }
+
+    function cancelQuickMatch() {
+      socket.emit('quick-match-cancel');
+      stopMmTimer();
+      document.getElementById('mm-searching').classList.add('hidden');
+      document.getElementById('mm-initial').classList.remove('hidden');
+      document.getElementById('mm-error').textContent = '';
+    }
+
+    function startMmTimer() {
+      _mmSeconds = 0;
+      stopMmTimer();
+      _mmInterval = setInterval(() => {
+        _mmSeconds++;
+        const m = Math.floor(_mmSeconds / 60);
+        const s = String(_mmSeconds % 60).padStart(2, '0');
+        const el = document.getElementById('mm-timer');
+        if (el) el.textContent = `${m}:${s}`;
+      }, 1000);
+    }
+
+    function stopMmTimer() {
+      if (_mmInterval) { clearInterval(_mmInterval); _mmInterval = null; }
+    }
+
+    socket.on('matchmaking-searching', () => {
+      document.getElementById('mm-initial').classList.add('hidden');
+      document.getElementById('mm-searching').classList.remove('hidden');
+      document.getElementById('mm-error').textContent = '';
+      startMmTimer();
+    });
+
+    socket.on('matchmaking-cancelled', () => {
+      stopMmTimer();
+      document.getElementById('mm-searching').classList.add('hidden');
+      document.getElementById('mm-initial').classList.remove('hidden');
+    });
+
+    // â”€â”€ CREAR SALA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function createRoom() {
+      sessionStorage.clear();
+      const url = new URL(window.location.href);
+      url.searchParams.delete('room');
+      window.history.replaceState(null, '', url.pathname);
+      socket.emit('create-room', {
+        playerName: document.getElementById('create-name').value.trim() || 'Jugador 1',
+        country: _user?.country || 'DO',
+      });
+    }
+
+    // â”€â”€ UNIRSE A SALA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function joinRoom() {
+      sessionStorage.clear();
+      const code = extractRoomCode(document.getElementById('join-input').value);
+      const name = document.getElementById('join-name').value.trim() || 'Jugador 2';
+      if (code.length < 4) { document.getElementById('join-error').textContent = 'Pega el enlace completo o ingresa el código.'; return; }
+      document.getElementById('join-error').textContent = '';
+      socket.emit('join-room', { code, playerName: name, country: _user?.country || 'DO' });
+    }
+
+    // â”€â”€ ROOM CREATED â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    socket.on('room-created', ({ code, color }) => {
+      myRoomCode = code; myColor = color;
+      document.getElementById('room-code-display').textContent = code;
+      document.getElementById('invite-link').value = getInviteUrl(code);
+      document.getElementById('create-initial').classList.add('hidden');
+      document.getElementById('create-waiting').classList.remove('hidden');
+    });
+
+    socket.on('room-joined', ({ code, color }) => { myRoomCode = code; myColor = color; });
+
+    // â”€â”€ GAME START â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    socket.on('game-start', ({ code, color, playerInfo }) => {
+      stopMmTimer();
+      const assignedColor = color || myColor;
+      const playerNames = {
+        w: playerInfo?.w?.name || 'Jugador 1',
+        b: playerInfo?.b?.name || 'Jugador 2',
+      };
+      sessionStorage.setItem('ozama-room',   code);
+      sessionStorage.setItem('ozama-color',  assignedColor);
+      sessionStorage.setItem('ozama-names',  JSON.stringify(playerNames));
+      sessionStorage.setItem('ozama-player-info', JSON.stringify(playerInfo || {}));
+      sessionStorage.setItem('ozama-myname', assignedColor === 'w' ? playerNames.w : playerNames.b);
+      if (_token) sessionStorage.setItem('ozama-token', _token);
+      window.location.href = '/game.html';
+    });
+
+    socket.on('room-error', (msg) => { document.getElementById('join-error').textContent = msg; });
+
+    // â”€â”€ COPY CODE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function copyCode() {
+      const inviteUrl = getInviteUrl(myRoomCode);
+      const input = document.getElementById('invite-link');
+      if (input) { input.value = inviteUrl; input.select(); }
+      navigator.clipboard.writeText(inviteUrl).then(() => {
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = '✅ Copiado';
+        setTimeout(() => { btn.textContent = '📋 Copiar enlace'; }, 2000);
+      }).catch(() => { document.getElementById('copy-btn').textContent = 'Selecciona el enlace'; });
+    }
+
+    // â”€â”€ Auto-fill cÃ³digo desde URL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const inviteCode = new URLSearchParams(window.location.search).get('room');
+    if (inviteCode) {
+      const ji = document.getElementById('join-input');
+      if (ji) { ji.value = getInviteUrl(inviteCode.toUpperCase().trim()); ji.focus(); }
+    }
+
+    document.getElementById('join-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') joinRoom();
+    });
+
+    initUserBar();
+
+    // â”€â”€ BUSCAR USUARIO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    let _foundUser = null;
+    let _challengerSocketId = null;
+
+    function searchUser() {
+      const username = document.getElementById('search-input').value.trim();
+      if (!username) return;
+      document.getElementById('search-error').textContent = '';
+      document.getElementById('search-result').classList.add('hidden');
+      document.getElementById('challenge-status').textContent = '';
+      socket.emit('search-user', { username });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('search-input').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') searchUser();
+      });
+    });
+
+    socket.on('search-user-result', ({ user, error }) => {
+      if (error) {
+        document.getElementById('search-error').textContent = error;
+        document.getElementById('search-result').classList.add('hidden');
+        return;
+      }
+      _foundUser = user;
+      document.getElementById('search-error').textContent = '';
+      document.getElementById('search-result').classList.remove('hidden');
+
+      const code = (user.country || 'DO').toLowerCase();
+      document.getElementById('search-flag').innerHTML =
+        `<img src="https://flagcdn.com/24x18/${code}.png" style="width:24px;height:16px;border-radius:2px;" onerror="this.outerHTML='🌍'"/>`;
+      document.getElementById('search-name').textContent = user.username;
+      document.getElementById('search-elo').textContent  = `ELO ${user.elo ?? 1200}`;
+
+      const statusEl = document.getElementById('search-status');
+      statusEl.textContent = user.isOnline ? '🟢 En línea' : '⚫ Desconectado';
+      statusEl.style.color = user.isOnline ? '#2ecc71' : 'rgba(255,255,255,0.25)';
+
+      const btn = document.getElementById('challenge-btn');
+      if (btn) btn.style.opacity = user.isOnline ? '1' : '0.4';
+    });
+
+    function sendChallenge() {
+      if (!_foundUser?.isOnline) return;
+      if (!_user) {
+        document.getElementById('search-error').textContent = 'Debes iniciar sesión para desafiar.';
+        return;
+      }
+      socket.emit('challenge-send', { targetUsername: _foundUser.username });
+      document.getElementById('challenge-status').textContent = `⏳ Desafío enviado a ${_foundUser.username}…`;
+    }
+
+    socket.on('challenge-sent', ({ to }) => {
+      document.getElementById('challenge-status').textContent = `⏳ Esperando respuesta de ${to}…`;
+    });
+
+    socket.on('challenge-error', (msg) => {
+      document.getElementById('search-error').textContent = msg;
+      document.getElementById('challenge-status').textContent = '';
+    });
+
+    socket.on('challenge-declined', ({ by }) => {
+      document.getElementById('challenge-status').textContent = `❌ ${by} rechazó el desafío.`;
+    });
+
+    // â”€â”€ RECIBIR DESAFÃO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    socket.on('challenge-received', ({ from, socketId }) => {
+  _challengerSocketId = socketId;
+  const code = (from.country || 'DO').toLowerCase();
+
+  // Crear modal en página en vez de confirm()
+  const overlay = document.createElement('div');
+  overlay.id = 'challenge-modal';
+  Object.assign(overlay.style, {
+    position:'fixed', inset:'0', background:'rgba(0,0,0,0.75)',
+    display:'flex', alignItems:'center', justifyContent:'center', zIndex:'999'
+  });
+  overlay.innerHTML = `
+    <div style="background:#111118;border:1.5px solid rgba(212,175,55,0.4);border-radius:18px;
+                padding:32px 28px;text-align:center;max-width:320px;width:90%;display:flex;flex-direction:column;gap:16px;">
+      <div style="font-size:36px;">⚔️</div>
+      <div style="color:#D4AF37;font-size:13px;font-weight:800;letter-spacing:3px;">DESAFÍO RECIBIDO</div>
+      <div style="color:rgba(255,255,255,0.5);font-size:12px;">
+        <img src="https://flagcdn.com/20x15/${code}.png" style="width:20px;vertical-align:middle;border-radius:2px;" onerror="this.outerHTML='🌍'"/>
+        <strong style="color:#D4AF37;">${from.username}</strong> (ELO ${from.elo}) te desafía
+      </div>
+      <div style="display:flex;gap:12px;justify-content:center;">
+        <button id="ch-accept" style="flex:1;padding:12px;background:linear-gradient(135deg,#D4AF37,#8B6914);
+          color:#0A0A0A;border:none;border-radius:50px;font-weight:800;font-size:12px;
+          letter-spacing:2px;cursor:pointer;">✔ ACEPTAR</button>
+        <button id="ch-decline" style="flex:1;padding:12px;background:transparent;color:#ef4444;
+          border:1.5px solid #ef4444;border-radius:50px;font-weight:800;font-size:12px;
+          letter-spacing:2px;cursor:pointer;">✗ RECHAZAR</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  document.getElementById('ch-accept').onclick = () => {
+    overlay.remove();
+    socket.emit('challenge-accept', { challengerSocketId: socketId });
+  };
+  document.getElementById('ch-decline').onclick = () => {
+    overlay.remove();
+    socket.emit('challenge-decline', { challengerSocketId: socketId });
+  };
+});
+
+    function startLocalGame(event) {
+      event.preventDefault();
+      sessionStorage.clear();
+      window.location.href = '/game.html';
+    }
+
+    function startBotGame(event, difficulty = 'medium') {
+      event.preventDefault();
+      sessionStorage.clear();
+      const human = _user
+        ? { name: _user.username, country: _user.country || 'DO', avatar: _user.avatar || 0, elo: _user.elo || 1200 }
+        : { name: 'Jugador', country: 'DO', avatar: 0, elo: 1200 };
+      const bot = { name: 'Ozama Bot', country: 'DO', avatar: 5, elo: 1200 };
+      sessionStorage.setItem('ozama-bot-mode', 'true');
+      sessionStorage.setItem('ozama-bot-color', 'b');
+      sessionStorage.setItem('ozama-bot-difficulty', difficulty);
+      sessionStorage.setItem('ozama-player-info', JSON.stringify({ w: human, b: bot }));
+      sessionStorage.setItem('ozama-names', JSON.stringify({ w: human.name, b: bot.name }));
+      window.location.href = '/game.html';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>OZAMA CHESS — Acceso</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold:       #D4AF37;
+      --gold-dim:   rgba(212,175,55,0.18);
+      --gold-glow:  rgba(212,175,55,0.35);
+      --bg:         #07070E;
+      --surface:    #0E0E1A;
+      --surface2:   #13131F;
+      --red:        #C0392B;
+      --blue:       #1A3A6B;
+      --text:       rgba(255,255,255,0.85);
+      --text-dim:   rgba(255,255,255,0.35);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Rajdhani', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    /* ── Fondo animado ── */
+    .bg-layer {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(26,58,107,0.25) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 90%, rgba(192,57,43,0.15) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 40% at 50% 50%, rgba(212,175,55,0.05) 0%, transparent 70%);
+    }
+
+    .grid-lines {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(212,175,55,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(212,175,55,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    /* ── Piezas decorativas flotando ── */
+    .deco-piece {
+      position: fixed; z-index: 0; font-size: 120px; opacity: 0.025;
+      color: var(--gold); pointer-events: none; user-select: none;
+      animation: float 8s ease-in-out infinite;
+    }
+    .deco-piece:nth-child(1) { top: -30px;  left: -20px;  animation-delay: 0s; }
+    .deco-piece:nth-child(2) { bottom: -30px; right: -20px; animation-delay: -4s; }
+    .deco-piece:nth-child(3) { top: 40%; right: -40px; font-size: 80px; animation-delay: -2s; }
+    @keyframes float {
+      0%,100% { transform: translateY(0) rotate(-5deg); }
+      50%      { transform: translateY(-20px) rotate(5deg); }
+    }
+
+    /* ── Contenedor principal ── */
+    .container {
+      position: relative; z-index: 1;
+      width: 100%; max-width: 440px;
+      animation: fadeIn 0.6s ease;
+    }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+
+    /* ── Logo ── */
+    .logo-wrap { text-align: center; margin-bottom: 36px; }
+
+    .logo-flag {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      margin-bottom: 8px;
+    }
+    .flag-stripe { height: 3px; width: 32px; border-radius: 2px; }
+    .flag-stripe.blue { background: #1A3A6B; }
+    .flag-stripe.red  { background: #C0392B; }
+
+    .logo-title {
+      font-family: 'Cinzel', serif;
+      font-size: 28px; font-weight: 900;
+      color: var(--gold);
+      letter-spacing: 6px;
+      text-shadow: 0 0 40px rgba(212,175,55,0.4);
+    }
+
+    .logo-sub {
+      font-size: 10px; letter-spacing: 5px;
+      color: var(--text-dim); margin-top: 4px;
+      font-weight: 500;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid rgba(212,175,55,0.15);
+      border-radius: 20px;
+      padding: 36px 32px;
+      box-shadow: 0 0 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.05) inset;
+    }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: grid; grid-template-columns: 1fr 1fr;
+      background: var(--surface2);
+      border-radius: 12px; padding: 4px;
+      margin-bottom: 28px;
+      border: 1px solid rgba(212,175,55,0.1);
+    }
+
+    .tab {
+      padding: 10px; text-align: center;
+      font-family: 'Cinzel', serif;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 2px; cursor: pointer;
+      border-radius: 9px; border: none;
+      background: transparent; color: var(--text-dim);
+      transition: all 0.25s;
+    }
+
+    .tab.active {
+      background: linear-gradient(135deg, var(--gold), #8B6914);
+      color: #0A0A0A;
+      box-shadow: 0 2px 12px rgba(212,175,55,0.3);
+    }
+
+    /* ── Form ── */
+    .form { display: flex; flex-direction: column; gap: 14px; }
+
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+
+    .form-label {
+      font-size: 10px; letter-spacing: 3px;
+      color: var(--text-dim); font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--surface2);
+      border: 1px solid rgba(212,175,55,0.15);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 15px; font-weight: 500;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(212,175,55,0.1);
+    }
+
+    .form-input::placeholder { color: rgba(255,255,255,0.2); }
+
+    /* ── Select de país ── */
+    .form-input.select-country {
+      cursor: pointer; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23D4AF37' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+    }
+
+    .form-input.select-country option { background: #13131F; }
+
+    /* ── Error / Success ── */
+    .msg {
+      font-size: 12px; letter-spacing: 1px;
+      text-align: center; padding: 10px 14px;
+      border-radius: 8px; min-height: 20px;
+      display: none; font-weight: 600;
+    }
+    .msg.error   { display: block; background: rgba(192,57,43,0.15); color: #e74c3c; border: 1px solid rgba(192,57,43,0.3); }
+    .msg.success { display: block; background: rgba(39,174,96,0.12); color: #2ecc71; border: 1px solid rgba(39,174,96,0.25); }
+
+    /* ── Botón principal ── */
+    .btn-main {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, var(--gold), #8B6914);
+      border: none; border-radius: 50px;
+      color: #0A0A0A;
+      font-family: 'Cinzel', serif;
+      font-size: 12px; font-weight: 700;
+      letter-spacing: 3px; text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.25s;
+      box-shadow: 0 4px 20px rgba(212,175,55,0.25);
+      margin-top: 4px;
+    }
+
+    .btn-main:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 28px rgba(212,175,55,0.4);
+    }
+
+    .btn-main:active { transform: translateY(0); }
+
+    .btn-main:disabled {
+      opacity: 0.5; cursor: not-allowed;
+      transform: none; box-shadow: none;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      display: flex; align-items: center; gap: 12px;
+      margin: 4px 0; color: var(--text-dim);
+      font-size: 10px; letter-spacing: 2px;
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px;
+      background: rgba(212,175,55,0.1);
+    }
+
+    /* ── Guest link ── */
+    .guest-link {
+      text-align: center; margin-top: 20px;
+      font-size: 12px; color: var(--text-dim);
+    }
+
+    .guest-link a {
+      color: rgba(212,175,55,0.6);
+      text-decoration: none; font-weight: 600;
+      letter-spacing: 1px;
+      transition: color 0.2s;
+    }
+
+    .guest-link a:hover { color: var(--gold); }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(10,10,10,0.3);
+      border-top-color: #0A0A0A;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block; vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Panel post-login (oculto inicialmente) ── */
+    .logged-in-panel {
+      display: none; flex-direction: column;
+      align-items: center; gap: 16px;
+      text-align: center;
+    }
+
+    .user-avatar {
+      width: 64px; height: 64px;
+      background: linear-gradient(135deg, var(--gold), #8B6914);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Cinzel', serif;
+      font-size: 26px; font-weight: 900; color: #0A0A0A;
+      box-shadow: 0 0 24px rgba(212,175,55,0.3);
+    }
+
+    .user-name-display {
+      font-family: 'Cinzel', serif;
+      font-size: 20px; font-weight: 700; color: var(--gold);
+    }
+
+    .user-elo {
+      font-size: 13px; color: var(--text-dim);
+      letter-spacing: 3px;
+    }
+
+    .btn-play {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, var(--gold), #8B6914);
+      border: none; border-radius: 50px;
+      color: #0A0A0A;
+      font-family: 'Cinzel', serif;
+      font-size: 13px; font-weight: 700;
+      letter-spacing: 3px; cursor: pointer;
+      transition: all 0.25s;
+      box-shadow: 0 4px 20px rgba(212,175,55,0.25);
+    }
+
+    .btn-play:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(212,175,55,0.4); }
+
+    .btn-logout {
+      background: transparent; border: 1px solid rgba(212,175,55,0.2);
+      color: var(--text-dim); border-radius: 50px;
+      padding: 9px 20px; font-family: 'Rajdhani', sans-serif;
+      font-size: 12px; font-weight: 600; letter-spacing: 2px;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-logout:hover { border-color: var(--gold); color: var(--gold); }
+  </style>
+</head>
+
+<body>
+
+  <div class="bg-layer"></div>
+  <div class="grid-lines"></div>
+  <div class="deco-piece">♛</div>
+  <div class="deco-piece">♞</div>
+  <div class="deco-piece">♜</div>
+
+  <div class="container">
+
+    <!-- Logo -->
+    <div class="logo-wrap">
+      <div class="logo-flag">
+        <div class="flag-stripe blue"></div>
+        <div class="flag-stripe red"></div>
+        <div class="flag-stripe blue"></div>
+      </div>
+      <div class="logo-title">OZAMA CHESS ♟</div>
+      <div class="logo-sub">DOMINICAN HERITAGE EDITION</div>
+    </div>
+
+    <!-- Card -->
+    <div class="card">
+
+      <!-- Panel logueado -->
+      <div class="logged-in-panel" id="logged-in-panel">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-name-display" id="user-name-display">—</div>
+        <div class="user-elo" id="user-elo">ELO —</div>
+        <button class="btn-play" onclick="goToLobby()">♟ Jugar Ahora</button>
+        <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
+      </div>
+
+      <!-- Panel auth -->
+      <div id="auth-panel">
+
+        <!-- Tabs -->
+        <div class="tabs">
+          <button class="tab active" id="tab-login"    onclick="switchTab('login')">Iniciar Sesión</button>
+          <button class="tab"        id="tab-register" onclick="switchTab('register')">Registrarse</button>
+        </div>
+
+        <!-- Mensaje -->
+        <div class="msg" id="msg"></div>
+
+        <!-- LOGIN -->
+        <div class="form" id="form-login">
+          <div class="form-group">
+            <label class="form-label">Usuario o Email</label>
+            <input class="form-input" id="login-identifier" type="text" placeholder="tu_usuario" autocomplete="username"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Contraseña</label>
+            <input class="form-input" id="login-password" type="password" placeholder="••••••••" autocomplete="current-password"/>
+          </div>
+          <button class="btn-main" id="btn-login" onclick="doLogin()">Entrar</button>
+          <div class="divider">o</div>
+          <div class="guest-link">
+            <a href="/lobby.html">Continuar sin cuenta →</a>
+          </div>
+        </div>
+
+        <!-- REGISTER -->
+        <div class="form hidden" id="form-register">
+          <div class="form-group">
+            <label class="form-label">Nombre de Usuario</label>
+            <input class="form-input" id="reg-username" type="text" placeholder="ozama_king" maxlength="20" autocomplete="username"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input class="form-input" id="reg-email" type="email" placeholder="tu@email.com" autocomplete="email"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Contraseña</label>
+            <input class="form-input" id="reg-password" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">País</label>
+            <select class="form-input select-country" id="reg-country">
+              <option value="DO">🇩🇴 República Dominicana</option>
+              <option value="US">🇺🇸 Estados Unidos</option>
+              <option value="ES">🇪🇸 España</option>
+              <option value="MX">🇲🇽 México</option>
+              <option value="CO">🇨🇴 Colombia</option>
+              <option value="VE">🇻🇪 Venezuela</option>
+              <option value="PR">🇵🇷 Puerto Rico</option>
+              <option value="CU">🇨🇺 Cuba</option>
+              <option value="HT">🇭🇹 Haití</option>
+              <option value="BR">🇧🇷 Brasil</option>
+              <option value="AR">🇦🇷 Argentina</option>
+              <option value="FR">🇫🇷 Francia</option>
+              <option value="DE">🇩🇪 Alemania</option>
+              <option value="IT">🇮🇹 Italia</option>
+              <option value="PT">🇵🇹 Portugal</option>
+              <option value="GB">🇬🇧 Reino Unido</option>
+              <option value="CA">🇨🇦 Canadá</option>
+              <option value="OTHER">🌍 Otro</option>
+            </select>
+          </div>
+          <button class="btn-main" id="btn-register" onclick="doRegister()">Crear Cuenta</button>
+          <div class="divider">o</div>
+          <div class="guest-link">
+            <a href="/lobby.html">Continuar sin cuenta →</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+
+    // ── Helpers ────────────────────────────────────────────────
+    function showMsg(text, type = 'error') {
+      const el = document.getElementById('msg');
+      el.textContent = text;
+      el.className = `msg ${type}`;
+    }
+
+    function clearMsg() {
+      const el = document.getElementById('msg');
+      el.textContent = '';
+      el.className = 'msg';
+    }
+
+    function setLoading(btnId, loading) {
+      const btn = document.getElementById(btnId);
+      if (loading) {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner"></span> Procesando…`;
+      } else {
+        btn.disabled = false;
+        btn.textContent = btnId === 'btn-login' ? 'Entrar' : 'Crear Cuenta';
+      }
+    }
+
+    // ── Tabs ───────────────────────────────────────────────────
+    function switchTab(tab) {
+      clearMsg();
+      document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+      document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+      document.getElementById('form-login').classList.toggle('hidden', tab !== 'login');
+      document.getElementById('form-register').classList.toggle('hidden', tab !== 'register');
+    }
+
+    // ── Guardar sesión ─────────────────────────────────────────
+    function saveSession(token, user) {
+      localStorage.setItem('ozama-token', token);
+      localStorage.setItem('ozama-user', JSON.stringify(user));
+    }
+
+    function getSession() {
+      const token = localStorage.getItem('ozama-token');
+      const user  = JSON.parse(localStorage.getItem('ozama-user') || 'null');
+      return { token, user };
+    }
+
+    function logout() {
+      localStorage.removeItem('ozama-token');
+      localStorage.removeItem('ozama-user');
+      document.getElementById('logged-in-panel').style.display = 'none';
+      document.getElementById('auth-panel').style.display = 'block';
+      clearMsg();
+    }
+
+    function goToLobby() {
+      window.location.href = '/lobby.html';
+    }
+
+    // ── Mostrar panel si ya hay sesión ─────────────────────────
+    function checkExistingSession() {
+      const { token, user } = getSession();
+      if (!token || !user) return;
+
+      // Verificar que el token sigue válido
+      fetch('/api/user/me', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(data => showLoggedIn(data.user))
+      .catch(() => logout());
+    }
+
+    function showLoggedIn(user) {
+      document.getElementById('auth-panel').style.display = 'none';
+      const panel = document.getElementById('logged-in-panel');
+      panel.style.display = 'flex';
+
+      const initial = (user.username || '?')[0].toUpperCase();
+      document.getElementById('user-avatar').textContent = initial;
+      document.getElementById('user-name-display').textContent = user.username;
+      document.getElementById('user-elo').textContent = `ELO ${user.elo ?? 1200}`;
+    }
+
+    // ── LOGIN ──────────────────────────────────────────────────
+    async function doLogin() {
+      clearMsg();
+      const identifier = document.getElementById('login-identifier').value.trim();
+      const password   = document.getElementById('login-password').value;
+
+      if (!identifier || !password) {
+        showMsg('Completa todos los campos.'); return;
+      }
+
+      setLoading('btn-login', true);
+
+      try {
+        const res  = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier, password }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          showMsg(data.error || 'Error al iniciar sesión.'); return;
+        }
+
+        saveSession(data.token, data.user);
+        showMsg('¡Bienvenido de vuelta!', 'success');
+        setTimeout(() => showLoggedIn(data.user), 600);
+
+      } catch (err) {
+        showMsg('Sin conexión con el servidor.');
+      } finally {
+        setLoading('btn-login', false);
+      }
+    }
+
+    // ── REGISTER ───────────────────────────────────────────────
+    async function doRegister() {
+      clearMsg();
+      const username = document.getElementById('reg-username').value.trim();
+      const email    = document.getElementById('reg-email').value.trim();
+      const password = document.getElementById('reg-password').value;
+      const country  = document.getElementById('reg-country').value;
+
+      if (!username || !email || !password) {
+        showMsg('Completa todos los campos.'); return;
+      }
+      if (password.length < 6) {
+        showMsg('La contraseña debe tener al menos 6 caracteres.'); return;
+      }
+
+      setLoading('btn-register', true);
+
+      try {
+        const res  = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, password, country }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          showMsg(data.error || 'Error al registrarse.'); return;
+        }
+
+        saveSession(data.token, data.user);
+        showMsg('¡Cuenta creada! Bienvenido a Ozama Chess.', 'success');
+        setTimeout(() => showLoggedIn(data.user), 800);
+
+      } catch (err) {
+        showMsg('Sin conexión con el servidor.');
+      } finally {
+        setLoading('btn-register', false);
+      }
+    }
+
+    // ── Enter key ──────────────────────────────────────────────
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      const loginVisible = !document.getElementById('form-login').classList.contains('hidden');
+      if (loginVisible) doLogin();
+      else doRegister();
+    });
+
+    // ── Init ───────────────────────────────────────────────────
+    checkExistingSession();
+
+  </script>
+
+</body>
+</html>

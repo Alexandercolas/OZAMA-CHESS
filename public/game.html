@@ -1,0 +1,314 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>OZAMA CHESS</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app">
+
+    <header class="topbar">
+      <h1 class="logo">OZAMA CHESS ♟</h1>
+      <div class="turn-container">
+        <div id="white-turn" class="turn-indicator active">⚪ White</div>
+        <div id="black-turn" class="turn-indicator">⚫ Black</div>
+      </div>
+    </header>
+
+    <div id="status-message" class="status-message">White's turn</div>
+
+    <div class="game-area">
+
+      <div class="board-col">
+
+        <div class="player-bar" id="player-bar-black">
+          <span class="player-avatar" id="avatar-black">B</span>
+          <span class="player-flag" id="flag-black">🏳️</span>
+          <span class="player-name" id="name-black">Black</span>
+          <span class="player-elo"  id="elo-black"></span>
+          <span class="player-clock" id="clock-black">10:00</span>
+        </div>
+
+        <div id="board" class="board"></div>
+
+        <div class="player-bar" id="player-bar-white">
+          <span class="player-avatar" id="avatar-white">W</span>
+          <span class="player-flag" id="flag-white">🏳️</span>
+          <span class="player-name" id="name-white">White</span>
+          <span class="player-elo"  id="elo-white"></span>
+          <span class="player-clock" id="clock-white">10:00</span>
+        </div>
+
+      </div>
+
+      <div class="chat-panel" id="chat-panel">
+        <div class="chat-header">
+          <span class="chat-title">💬 CHAT</span>
+          <button class="chat-toggle" onclick="toggleChat()" id="chat-toggle-btn">−</button>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+          <div class="chat-system">Partida iniciada. ¡Buena suerte!</div>
+        </div>
+        <div class="chat-input-row">
+          <input class="chat-input" id="chat-input" type="text"
+            maxlength="200" placeholder="Mensaje…" autocomplete="off"/>
+          <button class="chat-send" onclick="sendChatMessage()">➤</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="controls">
+      <button id="new-game-btn" class="control-btn">Nueva partida</button>
+      <button id="resign-btn"   class="control-btn danger">Rendirse</button>
+    </div>
+
+  </div>
+
+  <div id="game-over-overlay" class="overlay hidden">
+    <div class="overlay-card">
+      <div id="game-over-icon" style="font-size:52px;margin-bottom:4px;">♛</div>
+      <h2 id="game-over-title">CHECKMATE</h2>
+      <p  id="game-over-subtitle">White wins!</p>
+      <button id="play-again-btn" class="control-btn">▶ Play Again</button>
+      <div id="online-end-buttons" class="hidden" style="display:flex;flex-direction:column;gap:10px;width:100%">
+        <button id="rematch-btn"  class="control-btn">🔄 Revancha</button>
+        <button id="lobby-btn"   class="control-btn danger">← Volver al Lobby</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="promotion-dialog" class="promotion-dialog hidden">
+    <div class="promotion-card">
+      <h2>Choose Promotion</h2>
+      <div class="promotion-options"></div>
+    </div>
+  </div>
+
+  <div id="disconnect-overlay" class="overlay hidden">
+    <div class="overlay-card" style="text-align:center;">
+      <div style="font-size:48px;margin-bottom:8px;">📡</div>
+      <h2 style="color:#D4AF37;letter-spacing:4px;">RIVAL DESCONECTADO</h2>
+      <p style="color:rgba(255,255,255,0.4);margin-top:6px;">Esperando reconexión…</p>
+      <div id="disconnect-timer"
+           style="font-size:48px;font-weight:900;color:#D4AF37;margin:16px 0;
+                  text-shadow:0 0 20px rgba(212,175,55,0.5);">30</div>
+      <p style="font-size:11px;color:rgba(255,255,255,0.25);letter-spacing:1px;">
+        Si no vuelve, ganas por abandono
+      </p>
+    </div>
+  </div>
+
+  <div id="rematch-overlay" class="overlay hidden">
+    <div class="overlay-card" style="text-align:center;">
+      <div style="font-size:44px;margin-bottom:8px;">🔄</div>
+      <h2 style="color:#D4AF37;letter-spacing:4px;">REVANCHA</h2>
+      <p id="rematch-sub" style="color:rgba(255,255,255,0.4);margin:8px 0 20px;">
+        Tu rival quiere la revancha
+      </p>
+      <div style="display:flex;gap:12px;justify-content:center;">
+        <button id="rematch-accept-btn"  class="control-btn">✔ Aceptar</button>
+        <button id="rematch-decline-btn" class="control-btn danger">✗ Rechazar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="bot.js"></script>
+  <script src="script.js"></script>
+
+  <script>
+    function getFlag(country) {
+      if (!country || country === 'OTHER') return '🌍';
+      const code = String(country).trim().toLowerCase();
+      if (!/^[a-z]{2}$/.test(code)) return '🌍';
+      return `<img src="https://flagcdn.com/32x24/${code}.png" alt="${code.toUpperCase()}" style="width:28px;height:20px;border-radius:2px;object-fit:cover;vertical-align:middle;" onerror="this.outerHTML='🌍'">`;
+    }
+
+    function setFlag(flagId, country) {
+      const flagEl = document.getElementById(flagId);
+      if (flagEl) flagEl.innerHTML = getFlag(country);
+    }
+
+    function setAvatar(avatarId, player, fallback) {
+      const avatarEl = document.getElementById(avatarId);
+      if (!avatarEl) return;
+      const initial = String(player?.name || fallback || '?').trim().charAt(0).toUpperCase() || '?';
+      const avatarIndex = Number.isFinite(Number(player?.avatar)) ? Number(player.avatar) : 0;
+      avatarEl.textContent = initial;
+      avatarEl.className = `player-avatar avatar-${Math.abs(avatarIndex) % 6}`;
+      avatarEl.title = player?.name || fallback || '';
+    }
+
+    function formatElo(elo, change = null) {
+      if (!elo) return '';
+      if (change === null || change === undefined) return `ELO ${elo}`;
+      const sign = change > 0 ? '+' : '';
+      return `ELO ${elo} (${sign}${change})`;
+    }
+
+    function updatePlayerBars(playerInfo, myColor) {
+      if (!playerInfo) return;
+      const wInfo = playerInfo.w;
+      const bInfo = playerInfo.b;
+      if (wInfo) {
+        setAvatar('avatar-white', wInfo, 'White');
+        setFlag('flag-white', wInfo.country);
+        document.getElementById('name-white').textContent = wInfo.name || 'White';
+        document.getElementById('elo-white').textContent  = formatElo(wInfo.elo);
+      }
+      if (bInfo) {
+        setAvatar('avatar-black', bInfo, 'Black');
+        setFlag('flag-black', bInfo.country);
+        document.getElementById('name-black').textContent = bInfo.name || 'Black';
+        document.getElementById('elo-black').textContent  = formatElo(bInfo.elo);
+      }
+      if (myColor === 'w') document.getElementById('player-bar-white').classList.add('player-bar-me');
+      else                 document.getElementById('player-bar-black').classList.add('player-bar-me');
+    }
+
+    function updateEloBars(eloUpdate) {
+      if (!eloUpdate) return;
+      const whiteElo = document.getElementById('elo-white');
+      const blackElo = document.getElementById('elo-black');
+      if (whiteElo && eloUpdate.w) whiteElo.textContent = formatElo(eloUpdate.w.newElo, eloUpdate.w.change);
+      if (blackElo && eloUpdate.b) blackElo.textContent = formatElo(eloUpdate.b.newElo, eloUpdate.b.change);
+      const storedPlayerInfo = JSON.parse(sessionStorage.getItem('ozama-player-info') || 'null') || {};
+      if (storedPlayerInfo.w && eloUpdate.w?.newElo) storedPlayerInfo.w.elo = eloUpdate.w.newElo;
+      if (storedPlayerInfo.b && eloUpdate.b?.newElo) storedPlayerInfo.b.elo = eloUpdate.b.newElo;
+      sessionStorage.setItem('ozama-player-info', JSON.stringify(storedPlayerInfo));
+      const color = sessionStorage.getItem('ozama-color');
+      const user  = JSON.parse(localStorage.getItem('ozama-user') || 'null');
+      const myUpdate = color === 'w' ? eloUpdate.w : color === 'b' ? eloUpdate.b : null;
+      if (user && myUpdate?.newElo) {
+        localStorage.setItem('ozama-user', JSON.stringify({ ...user, elo: myUpdate.newElo }));
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+
+      const chatInput = document.getElementById('chat-input');
+      if (chatInput) {
+        chatInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') sendChatMessage();
+        });
+      }
+
+      const waitForSocket = setInterval(() => {
+        if (typeof socket !== 'undefined' && socket) {
+          clearInterval(waitForSocket);
+
+          socket.on('game-start', ({ playerInfo, color, clockW, clockB }) => {
+            updatePlayerBars(playerInfo, color || PLAYER_COLOR);
+            if (typeof CLOCK !== 'undefined') CLOCK.set(clockW || 600000, clockB || 600000);
+          });
+
+          socket.on('rejoin-ok', ({ playerInfo, clockW, clockB }) => {
+            updatePlayerBars(playerInfo, PLAYER_COLOR);
+            if (typeof CLOCK !== 'undefined') CLOCK.set(clockW || 600000, clockB || 600000);
+          });
+
+          socket.on('elo-update', updateEloBars);
+          socket.on('chat-message', appendChatMessage);
+
+          socket.on('opponent-disconnected', () => {
+            appendSystemMessage('⚠️ Rival desconectado. Esperando…');
+          });
+
+          socket.on('opponent-reconnected', ({ playerName }) => {
+            appendSystemMessage(`✅ ${playerName || 'Rival'} reconectado`);
+          });
+
+          socket.on('opponent-resigned', ({ playerName }) => {
+            appendSystemMessage(`🏳️ ${playerName || 'Rival'} abandonó la partida`);
+          });
+        }
+      }, 100);
+
+      setTimeout(() => {
+        const storedPlayerInfo = JSON.parse(sessionStorage.getItem('ozama-player-info') || 'null');
+        const names = JSON.parse(sessionStorage.getItem('ozama-names') || '{}');
+        const color = sessionStorage.getItem('ozama-color');
+        const user  = JSON.parse(localStorage.getItem('ozama-user') || 'null');
+
+        if (storedPlayerInfo?.w || storedPlayerInfo?.b) {
+          updatePlayerBars(storedPlayerInfo, color);
+        } else {
+          if (names.w) { document.getElementById('name-white').textContent = names.w; setAvatar('avatar-white', { name: names.w }, 'White'); }
+          if (names.b) { document.getElementById('name-black').textContent = names.b; setAvatar('avatar-black', { name: names.b }, 'Black'); }
+        }
+
+        if (!storedPlayerInfo && user?.country && color) {
+          const flagEl = color === 'w' ? document.getElementById('flag-white') : document.getElementById('flag-black');
+          if (flagEl) flagEl.innerHTML = getFlag(user.country);
+          setAvatar(color === 'w' ? 'avatar-white' : 'avatar-black', user, user.username);
+          document.getElementById(color === 'w' ? 'player-bar-white' : 'player-bar-black')?.classList.add('player-bar-me');
+        }
+
+        if (typeof IS_ONLINE !== 'undefined' && !IS_ONLINE) {
+          const panel = document.getElementById('chat-panel');
+          if (panel) panel.style.display = 'none';
+        }
+      }, 300);
+    });
+
+    let _chatOpen = true;
+
+    function toggleChat() {
+      _chatOpen = !_chatOpen;
+      const msgs  = document.getElementById('chat-messages');
+      const input = document.querySelector('.chat-input-row');
+      const btn   = document.getElementById('chat-toggle-btn');
+      if (msgs)  msgs.style.display  = _chatOpen ? 'flex' : 'none';
+      if (input) input.style.display = _chatOpen ? 'flex' : 'none';
+      if (btn)   btn.textContent     = _chatOpen ? '−' : '+';
+    }
+
+    function sendChatMessage() {
+      if (typeof socket === 'undefined' || !socket) return;
+      const input = document.getElementById('chat-input');
+      const msg   = (input?.value || '').trim();
+      if (!msg) return;
+      socket.emit('chat-message', { room: ROOM_CODE, message: msg });
+      input.value = '';
+      input.focus();
+    }
+
+    function appendChatMessage({ from, color, message }) {
+      const container = document.getElementById('chat-messages');
+      if (!container) return;
+      const isMe = (typeof PLAYER_COLOR !== 'undefined') && color === PLAYER_COLOR;
+      const wrap = document.createElement('div');
+      wrap.className = 'chat-msg ' + (isMe ? 'chat-msg-me' : 'chat-msg-them');
+      const nameEl = document.createElement('span');
+      nameEl.className = 'chat-name';
+      nameEl.textContent = from;
+      const textEl = document.createElement('span');
+      textEl.className = 'chat-text';
+      textEl.textContent = message;
+      wrap.appendChild(nameEl);
+      wrap.appendChild(textEl);
+      container.appendChild(wrap);
+      container.scrollTop = container.scrollHeight;
+      if (!_chatOpen) {
+        const btn = document.getElementById('chat-toggle-btn');
+        if (btn) btn.textContent = '● +';
+      }
+    }
+
+    function appendSystemMessage(text) {
+      const container = document.getElementById('chat-messages');
+      if (!container) return;
+      const el = document.createElement('div');
+      el.className = 'chat-system';
+      el.textContent = text;
+      container.appendChild(el);
+      container.scrollTop = container.scrollHeight;
+    }
+  </script>
+
+</body>
+</html>
