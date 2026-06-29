@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>OZAMA CHESS — Lobby</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: radial-gradient(ellipse at top, #1a1a1a 0%, #090909 100%);
+      color: white;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 30px 20px;
+    }
+
+    /* ── Logo ── */
+    .logo {
+      font-size: 32px;
+      font-weight: 900;
+      color: #D4AF37;
+      letter-spacing: 7px;
+      text-transform: uppercase;
+      text-shadow: 0 0 30px rgba(212,175,55,0.5);
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .logo-sub {
+      font-size: 11px;
+      color: rgba(255,255,255,0.2);
+      letter-spacing: 5px;
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    /* ── Cards ── */
+    .cards {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .card {
+      background: #111118;
+      border: 1.5px solid rgba(212,175,55,0.2);
+      border-radius: 18px;
+      padding: 36px 32px;
+      width: 280px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      transition: border-color 0.25s, box-shadow 0.25s;
+    }
+    .card:hover {
+      border-color: rgba(212,175,55,0.45);
+      box-shadow: 0 0 30px rgba(212,175,55,0.1);
+    }
+
+    .card-icon { font-size: 42px; line-height: 1; }
+    .card-title {
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 3px;
+      color: #D4AF37;
+      text-transform: uppercase;
+      text-align: center;
+    }
+    .card-desc {
+      font-size: 12px;
+      color: rgba(255,255,255,0.35);
+      text-align: center;
+      line-height: 1.6;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      width: 100%;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 50px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-gold {
+      background: linear-gradient(135deg, #D4AF37, #8B6914);
+      color: #0A0A0A;
+    }
+    .btn-gold:hover  { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212,175,55,0.4); }
+    .btn-gold:active { transform: translateY(0); }
+
+    .btn-outline {
+      background: transparent;
+      color: #D4AF37;
+      border: 1.5px solid rgba(212,175,55,0.4);
+    }
+    .btn-outline:hover  { border-color: #D4AF37; background: rgba(212,175,55,0.07); }
+
+    /* ── Input ── */
+    .input-code {
+      width: 100%;
+      padding: 12px 16px;
+      background: #1A1A28;
+      border: 1.5px solid rgba(212,175,55,0.25);
+      border-radius: 10px;
+      color: #D4AF37;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 5px;
+      text-align: center;
+      text-transform: uppercase;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .input-code::placeholder { color: rgba(212,175,55,0.25); letter-spacing: 3px; font-size: 13px; font-weight: 400; }
+    .input-code:focus { border-color: #D4AF37; }
+
+    /* ── States ── */
+    .hidden { display: none !important; }
+
+    .code-display {
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: 8px;
+      color: #D4AF37;
+      text-shadow: 0 0 20px rgba(212,175,55,0.4);
+      text-align: center;
+    }
+
+    .waiting {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.4);
+      letter-spacing: 2px;
+    }
+    .dot {
+      width: 6px; height: 6px;
+      background: #D4AF37;
+      border-radius: 50%;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes pulse { 0%,100%{opacity:.2;} 50%{opacity:1;} }
+
+    .error-msg {
+      font-size: 11px;
+      color: #ef4444;
+      letter-spacing: 1px;
+      text-align: center;
+      min-height: 16px;
+    }
+
+    /* ── Local play option ── */
+    .local-link {
+      margin-top: 36px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.25);
+      letter-spacing: 1px;
+    }
+    .local-link a {
+      color: rgba(212,175,55,0.5);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .local-link a:hover { color: #D4AF37; }
+
+    .divider {
+      width: 40px; height: 1px;
+      background: linear-gradient(90deg, transparent, #D4AF37, transparent);
+    }
+
+    @media (max-width: 620px) {
+      .logo { font-size: 22px; letter-spacing: 4px; }
+      .card { width: 100%; max-width: 340px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="logo">OZAMA CHESS ♟</div>
+  <div class="logo-sub">DOMINICAN HERITAGE EDITION</div>
+
+  <div class="cards">
+
+    <!-- ── CREAR PARTIDA ── -->
+    <div class="card" id="card-create">
+      <div class="card-icon">⚪</div>
+      <div class="card-title">Crear Partida</div>
+      <div class="card-desc">Crea una sala y comparte el código con tu rival. Juegas con las blancas.</div>
+
+      <!-- Estado inicial: botón crear -->
+      <div id="create-initial" style="width:100%">
+        <button class="btn btn-gold" onclick="createRoom()">Crear Sala</button>
+      </div>
+
+      <!-- Estado: sala creada, esperando rival -->
+      <div id="create-waiting" class="hidden" style="width:100%;display:flex;flex-direction:column;align-items:center;gap:14px">
+        <div style="font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:2px;">CÓDIGO DE SALA</div>
+        <div class="code-display" id="room-code-display">——</div>
+        <button class="btn btn-outline" onclick="copyCode()" id="copy-btn">📋 Copiar Código</button>
+        <div class="divider"></div>
+        <div class="waiting">
+          <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+          <span>Esperando rival…</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── UNIRSE A PARTIDA ── -->
+    <div class="card" id="card-join">
+      <div class="card-icon">⚫</div>
+      <div class="card-title">Unirse</div>
+      <div class="card-desc">Ingresa el código que te compartió tu rival para unirte a su partida.</div>
+
+      <input
+        class="input-code"
+        id="join-input"
+        type="text"
+        maxlength="6"
+        placeholder="CÓDIGO"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <div class="error-msg" id="join-error"></div>
+      <button class="btn btn-gold" onclick="joinRoom()">Unirse a Sala</button>
+    </div>
+
+  </div>
+
+  <div class="local-link">
+    ¿Quieres jugar en el mismo dispositivo?
+    <a href="index.html">Modo local →</a>
+  </div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+
+  let myRoomCode = null;
+  let _myColor = null;
+
+  // ─────────────────────────────────────────────────────────────
+  // CREAR SALA
+  // ─────────────────────────────────────────────────────────────
+  function createRoom() {
+    socket.emit('create-room');
+  }
+
+  socket.on('room-created', ({ code, color }) => {
+    myRoomCode = code;
+    _myColor = color;
+
+    document.getElementById('room-code-display').textContent = code;
+
+    document.getElementById('create-initial')
+      .classList.add('hidden');
+
+    document.getElementById('create-waiting')
+      .classList.remove('hidden');
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // COPIAR CÓDIGO
+  // ─────────────────────────────────────────────────────────────
+  function copyCode() {
+    navigator.clipboard.writeText(myRoomCode).then(() => {
+      const btn = document.getElementById('copy-btn');
+
+      btn.textContent = '✅ Copiado';
+
+      setTimeout(() => {
+        btn.textContent = '📋 Copiar Código';
+      }, 2000);
+    });
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // UNIRSE A SALA
+  // ─────────────────────────────────────────────────────────────
+  function joinRoom() {
+    const code = document
+      .getElementById('join-input')
+      .value
+      .toUpperCase()
+      .trim();
+
+    if (code.length < 4) {
+      showJoinError('Ingresa el código completo.');
+      return;
+    }
+
+    document.getElementById('join-error').textContent = '';
+
+    socket.emit('join-room', { code });
+  }
+
+  socket.on('room-joined', ({ code, color }) => {
+    myRoomCode = code;
+    _myColor = color;
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // ERRORES
+  // ─────────────────────────────────────────────────────────────
+  socket.on('room-error', (msg) => {
+    showJoinError(msg);
+  });
+
+  function showJoinError(msg) {
+    document.getElementById('join-error').textContent = msg;
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // INICIAR PARTIDA
+  // ─────────────────────────────────────────────────────────────
+  socket.on('game-start', ({ code }) => {
+
+    sessionStorage.setItem('ozama-room', code);
+
+    sessionStorage.setItem('ozama-color', _myColor);
+
+    window.location.href = '/index.html';
+  });
+
+  // ─────────────────────────────────────────────────────────────
+  // ENTER PARA UNIRSE
+  // ─────────────────────────────────────────────────────────────
+  document.getElementById('join-input')
+    .addEventListener('keydown', (e) => {
+
+      if (e.key === 'Enter') {
+        joinRoom();
+      }
+    });
+</script>
+</body>
+</html>
