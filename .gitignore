@@ -1,16 +1,12 @@
 node_modules/
 .env
 npm-debug.log*
-.DS_Store
 
 # Legacy/temporary local copies not used by Express deploy
 on package-lock.json
 public/Untitled-1.css
 public/css/
 public/js/
-node_modules/
-.env
-npm-debug.log*
 
 # Windows
 desktop.ini
