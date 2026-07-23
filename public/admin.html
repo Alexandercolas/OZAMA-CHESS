@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>OZAMA CHESS - Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --black:#060504; --carbon:#0D0B08; --iron:#211D18; --warm:#EEE5D5;
+      --muted:rgba(238,229,213,.58); --faint:rgba(238,229,213,.34);
+      --gold:#C8983C; --gold2:#E2B960; --red:#C0392B; --line:rgba(200,152,60,.22);
+      --title:'Cinzel', Georgia, serif; --body:'Inter', Arial, sans-serif; --mono:'IBM Plex Mono', Consolas, monospace;
+    }
+    body {
+      min-height:100vh; color:var(--warm); font-family:var(--body);
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(200,152,60,.10), transparent 34rem),
+        linear-gradient(180deg,#0B0906,#040302);
+    }
+    body::before {
+      content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+      background:
+        repeating-linear-gradient(90deg, rgba(200,152,60,.030) 0 1px, transparent 1px 88px),
+        repeating-linear-gradient(0deg, rgba(200,152,60,.022) 0 1px, transparent 1px 88px);
+    }
+    a { color:inherit; text-decoration:none; }
+    .topbar {
+      min-height:72px; display:flex; align-items:center; justify-content:space-between; gap:16px;
+      padding:0 clamp(18px,4vw,56px); border-bottom:1px solid var(--line);
+      background:rgba(6,5,4,.84); backdrop-filter:blur(12px);
+    }
+    .brand { font-family:var(--title); color:var(--gold2); font-weight:900; letter-spacing:2px; }
+    .nav { display:flex; gap:18px; color:var(--muted); font-size:11px; font-weight:900; letter-spacing:1.6px; text-transform:uppercase; }
+    .nav a:hover { color:var(--gold2); }
+    .page { width:min(1180px, calc(100% - 36px)); margin:0 auto; padding:46px 0 72px; }
+    .hero { display:flex; justify-content:space-between; gap:24px; align-items:flex-end; margin-bottom:24px; }
+    .kicker { color:var(--gold2); font-size:11px; font-weight:900; letter-spacing:4px; text-transform:uppercase; }
+    h1 { margin-top:10px; font-family:var(--title); font-size:clamp(38px,6vw,72px); line-height:.92; color:#F0DCA9; }
+    .hero p { max-width:650px; margin-top:16px; color:var(--muted); font-size:14px; line-height:1.8; }
+    .status { color:var(--muted); font-size:12px; font-weight:800; text-align:right; }
+    .grid { display:grid; grid-template-columns: 360px 1fr; gap:18px; align-items:start; }
+    .panel {
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(255,255,255,.030), transparent 28%), rgba(13,11,8,.92);
+      box-shadow:0 18px 52px rgba(0,0,0,.38), inset 0 0 0 1px rgba(255,255,255,.025);
+      padding:18px;
+    }
+    .panel-title {
+      margin-bottom:14px; color:var(--gold2); font-family:var(--title); font-size:14px; font-weight:800;
+      letter-spacing:2px; text-transform:uppercase;
+    }
+    .stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:18px; }
+    .stat { padding:12px; border:1px solid rgba(200,152,60,.12); background:rgba(0,0,0,.22); }
+    .stat-value { color:var(--gold2); font-family:var(--mono); font-size:24px; font-weight:700; }
+    .stat-label { margin-top:6px; color:var(--faint); font-size:10px; font-weight:900; letter-spacing:1.5px; text-transform:uppercase; }
+    .form { display:grid; gap:12px; }
+    label { color:var(--muted); font-size:10px; font-weight:900; letter-spacing:1.7px; text-transform:uppercase; }
+    input, select, textarea {
+      width:100%; min-height:42px; margin-top:6px; padding:10px 12px; outline:none;
+      border:1px solid rgba(200,152,60,.18); background:rgba(0,0,0,.28); color:var(--warm);
+      font-family:var(--body); font-size:13px; font-weight:650;
+    }
+    textarea { min-height:120px; resize:vertical; line-height:1.55; }
+    input:focus, select:focus, textarea:focus { border-color:var(--gold); box-shadow:0 0 0 3px rgba(200,152,60,.10); }
+    option { background:#13100D; }
+    .row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .btn {
+      min-height:42px; padding:0 18px; border:1px solid rgba(226,185,96,.58);
+      background:linear-gradient(180deg,#E2B960,#B9842C 60%,#7A5521); color:#080604;
+      font-family:var(--title); font-size:11px; font-weight:900; letter-spacing:1.8px; text-transform:uppercase; cursor:pointer;
+    }
+    .btn.secondary { background:rgba(0,0,0,.16); color:var(--gold2); border-color:rgba(200,152,60,.26); }
+    .message { min-height:20px; color:var(--muted); font-size:12px; font-weight:750; }
+    .message.error { color:#ECA7A0; }
+    .message.success { color:#9BE6B7; }
+    .event-list { display:grid; gap:10px; }
+    .event,
+    .user-row {
+      display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; padding:14px;
+      border:1px solid rgba(200,152,60,.12); background:rgba(0,0,0,.20);
+    }
+    .event-title { color:var(--warm); font-weight:850; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .event-meta { margin-top:6px; color:var(--faint); font-family:var(--mono); font-size:11px; }
+    .pill { display:inline-flex; align-items:center; min-height:28px; padding:0 10px; color:var(--gold2); border:1px solid rgba(200,152,60,.22); font-size:10px; font-weight:900; letter-spacing:1.2px; text-transform:uppercase; }
+    .user-tools { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; align-items:center; }
+    .mini-select,
+    .mini-date {
+      width:auto; min-height:32px; margin:0; padding:6px 8px; font-size:11px;
+      border:1px solid rgba(200,152,60,.18); background:rgba(0,0,0,.28); color:var(--warm);
+    }
+    .mini-check { display:inline-flex; align-items:center; gap:6px; color:var(--muted); font-size:10px; font-weight:900; letter-spacing:1px; text-transform:uppercase; }
+    .mini-check input { width:auto; min-height:0; margin:0; accent-color:var(--gold); }
+    .mini-btn {
+      min-height:32px; padding:0 10px; border:1px solid rgba(226,185,96,.45);
+      background:rgba(200,152,60,.10); color:var(--gold2); font-size:10px; font-weight:900; letter-spacing:1px; text-transform:uppercase; cursor:pointer;
+    }
+    .hidden { display:none !important; }
+    .locked { min-height:50vh; display:grid; place-items:center; text-align:center; color:var(--muted); }
+    .locked h2 { color:var(--gold2); font-family:var(--title); letter-spacing:2px; margin-bottom:10px; }
+    @media (max-width:900px) { .grid { grid-template-columns:1fr; } .hero { align-items:flex-start; flex-direction:column; } .status { text-align:left; } }
+    @media (max-width:560px) { .topbar { align-items:flex-start; flex-direction:column; padding:18px; } .row,.stats { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a href="/" class="brand">OZAMA CHESS ADMIN</a>
+    <nav class="nav">
+      <a href="/lobby.html">Lobby</a>
+      <a href="/leaderboard.html">Ranking</a>
+      <a href="/profile.html">Perfil</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <div>
+        <div class="kicker">Panel privado</div>
+        <h1>Control<br>Ozama</h1>
+        <p>Gestiona eventos, torneos, anuncios y operaciones internas sin mezclar herramientas administrativas con la experiencia del jugador.</p>
+      </div>
+      <div class="status" id="admin-status">Verificando acceso...</div>
+    </section>
+
+    <section id="locked" class="locked hidden">
+      <div>
+        <h2>ACCESO RESTRINGIDO</h2>
+        <p>Inicia sesion con una cuenta administradora para entrar.</p>
+      </div>
+    </section>
+
+    <section id="admin-app" class="grid hidden">
+      <aside class="panel">
+        <div class="panel-title">Resumen</div>
+        <div class="stats">
+          <div class="stat"><div class="stat-value" id="stat-users">--</div><div class="stat-label">Usuarios</div></div>
+          <div class="stat"><div class="stat-value" id="stat-matches">--</div><div class="stat-label">Partidas</div></div>
+          <div class="stat"><div class="stat-value" id="stat-events">--</div><div class="stat-label">Eventos</div></div>
+          <div class="stat"><div class="stat-value" id="stat-published">--</div><div class="stat-label">Publicados</div></div>
+        </div>
+
+        <div class="panel-title">Crear evento</div>
+        <div class="form">
+          <label>Titulo
+            <input id="event-title" maxlength="90" placeholder="Copa Ozama">
+          </label>
+          <div class="row">
+            <label>Tipo
+              <select id="event-type">
+                <option value="event">Evento</option>
+                <option value="tournament">Torneo</option>
+                <option value="announcement">Anuncio</option>
+                <option value="maintenance">Mantenimiento</option>
+              </select>
+            </label>
+            <label>Estado
+              <select id="event-status">
+                <option value="draft">Borrador</option>
+                <option value="published">Publicado</option>
+                <option value="closed">Cerrado</option>
+              </select>
+            </label>
+          </div>
+          <div class="row">
+            <label>Inicio
+              <input id="event-start" type="datetime-local">
+            </label>
+            <label>Max jugadores
+              <input id="event-max" type="number" min="2" max="512" value="16">
+            </label>
+          </div>
+          <label>Descripcion
+            <textarea id="event-description" maxlength="1200" placeholder="Detalles del evento..."></textarea>
+          </label>
+          <button class="btn" type="button" onclick="createEvent()">Crear evento</button>
+          <div class="message" id="message"></div>
+        </div>
+      </aside>
+
+      <section class="panel">
+        <div class="panel-title">Eventos y operaciones</div>
+        <div class="event-list" id="event-list"></div>
+      </section>
+
+      <section class="panel" style="grid-column:1 / -1">
+        <div class="panel-title">Usuarios y Premium</div>
+        <div class="event-list" id="user-list"></div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const user = JSON.parse(localStorage.getItem('ozama-user') || 'null');
+    const token = localStorage.getItem('ozama-token') || user?.token || user?.jwt || user?.accessToken || '';
+
+    function authHeaders() {
+      return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;',
+      }[char]));
+    }
+
+    function setMessage(text, type = '') {
+      const el = document.getElementById('message');
+      el.textContent = text || '';
+      el.className = `message ${type}`;
+    }
+
+    function formatDate(value) {
+      if (!value) return 'Sin fecha';
+      return new Date(value).toLocaleString('es-DO', { dateStyle: 'medium', timeStyle: 'short' });
+    }
+
+    async function api(path, options = {}) {
+      const response = await fetch(path, {
+        ...options,
+        headers: { ...authHeaders(), ...(options.headers || {}) },
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Error de servidor.');
+      return data;
+    }
+
+    function renderStats(stats) {
+      document.getElementById('stat-users').textContent = stats.users ?? 0;
+      document.getElementById('stat-matches').textContent = stats.matches ?? 0;
+      document.getElementById('stat-events').textContent = stats.events ?? 0;
+      document.getElementById('stat-published').textContent = stats.publishedEvents ?? 0;
+    }
+
+    function renderEvents(events) {
+      const list = document.getElementById('event-list');
+      if (!events.length) {
+        list.innerHTML = '<div class="event"><div><div class="event-title">No hay eventos todavia</div><div class="event-meta">Crea el primero desde el panel.</div></div></div>';
+        return;
+      }
+
+      list.innerHTML = events.map((event) => `
+        <article class="event">
+          <div>
+            <div class="event-title">${escapeHtml(event.title)}</div>
+            <div class="event-meta">${escapeHtml(event.type)} · ${formatDate(event.startsAt)} · ${Number(event.maxPlayers || 0)} jugadores</div>
+            <div class="event-meta">${escapeHtml(event.description || '')}</div>
+          </div>
+          <div class="pill">${escapeHtml(event.status)}</div>
+        </article>
+      `).join('');
+    }
+
+    function renderUsers(users) {
+      const list = document.getElementById('user-list');
+      if (!users.length) {
+        list.innerHTML = '<div class="user-row"><div><div class="event-title">No hay usuarios registrados</div></div></div>';
+        return;
+      }
+
+      list.innerHTML = users.map((u) => {
+        const games = (u.stats?.wins || 0) + (u.stats?.losses || 0) + (u.stats?.draws || 0);
+        const premiumDate = u.premiumUntil ? new Date(u.premiumUntil).toISOString().slice(0, 10) : '';
+        return `
+          <article class="user-row" data-user-id="${escapeHtml(u._id)}">
+            <div>
+              <div class="event-title">${escapeHtml(u.username)} <span class="pill">${escapeHtml(u.plan || 'free')}</span></div>
+              <div class="event-meta">${escapeHtml(u.email)} · ELO ${Number(u.elo || 1200)} · ${games} partidas · ${escapeHtml(u.country || 'DO')}</div>
+              <div class="event-meta">Estado: ${escapeHtml(u.subscriptionStatus || 'none')} · Admin: ${u.isAdmin ? 'si' : 'no'} · Activo: ${u.isActive ? 'si' : 'no'}</div>
+            </div>
+            <div class="user-tools">
+              <select class="mini-select" data-field="plan">
+                <option value="free" ${u.plan === 'free' ? 'selected' : ''}>Free</option>
+                <option value="premium" ${u.plan === 'premium' ? 'selected' : ''}>Premium</option>
+              </select>
+              <select class="mini-select" data-field="subscriptionStatus">
+                ${['none','trial','active','past_due','cancelled'].map((s) => `<option value="${s}" ${u.subscriptionStatus === s ? 'selected' : ''}>${s}</option>`).join('')}
+              </select>
+              <input class="mini-date" data-field="premiumUntil" type="date" value="${premiumDate}">
+              <label class="mini-check"><input data-field="isAdmin" type="checkbox" ${u.isAdmin ? 'checked' : ''}>Admin</label>
+              <label class="mini-check"><input data-field="isActive" type="checkbox" ${u.isActive ? 'checked' : ''}>Activo</label>
+              <button class="mini-btn" type="button" onclick="saveUserPlan('${escapeHtml(u._id)}')">Guardar</button>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    async function loadAdmin() {
+      if (!token) throw new Error('Token requerido.');
+      const me = await api('/api/admin/me');
+      document.getElementById('admin-status').textContent = `Admin: ${me.admin.username}`;
+      document.getElementById('locked').classList.add('hidden');
+      document.getElementById('admin-app').classList.remove('hidden');
+      const [stats, eventData, userData] = await Promise.all([
+        api('/api/admin/stats'),
+        api('/api/admin/events'),
+        api('/api/admin/users'),
+      ]);
+      renderStats(stats);
+      renderEvents(eventData.events || []);
+      renderUsers(userData.users || []);
+    }
+
+    async function saveUserPlan(userId) {
+      const row = document.querySelector(`[data-user-id="${CSS.escape(userId)}"]`);
+      if (!row) return;
+
+      const plan = row.querySelector('[data-field="plan"]').value;
+      const subscriptionStatus = row.querySelector('[data-field="subscriptionStatus"]').value;
+      const premiumUntil = row.querySelector('[data-field="premiumUntil"]').value || null;
+      const isAdmin = row.querySelector('[data-field="isAdmin"]').checked;
+      const isActive = row.querySelector('[data-field="isActive"]').checked;
+
+      try {
+        await api(`/api/admin/users/${encodeURIComponent(userId)}/plan`, {
+          method: 'PATCH',
+          body: JSON.stringify({ plan, subscriptionStatus, premiumUntil, isAdmin, isActive }),
+        });
+        setMessage('Usuario actualizado.', 'success');
+        await loadAdmin();
+      } catch (err) {
+        setMessage(err.message, 'error');
+      }
+    }
+
+    async function createEvent() {
+      setMessage('');
+      const payload = {
+        title: document.getElementById('event-title').value.trim(),
+        type: document.getElementById('event-type').value,
+        status: document.getElementById('event-status').value,
+        startsAt: document.getElementById('event-start').value || null,
+        maxPlayers: Number(document.getElementById('event-max').value || 16),
+        description: document.getElementById('event-description').value.trim(),
+      };
+
+      if (!payload.title) {
+        setMessage('Titulo requerido.', 'error');
+        return;
+      }
+
+      try {
+        await api('/api/admin/events', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+        document.getElementById('event-title').value = '';
+        document.getElementById('event-description').value = '';
+        setMessage('Evento creado.', 'success');
+        await loadAdmin();
+      } catch (err) {
+        setMessage(err.message, 'error');
+      }
+    }
+
+    loadAdmin().catch((err) => {
+      document.getElementById('admin-status').textContent = err.message || 'Acceso denegado';
+      document.getElementById('admin-app').classList.add('hidden');
+      document.getElementById('locked').classList.remove('hidden');
+    });
+  </script>
+</body>
+</html>

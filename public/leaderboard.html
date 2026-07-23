@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>OZAMA CHESS - Ranking</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black: #060504;
+      --carbon: #0D0B08;
+      --iron: #211D18;
+      --warm: #EEE5D5;
+      --muted: rgba(238,229,213,0.58);
+      --faint: rgba(238,229,213,0.34);
+      --gold: #C8983C;
+      --gold-2: #E2B960;
+      --bronze: #8B6520;
+      --red: #C0392B;
+      --blue: #1A3A6B;
+      --line: rgba(200,152,60,0.22);
+      --title: 'Cinzel', Georgia, serif;
+      --body: 'Inter', Arial, sans-serif;
+      --mono: 'IBM Plex Mono', Consolas, monospace;
+    }
+
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(200,152,60,0.10), transparent 34rem),
+        radial-gradient(ellipse at 12% 74%, rgba(26,58,107,0.15), transparent 28rem),
+        radial-gradient(ellipse at 88% 72%, rgba(192,57,43,0.11), transparent 26rem),
+        linear-gradient(180deg, #0B0906 0%, #040302 100%);
+      color: var(--warm);
+      font-family: var(--body);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background:
+        repeating-linear-gradient(90deg, rgba(200,152,60,0.030) 0 1px, transparent 1px 88px),
+        repeating-linear-gradient(0deg, rgba(200,152,60,0.022) 0 1px, transparent 1px 88px);
+      pointer-events: none;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .topbar {
+      min-height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 0 clamp(18px, 4vw, 56px);
+      border-bottom: 1px solid var(--line);
+      background: rgba(6,5,4,0.82);
+      backdrop-filter: blur(12px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--gold-2);
+      font-family: var(--title);
+      font-weight: 900;
+      letter-spacing: 2px;
+    }
+
+    .brand-mark {
+      width: 24px;
+      height: 34px;
+      border: 2px solid var(--gold-2);
+      box-shadow: inset 0 0 0 4px rgba(0,0,0,0.52), 0 0 18px rgba(200,152,60,0.16);
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1.7px;
+      text-transform: uppercase;
+    }
+
+    .nav a:hover { color: var(--gold-2); }
+
+    .page {
+      width: min(1180px, calc(100% - 36px));
+      margin: 0 auto;
+      padding: 54px 0 72px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 28px;
+      align-items: end;
+      margin-bottom: 28px;
+    }
+
+    .kicker {
+      color: var(--gold-2);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin-top: 12px;
+      font-family: var(--title);
+      font-size: clamp(42px, 7vw, 82px);
+      line-height: 0.92;
+      letter-spacing: 2px;
+      color: #F0DCA9;
+      text-shadow: 0 2px 0 #050403, 0 0 40px rgba(200,152,60,0.22);
+    }
+
+    .hero p {
+      max-width: 660px;
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.8;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.028), transparent),
+        rgba(13,11,8,0.88);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.025);
+    }
+
+    .summary-card {
+      min-height: 78px;
+      padding: 12px;
+      border: 1px solid rgba(200,152,60,0.12);
+      background: rgba(0,0,0,0.22);
+    }
+
+    .summary-value {
+      font-family: var(--mono);
+      color: var(--gold-2);
+      font-size: 22px;
+      font-weight: 700;
+    }
+
+    .summary-label {
+      margin-top: 7px;
+      color: var(--faint);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+    }
+
+    .rank-panel {
+      border: 1px solid var(--line);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.030), transparent 28%),
+        linear-gradient(135deg, rgba(19,15,10,0.96), rgba(6,5,4,0.96));
+      box-shadow: 0 24px 70px rgba(0,0,0,0.48), inset 0 0 0 1px rgba(255,255,255,0.030);
+      overflow: hidden;
+    }
+
+    .rank-head,
+    .rank-row {
+      display: grid;
+      grid-template-columns: 58px minmax(220px, 1fr) 110px 110px 110px 100px 100px;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .rank-head {
+      min-height: 48px;
+      padding: 0 18px;
+      border-bottom: 1px solid rgba(200,152,60,0.18);
+      color: var(--faint);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+      background: rgba(0,0,0,0.22);
+    }
+
+    .rank-row {
+      min-height: 78px;
+      padding: 12px 18px;
+      border-bottom: 1px solid rgba(200,152,60,0.10);
+      transition: background 220ms ease, box-shadow 220ms ease;
+    }
+
+    .rank-row:hover {
+      background: rgba(200,152,60,0.055);
+      box-shadow: inset 3px 0 0 var(--gold);
+    }
+
+    .rank-row.me { box-shadow: inset 3px 0 0 var(--gold-2); }
+
+    .rank-num {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(200,152,60,0.28);
+      color: var(--gold-2);
+      font-family: var(--mono);
+      font-weight: 700;
+      background: rgba(200,152,60,0.06);
+    }
+
+    .player {
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      gap: 12px;
+    }
+
+    .avatar {
+      width: 42px;
+      height: 42px;
+      flex: 0 0 42px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border: 1px solid rgba(226,185,96,0.36);
+      background: linear-gradient(135deg, var(--gold-2), #8B6520);
+      color: #080604;
+      font-family: var(--title);
+      font-weight: 900;
+    }
+
+    .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .player-name {
+      overflow: hidden;
+      color: var(--warm);
+      font-size: 14px;
+      font-weight: 800;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .player-country {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 5px;
+      color: var(--faint);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+    }
+
+    .flag {
+      width: 20px;
+      height: 15px;
+      object-fit: cover;
+      border: 1px solid rgba(255,255,255,0.14);
+    }
+
+    .elo {
+      color: var(--gold-2);
+      font-family: var(--mono);
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .num {
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .winrate {
+      color: var(--warm);
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .empty,
+    .loading {
+      min-height: 220px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .btn {
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 20px;
+      border: 1px solid rgba(200,152,60,0.28);
+      color: var(--gold-2);
+      background: rgba(0,0,0,0.18);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 1.7px;
+      text-transform: uppercase;
+      transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+    }
+
+    .btn.primary {
+      color: #0A0A0A;
+      background: linear-gradient(180deg, #E2B960, #B9842C 60%, #7A5521);
+      border-color: rgba(226,185,96,0.58);
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(226,185,96,0.82);
+      box-shadow: 0 8px 26px rgba(200,152,60,0.18);
+    }
+
+    @media (max-width: 980px) {
+      .hero { grid-template-columns: 1fr; }
+      .summary { max-width: 420px; }
+      .rank-head { display: none; }
+      .rank-row {
+        grid-template-columns: 46px 1fr 84px;
+        grid-template-areas:
+          "rank player elo"
+          "rank stats stats";
+        min-height: 96px;
+      }
+      .rank-num { grid-area: rank; }
+      .player { grid-area: player; }
+      .elo { grid-area: elo; text-align: right; }
+      .num,
+      .winrate {
+        grid-area: stats;
+        display: inline;
+        font-size: 12px;
+      }
+      .rank-row .num:nth-of-type(1)::before { content: "Victorias "; color: var(--faint); }
+      .rank-row .num:nth-of-type(2)::before { content: "Partidas "; color: var(--faint); }
+      .rank-row .num:nth-of-type(3)::before { content: "Racha "; color: var(--faint); }
+      .rank-row .winrate::before { content: "Winrate "; color: var(--faint); }
+    }
+
+    @media (max-width: 620px) {
+      .topbar { align-items: flex-start; flex-direction: column; padding: 18px; }
+      .nav { flex-wrap: wrap; }
+      .page { width: min(100% - 24px, 1180px); padding-top: 36px; }
+      .summary { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a href="/" class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>OZAMA CHESS</span>
+    </a>
+    <nav class="nav">
+      <a href="/">Inicio</a>
+      <a href="/lobby.html">Lobby</a>
+      <a href="/profile.html">Perfil</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <div>
+        <div class="kicker">Hall of Fame</div>
+        <h1>Ranking<br>Ozama</h1>
+        <p>Una tabla de bronce para medir progreso real: ELO, victorias, partidas y rendimiento competitivo de los jugadores registrados.</p>
+        <div class="actions">
+          <a class="btn primary" href="/lobby.html">Jugar ahora</a>
+          <a class="btn" href="/profile.html">Ver perfil</a>
+        </div>
+      </div>
+      <aside class="summary" aria-label="Resumen del ranking">
+        <div class="summary-card">
+          <div class="summary-value" id="summary-players">--</div>
+          <div class="summary-label">Jugadores</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-value" id="summary-games">--</div>
+          <div class="summary-label">Partidas</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-value" id="summary-top">--</div>
+          <div class="summary-label">ELO lider</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-value" id="summary-wins">--</div>
+          <div class="summary-label">Victorias</div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="rank-panel">
+      <div class="rank-head">
+        <span>#</span>
+        <span>Jugador</span>
+        <span>ELO</span>
+        <span>Victorias</span>
+        <span>Partidas</span>
+        <span>Winrate</span>
+        <span>Racha</span>
+      </div>
+      <div id="rank-body">
+        <div class="loading">Cargando ranking</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const storedUser = JSON.parse(localStorage.getItem('ozama-user') || 'null');
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;',
+      }[char]));
+    }
+
+    function countryCode(country) {
+      const code = String(country || 'DO').trim().toLowerCase();
+      return /^[a-z]{2}$/.test(code) ? code : 'do';
+    }
+
+    function avatar(player) {
+      if (player.avatarImage) {
+        return `<span class="avatar"><img src="${escapeHtml(player.avatarImage)}" alt=""></span>`;
+      }
+      const initial = escapeHtml((player.username || '?').charAt(0).toUpperCase());
+      return `<span class="avatar">${initial}</span>`;
+    }
+
+    function statsFor(player) {
+      const stats = player.stats || {};
+      const wins = Number(stats.wins || 0);
+      const losses = Number(stats.losses || 0);
+      const draws = Number(stats.draws || 0);
+      const games = wins + losses + draws;
+      const winrate = games ? Math.round((wins / games) * 100) : 0;
+      const streak = Number(stats.streak ?? Math.max(0, Math.min(12, wins - losses)));
+      return { wins, losses, draws, games, winrate, streak };
+    }
+
+    function render(players) {
+      const body = document.getElementById('rank-body');
+      if (!body) return;
+      if (!players.length) {
+        body.innerHTML = '<div class="empty">Aun no hay jugadores registrados</div>';
+        return;
+      }
+
+      body.innerHTML = players.map((player, index) => {
+        const s = statsFor(player);
+        const code = countryCode(player.country);
+        const username = escapeHtml(player.username || 'Jugador');
+        const isMe = storedUser && player.username === storedUser.username;
+        return `
+          <div class="rank-row${isMe ? ' me' : ''}">
+            <div class="rank-num">${index + 1}</div>
+            <div class="player">
+              ${avatar(player)}
+              <div>
+                <div class="player-name">${username}</div>
+                <div class="player-country">
+                  <img class="flag" src="https://flagcdn.com/40x30/${code}.png" alt="${code.toUpperCase()}" onerror="this.style.visibility='hidden'">
+                  <span>${code.toUpperCase()}</span>
+                </div>
+              </div>
+            </div>
+            <div class="elo">${Number(player.elo || 1200)}</div>
+            <div class="num">${s.wins}</div>
+            <div class="num">${s.games}</div>
+            <div class="winrate">${s.winrate}%</div>
+            <div class="num">${s.streak}</div>
+          </div>
+        `;
+      }).join('');
+
+      const totals = players.reduce((acc, player) => {
+        const s = statsFor(player);
+        acc.games += s.games;
+        acc.wins += s.wins;
+        acc.top = Math.max(acc.top, Number(player.elo || 1200));
+        return acc;
+      }, { games: 0, wins: 0, top: 0 });
+
+      document.getElementById('summary-players').textContent = players.length;
+      document.getElementById('summary-games').textContent = totals.games;
+      document.getElementById('summary-top').textContent = totals.top || 1200;
+      document.getElementById('summary-wins').textContent = totals.wins;
+    }
+
+    async function load() {
+      try {
+        const response = await fetch('/api/user/leaderboard');
+        if (!response.ok) throw new Error('leaderboard');
+        const data = await response.json();
+        render(Array.isArray(data.players) ? data.players : []);
+      } catch (_) {
+        const body = document.getElementById('rank-body');
+        if (body) body.innerHTML = '<div class="empty">No se pudo cargar el ranking</div>';
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>

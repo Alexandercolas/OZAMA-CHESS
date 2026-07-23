@@ -28,11 +28,16 @@ const UserSchema = new mongoose.Schema(
       minlength: [6, 'Mínimo 6 caracteres'],
       select: false, // no se devuelve en queries por defecto
     },
+    recoveryCodeHash: {
+      type: String,
+      select: false,
+    },
 
     // ── Perfil ─────────────────────────────────────────────────────
     country: { type: String, default: 'DO' },   // ISO 3166-1 alpha-2
     avatar:  { type: Number, default: 0 },       // índice de avatar predefinido
     avatarImage: { type: String, default: '' },
+    friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 
     // ── ELO + estadísticas ──────────────────────────────────────────
     elo: { type: Number, default: 1200 },
@@ -42,9 +47,23 @@ const UserSchema = new mongoose.Schema(
       draws:  { type: Number, default: 0 },
     },
 
+    // Plan comercial: no da ventajas deportivas, solo confort/experiencia.
+    plan: {
+      type: String,
+      enum: ['free', 'premium'],
+      default: 'free',
+    },
+    premiumUntil: { type: Date, default: null },
+    subscriptionStatus: {
+      type: String,
+      enum: ['none', 'trial', 'active', 'past_due', 'cancelled'],
+      default: 'none',
+    },
+
     // ── Metadatos ───────────────────────────────────────────────────
     lastSeenAt: { type: Date, default: Date.now },
     isActive:   { type: Boolean, default: true },
+    isAdmin:    { type: Boolean, default: false },
   },
   { timestamps: true }
 );
@@ -52,12 +71,18 @@ const UserSchema = new mongoose.Schema(
 // ── Hash de contraseña antes de guardar ─────────────────────────
 UserSchema.pre('save', async function () {
   if (!this.isModified('password')) return;
+  if (/^\$2[aby]\$\d{2}\$/.test(this.password)) return;
   this.password = await bcrypt.hash(this.password, 12);
 });
 
 // ── Comparar contraseña ─────────────────────────────────────────
 UserSchema.methods.comparePassword = async function (candidate) {
   return bcrypt.compare(candidate, this.password);
+};
+
+UserSchema.methods.compareRecoveryCode = async function (candidate) {
+  if (!this.recoveryCodeHash || !candidate) return false;
+  return bcrypt.compare(String(candidate).trim().toUpperCase(), this.recoveryCodeHash);
 };
 
 // ── ELO update helper ───────────────────────────────────────────

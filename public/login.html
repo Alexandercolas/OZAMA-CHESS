@@ -3,418 +3,714 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>OZAMA CHESS — Acceso</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <title>OZAMA CHESS - Acceso</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --gold:       #D4AF37;
-      --gold-dim:   rgba(212,175,55,0.18);
-      --gold-glow:  rgba(212,175,55,0.35);
-      --bg:         #07070E;
-      --surface:    #0E0E1A;
-      --surface2:   #13131F;
-      --red:        #C0392B;
-      --blue:       #1A3A6B;
-      --text:       rgba(255,255,255,0.85);
-      --text-dim:   rgba(255,255,255,0.35);
+      --black: #060504;
+      --carbon: #0D0B08;
+      --iron: #211D18;
+      --stone: #C9B79C;
+      --warm: #EEE5D5;
+      --muted: rgba(238,229,213,0.58);
+      --faint: rgba(238,229,213,0.32);
+      --gold: #C8983C;
+      --gold-2: #E2B960;
+      --bronze: #8B6520;
+      --red: #C0392B;
+      --blue: #1A3A6B;
+      --line: rgba(200,152,60,0.22);
+      --title: 'Cinzel', Georgia, serif;
+      --body: 'Inter', Arial, sans-serif;
     }
 
     body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Rajdhani', sans-serif;
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 32px 20px;
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(200,152,60,0.10), transparent 34rem),
+        radial-gradient(ellipse at 16% 72%, rgba(26,58,107,0.16), transparent 28rem),
+        radial-gradient(ellipse at 86% 78%, rgba(192,57,43,0.11), transparent 26rem),
+        linear-gradient(180deg, #0B0906 0%, #040302 100%);
+      color: var(--warm);
+      font-family: var(--body);
       overflow-y: auto;
     }
 
-    /* ── Fondo animado ── */
+    .bg-layer,
+    .grid-lines {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
     .bg-layer {
-      position: fixed; inset: 0; z-index: 0; pointer-events: none;
       background:
-        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(26,58,107,0.25) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 50% at 80% 90%, rgba(192,57,43,0.15) 0%, transparent 60%),
-        radial-gradient(ellipse 40% 40% at 50% 50%, rgba(212,175,55,0.05) 0%, transparent 70%);
+        linear-gradient(90deg, rgba(0,0,0,0.72), transparent 32%, transparent 68%, rgba(0,0,0,0.72)),
+        repeating-linear-gradient(90deg, rgba(200,152,60,0.034) 0 1px, transparent 1px 96px),
+        repeating-linear-gradient(0deg, rgba(200,152,60,0.026) 0 1px, transparent 1px 96px);
     }
 
     .grid-lines {
-      position: fixed; inset: 0; z-index: 0; pointer-events: none;
-      background-image:
-        linear-gradient(rgba(212,175,55,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(212,175,55,0.03) 1px, transparent 1px);
-      background-size: 60px 60px;
+      opacity: 0.55;
+      background:
+        linear-gradient(135deg, transparent 0 48%, rgba(200,152,60,0.08) 49%, transparent 51%),
+        radial-gradient(circle at 50% 50%, rgba(232,217,188,0.035), transparent 32rem);
+      background-size: 120px 120px, auto;
     }
 
-    /* ── Piezas decorativas flotando ── */
     .deco-piece {
-      position: fixed; z-index: 0; font-size: 120px; opacity: 0.025;
-      color: var(--gold); pointer-events: none; user-select: none;
-      animation: float 8s ease-in-out infinite;
+      position: fixed;
+      z-index: 0;
+      width: 180px;
+      height: 180px;
+      color: var(--gold);
+      opacity: 0.05;
+      pointer-events: none;
     }
-    .deco-piece:nth-child(1) { top: -30px;  left: -20px;  animation-delay: 0s; }
-    .deco-piece:nth-child(2) { bottom: -30px; right: -20px; animation-delay: -4s; }
-    .deco-piece:nth-child(3) { top: 40%; right: -40px; font-size: 80px; animation-delay: -2s; }
-    @keyframes float {
-      0%,100% { transform: translateY(0) rotate(-5deg); }
-      50%      { transform: translateY(-20px) rotate(5deg); }
-    }
+    .deco-piece.left { top: 8%; left: -42px; transform: rotate(-12deg); }
+    .deco-piece.right { bottom: 4%; right: -34px; transform: rotate(10deg); }
+    .deco-piece path { fill: currentColor; }
 
-    /* ── Contenedor principal ── */
     .container {
-      position: relative; z-index: 1;
-      width: 100%; max-width: 440px;
-      animation: fadeIn 0.6s ease;
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 980px;
+      display: grid;
+      grid-template-columns: minmax(280px, 0.9fr) minmax(360px, 440px);
+      border: 1px solid var(--line);
+      background: linear-gradient(135deg, rgba(23,19,13,0.94), rgba(8,7,5,0.98));
+      box-shadow: 0 34px 90px rgba(0,0,0,0.68), inset 0 0 0 1px rgba(255,255,255,0.035);
+      animation: fadeIn 0.55s ease;
     }
-    @keyframes fadeIn { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
 
-    /* ── Logo ── */
-    .logo-wrap { text-align: center; margin-bottom: 36px; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .logo-wrap {
+      position: relative;
+      min-height: 610px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 42px;
+      overflow: hidden;
+      border-right: 1px solid var(--line);
+      background:
+        linear-gradient(180deg, rgba(0,0,0,0.12), rgba(0,0,0,0.62)),
+        radial-gradient(ellipse at 50% 18%, rgba(226,185,96,0.12), transparent 25rem),
+        linear-gradient(135deg, #211A12, #080705);
+    }
+
+    .logo-wrap::before {
+      content: "";
+      position: absolute;
+      inset: 18px;
+      border: 1px solid rgba(200,152,60,0.18);
+      pointer-events: none;
+    }
+
+    .logo-wrap::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: 54px;
+      width: 260px;
+      height: 260px;
+      transform: translateX(-50%) perspective(600px) rotateX(58deg);
+      border: 2px solid rgba(200,152,60,0.28);
+      background-size: 25% 25%;
+      background-image:
+        linear-gradient(45deg, rgba(201,183,156,0.55) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(201,183,156,0.55) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(201,183,156,0.55) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(201,183,156,0.55) 75%);
+      background-position: 0 0, 0 0, 65px 65px, 65px 65px;
+      background-color: #5C321B;
+      opacity: 0.38;
+      box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+    }
+
+    .logo-main,
+    .access-note {
+      position: relative;
+      z-index: 1;
+    }
 
     .logo-flag {
-      display: flex; align-items: center; justify-content: center; gap: 6px;
-      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 16px;
     }
-    .flag-stripe { height: 3px; width: 32px; border-radius: 2px; }
-    .flag-stripe.blue { background: #1A3A6B; }
-    .flag-stripe.red  { background: #C0392B; }
+
+    .flag-stripe { height: 4px; width: 34px; }
+    .flag-stripe.blue { background: var(--blue); }
+    .flag-stripe.white { background: #F2EEE4; }
+    .flag-stripe.red { background: var(--red); }
 
     .logo-title {
-      font-family: 'Cinzel', serif;
-      font-size: 28px; font-weight: 900;
-      color: var(--gold);
-      letter-spacing: 6px;
-      text-shadow: 0 0 40px rgba(212,175,55,0.4);
+      font-family: var(--title);
+      font-size: clamp(42px, 5vw, 72px);
+      font-weight: 900;
+      line-height: 0.92;
+      letter-spacing: 3px;
+      color: #F0DCA9;
+      text-shadow: 0 2px 0 #050403, 0 0 42px rgba(200,152,60,0.26);
     }
 
     .logo-sub {
-      font-size: 10px; letter-spacing: 5px;
-      color: var(--text-dim); margin-top: 4px;
-      font-weight: 500;
+      margin-top: 14px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 4px;
+      color: var(--gold-2);
+      text-transform: uppercase;
     }
 
-    /* ── Card ── */
+    .access-note p {
+      max-width: 360px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.8;
+    }
+
+    .security-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 18px;
+      color: rgba(238,229,213,0.58);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
+    }
+
+    .security-list span {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .security-list span::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border: 1px solid var(--gold);
+      transform: rotate(45deg);
+    }
+
     .card {
-      background: var(--surface);
-      border: 1px solid rgba(212,175,55,0.15);
-      border-radius: 20px;
-      padding: 36px 32px;
-      box-shadow: 0 0 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(212,175,55,0.05) inset;
+      position: relative;
+      display: flex;
+      align-items: center;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.028), transparent 32%),
+        linear-gradient(135deg, rgba(13,11,8,0.98), rgba(6,5,4,0.98));
+      padding: 42px 38px;
+      box-shadow: inset 14px 0 30px rgba(0,0,0,0.24);
     }
 
-    /* ── Tabs ── */
+    .card::before,
+    .card::after {
+      content: "";
+      position: absolute;
+      right: 18px;
+      width: 34px;
+      height: 34px;
+      border-color: var(--gold);
+      opacity: 0.45;
+      pointer-events: none;
+    }
+    .card::before { top: 18px; border-top: 1px solid; border-right: 1px solid; }
+    .card::after { bottom: 18px; border-bottom: 1px solid; border-right: 1px solid; }
+
+    .card > div { width: 100%; }
+
     .tabs {
-      display: grid; grid-template-columns: 1fr 1fr;
-      background: var(--surface2);
-      border-radius: 12px; padding: 4px;
-      margin-bottom: 28px;
-      border: 1px solid rgba(212,175,55,0.1);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      padding: 4px;
+      margin-bottom: 24px;
+      background: rgba(0,0,0,0.24);
+      border: 1px solid rgba(200,152,60,0.18);
     }
 
     .tab {
-      padding: 10px; text-align: center;
-      font-family: 'Cinzel', serif;
-      font-size: 11px; font-weight: 600;
-      letter-spacing: 2px; cursor: pointer;
-      border-radius: 9px; border: none;
-      background: transparent; color: var(--text-dim);
-      transition: all 0.25s;
+      min-height: 40px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--title);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: color 220ms ease, background 220ms ease, box-shadow 220ms ease;
     }
+
+    .tab:hover { color: var(--gold-2); }
 
     .tab.active {
-      background: linear-gradient(135deg, var(--gold), #8B6914);
       color: #0A0A0A;
-      box-shadow: 0 2px 12px rgba(212,175,55,0.3);
+      background: linear-gradient(180deg, #E2B960, #B9842C 60%, #7A5521);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 4px 18px rgba(200,152,60,0.2);
     }
 
-    /* ── Form ── */
-    .form { display: flex; flex-direction: column; gap: 14px; }
+    .form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
 
-    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
 
     .form-label {
-      font-size: 10px; letter-spacing: 3px;
-      color: var(--text-dim); font-weight: 600;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 2px;
       text-transform: uppercase;
     }
 
     .form-input {
       width: 100%;
-      padding: 12px 16px;
-      background: var(--surface2);
-      border: 1px solid rgba(212,175,55,0.15);
-      border-radius: 10px;
-      color: var(--text);
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 15px; font-weight: 500;
+      min-height: 44px;
+      padding: 12px 14px;
+      border: 1px solid rgba(200,152,60,0.18);
+      background: rgba(0,0,0,0.28);
+      color: var(--warm);
+      font-family: var(--body);
+      font-size: 14px;
+      font-weight: 600;
       outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
+      transition: border-color 220ms ease, box-shadow 220ms ease, background 220ms ease;
     }
 
     .form-input:focus {
       border-color: var(--gold);
-      box-shadow: 0 0 0 3px rgba(212,175,55,0.1);
+      background: rgba(0,0,0,0.38);
+      box-shadow: 0 0 0 3px rgba(200,152,60,0.10);
     }
 
-    .form-input::placeholder { color: rgba(255,255,255,0.2); }
+    .form-input::placeholder { color: rgba(238,229,213,0.25); }
 
-    /* ── Select de país ── */
-    .form-input.select-country {
-      cursor: pointer; appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23D4AF37' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    .select-country {
+      appearance: none;
+      cursor: pointer;
+      padding-right: 38px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23C8983C' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
       background-repeat: no-repeat;
       background-position: right 14px center;
-      padding-right: 36px;
     }
 
-    .form-input.select-country option { background: #13131F; }
+    .select-country option { background: #13100D; }
 
-    /* ── Error / Success ── */
     .msg {
-      font-size: 12px; letter-spacing: 1px;
-      text-align: center; padding: 10px 14px;
-      border-radius: 8px; min-height: 20px;
-      display: none; font-weight: 600;
+      display: none;
+      min-height: 20px;
+      margin-bottom: 14px;
+      padding: 10px 12px;
+      border: 1px solid rgba(200,152,60,0.16);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.5;
+      text-align: center;
     }
-    .msg.error   { display: block; background: rgba(192,57,43,0.15); color: #e74c3c; border: 1px solid rgba(192,57,43,0.3); }
-    .msg.success { display: block; background: rgba(39,174,96,0.12); color: #2ecc71; border: 1px solid rgba(39,174,96,0.25); }
 
-    /* ── Botón principal ── */
-    .btn-main {
-      width: 100%; padding: 14px;
-      background: linear-gradient(135deg, var(--gold), #8B6914);
-      border: none; border-radius: 50px;
+    .msg.error {
+      display: block;
+      border-color: rgba(192,57,43,0.34);
+      background: rgba(192,57,43,0.12);
+      color: #ECA7A0;
+    }
+
+    .msg.success {
+      display: block;
+      border-color: rgba(74,222,128,0.28);
+      background: rgba(74,222,128,0.09);
+      color: #9BE6B7;
+    }
+
+    .btn-main,
+    .btn-play {
+      width: 100%;
+      min-height: 46px;
+      padding: 12px 16px;
+      border: 1px solid rgba(226,185,96,0.58);
+      background: linear-gradient(180deg, #E2B960, #B9842C 60%, #7A5521);
       color: #0A0A0A;
-      font-family: 'Cinzel', serif;
-      font-size: 12px; font-weight: 700;
-      letter-spacing: 3px; text-transform: uppercase;
+      font-family: var(--title);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 2.4px;
+      text-transform: uppercase;
       cursor: pointer;
-      transition: all 0.25s;
-      box-shadow: 0 4px 20px rgba(212,175,55,0.25);
-      margin-top: 4px;
+      transition: transform 220ms ease, box-shadow 240ms ease, border-color 240ms ease;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.24), 0 4px 20px rgba(200,152,60,0.25);
     }
 
-    .btn-main:hover {
+    .btn-main:hover,
+    .btn-play:hover {
       transform: translateY(-1px);
-      box-shadow: 0 6px 28px rgba(212,175,55,0.4);
+      border-color: rgba(226,185,96,0.88);
+      box-shadow: 0 0 0 1px rgba(200,152,60,0.18), 0 8px 30px rgba(200,152,60,0.34);
     }
-
-    .btn-main:active { transform: translateY(0); }
 
     .btn-main:disabled {
-      opacity: 0.5; cursor: not-allowed;
-      transform: none; box-shadow: none;
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
     }
 
-    /* ── Divider ── */
-    .divider {
-      display: flex; align-items: center; gap: 12px;
-      margin: 4px 0; color: var(--text-dim);
-      font-size: 10px; letter-spacing: 2px;
-    }
-    .divider::before, .divider::after {
-      content: ''; flex: 1; height: 1px;
-      background: rgba(212,175,55,0.1);
-    }
-
-    /* ── Guest link ── */
-    .guest-link {
-      text-align: center; margin-top: 20px;
-      font-size: 12px; color: var(--text-dim);
-    }
-
-    .guest-link a {
-      color: rgba(212,175,55,0.6);
-      text-decoration: none; font-weight: 600;
-      letter-spacing: 1px;
-      transition: color 0.2s;
-    }
-
-    .guest-link a:hover { color: var(--gold); }
-
-    /* ── Spinner ── */
     .spinner {
-      width: 16px; height: 16px;
-      border: 2px solid rgba(10,10,10,0.3);
+      width: 15px;
+      height: 15px;
+      display: inline-block;
+      margin-right: 7px;
+      border: 2px solid rgba(10,10,10,0.28);
       border-top-color: #0A0A0A;
       border-radius: 50%;
+      vertical-align: middle;
       animation: spin 0.7s linear infinite;
-      display: inline-block; vertical-align: middle;
-      margin-right: 6px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Panel post-login (oculto inicialmente) ── */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--faint);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    .divider::before,
+    .divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: rgba(200,152,60,0.12);
+    }
+
+    .guest-link {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .guest-link a,
+    .inline-link {
+      color: rgba(226,185,96,0.75);
+      text-decoration: none;
+      font: inherit;
+      letter-spacing: 1px;
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+      transition: color 200ms ease;
+    }
+
+    .guest-link a:hover,
+    .inline-link:hover { color: var(--gold-2); }
+
+    .recovery-entry {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 12px 14px;
+      border: 1px solid rgba(200,152,60,0.18);
+      background: rgba(200,152,60,0.055);
+    }
+
+    .recovery-entry span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.45;
+      text-align: left;
+    }
+
+    .recovery-entry .inline-link {
+      flex-shrink: 0;
+      color: var(--gold-2);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .recovery-box {
+      display: none;
+      padding: 12px 14px;
+      border: 1px solid rgba(200,152,60,0.24);
+      background: rgba(200,152,60,0.08);
+      color: var(--text);
+      font-size: 12px;
+      line-height: 1.5;
+      letter-spacing: 0.4px;
+    }
+
+    .recovery-box.show { display: block; }
+
+    .recovery-code {
+      display: block;
+      margin-top: 8px;
+      color: var(--gold-2);
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 4px;
+      user-select: all;
+    }
+
+    .reset-note {
+      padding: 11px 12px;
+      border-left: 2px solid rgba(200,152,60,0.46);
+      background: rgba(0,0,0,0.18);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 650;
+      line-height: 1.55;
+    }
+
     .logged-in-panel {
-      display: none; flex-direction: column;
-      align-items: center; gap: 16px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
       text-align: center;
     }
 
     .user-avatar {
-      width: 64px; height: 64px;
-      background: linear-gradient(135deg, var(--gold), #8B6914);
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-family: 'Cinzel', serif;
-      font-size: 26px; font-weight: 900; color: #0A0A0A;
-      box-shadow: 0 0 24px rgba(212,175,55,0.3);
+      width: 68px;
+      height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border: 1px solid rgba(226,185,96,0.42);
+      background: linear-gradient(135deg, var(--gold-2), #8B6520);
+      color: #0A0A0A;
+      font-family: var(--title);
+      font-size: 28px;
+      font-weight: 900;
+      box-shadow: 0 0 24px rgba(200,152,60,0.24);
+    }
+
+    .user-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
 
     .user-name-display {
-      font-family: 'Cinzel', serif;
-      font-size: 20px; font-weight: 700; color: var(--gold);
+      color: var(--gold-2);
+      font-family: var(--title);
+      font-size: 21px;
+      font-weight: 800;
+      letter-spacing: 1px;
     }
 
     .user-elo {
-      font-size: 13px; color: var(--text-dim);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
       letter-spacing: 3px;
+      text-transform: uppercase;
     }
-
-    .btn-play {
-      width: 100%; padding: 14px;
-      background: linear-gradient(135deg, var(--gold), #8B6914);
-      border: none; border-radius: 50px;
-      color: #0A0A0A;
-      font-family: 'Cinzel', serif;
-      font-size: 13px; font-weight: 700;
-      letter-spacing: 3px; cursor: pointer;
-      transition: all 0.25s;
-      box-shadow: 0 4px 20px rgba(212,175,55,0.25);
-    }
-
-    .btn-play:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(212,175,55,0.4); }
 
     .btn-logout {
-      background: transparent; border: 1px solid rgba(212,175,55,0.2);
-      color: var(--text-dim); border-radius: 50px;
-      padding: 9px 20px; font-family: 'Rajdhani', sans-serif;
-      font-size: 12px; font-weight: 600; letter-spacing: 2px;
-      cursor: pointer; transition: all 0.2s;
+      min-height: 38px;
+      padding: 9px 20px;
+      border: 1px solid rgba(200,152,60,0.22);
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--body);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: border-color 200ms ease, color 200ms ease;
     }
-    .btn-logout:hover { border-color: var(--gold); color: var(--gold); }
+    .btn-logout:hover { border-color: var(--gold); color: var(--gold-2); }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 840px) {
+      .container { grid-template-columns: 1fr; max-width: 500px; }
+      .logo-wrap {
+        min-height: 270px;
+        padding: 30px;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .logo-wrap::after { width: 190px; height: 190px; bottom: 18px; opacity: 0.25; }
+      .logo-title { font-size: 40px; }
+      .card { padding: 32px 24px; }
+    }
+
+    @media (max-width: 480px) {
+      body { padding: 16px; align-items: flex-start; }
+      .logo-wrap { min-height: 230px; padding: 24px; }
+      .card { padding: 28px 18px; }
+      .tabs { grid-template-columns: 1fr; }
+      .logo-title { font-size: 34px; }
+    }
   </style>
 </head>
 
 <body>
-
   <div class="bg-layer"></div>
   <div class="grid-lines"></div>
-  <div class="deco-piece">♛</div>
-  <div class="deco-piece">♞</div>
-  <div class="deco-piece">♜</div>
+  <svg class="deco-piece left" viewBox="0 0 48 48" aria-hidden="true"><path d="M16 6h16v7l-5 5 6 20H15l6-20-5-5V6Zm5 5v2l5 6-4 14h4l-4-14 5-6v-2h-6ZM11 40h26v4H11v-4Z"/></svg>
+  <svg class="deco-piece right" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 4 38 12v11c0 10-6 18-14 21C16 41 10 33 10 23V12L24 4Zm0 6-8 5v8c0 6 3 12 8 15 5-3 8-9 8-15v-8l-8-5Zm-5 13 3-3 3 3 5-6 3 3-8 10-6-7Z"/></svg>
 
   <div class="container">
-
-    <!-- Logo -->
-    <div class="logo-wrap">
-      <div class="logo-flag">
-        <div class="flag-stripe blue"></div>
-        <div class="flag-stripe red"></div>
-        <div class="flag-stripe blue"></div>
+    <aside class="logo-wrap">
+      <div class="logo-main">
+        <div class="logo-flag" aria-hidden="true">
+          <div class="flag-stripe blue"></div>
+          <div class="flag-stripe white"></div>
+          <div class="flag-stripe red"></div>
+        </div>
+        <div class="logo-title">OZAMA<br>CHESS</div>
+        <div class="logo-sub">Dominican Heritage Edition</div>
       </div>
-      <div class="logo-title">OZAMA CHESS ♟</div>
-      <div class="logo-sub">DOMINICAN HERITAGE EDITION</div>
-    </div>
 
-    <!-- Card -->
-    <div class="card">
+      <div class="access-note">
+        <p>Tu perfil guarda ELO, historial, amigos y progreso competitivo. Entra con calma: la partida empieza cuando el tablero se abre.</p>
+        <div class="security-list">
+          <span>Sesion verificada</span>
+          <span>Contrasena protegida</span>
+          <span>Recuperacion por codigo</span>
+        </div>
+      </div>
+    </aside>
 
-      <!-- Panel logueado -->
+    <main class="card">
       <div class="logged-in-panel" id="logged-in-panel">
         <div class="user-avatar" id="user-avatar">?</div>
-        <div class="user-name-display" id="user-name-display">—</div>
-        <div class="user-elo" id="user-elo">ELO —</div>
-        <button class="btn-play" onclick="goToLobby()">♟ Jugar Ahora</button>
-        <button class="btn-logout" onclick="logout()">Cerrar Sesión</button>
+        <div class="user-name-display" id="user-name-display">-</div>
+        <div class="user-elo" id="user-elo">ELO -</div>
+        <button class="btn-play" type="button" onclick="goToLobby()">Jugar Ahora</button>
+        <button class="btn-logout" type="button" onclick="logout()">Cerrar sesion</button>
       </div>
 
-      <!-- Panel auth -->
       <div id="auth-panel">
-
-        <!-- Tabs -->
         <div class="tabs">
-          <button class="tab active" id="tab-login"    onclick="switchTab('login')">Iniciar Sesión</button>
-          <button class="tab"        id="tab-register" onclick="switchTab('register')">Registrarse</button>
+          <button class="tab active" id="tab-login" type="button" onclick="switchTab('login')">Iniciar sesion</button>
+          <button class="tab" id="tab-register" type="button" onclick="switchTab('register')">Registrarse</button>
         </div>
 
-        <!-- Mensaje -->
         <div class="msg" id="msg"></div>
 
-        <!-- LOGIN -->
         <div class="form" id="form-login">
           <div class="form-group">
-            <label class="form-label">Usuario o Email</label>
-            <input class="form-input" id="login-identifier" type="text" placeholder="tu_usuario" autocomplete="username"/>
+            <label class="form-label" for="login-identifier">Usuario o email</label>
+            <input class="form-input" id="login-identifier" type="text" placeholder="tu_usuario" autocomplete="username" maxlength="80"/>
           </div>
           <div class="form-group">
-            <label class="form-label">Contraseña</label>
-            <input class="form-input" id="login-password" type="password" placeholder="••••••••" autocomplete="current-password"/>
+            <label class="form-label" for="login-password">Contrasena</label>
+            <input class="form-input" id="login-password" type="password" placeholder="Minimo 6 caracteres" autocomplete="current-password" minlength="6" maxlength="128"/>
           </div>
-          <button class="btn-main" id="btn-login" onclick="doLogin()">Entrar</button>
-          <div class="divider">o</div>
-          <div class="guest-link">
-            <a href="/lobby.html">Continuar sin cuenta →</a>
+          <button class="btn-main" id="btn-login" type="button" onclick="doLogin()">Entrar</button>
+          <div class="recovery-entry">
+            <span>Si olvidaste tu contrasena, usa el codigo de recuperacion de tu cuenta.</span>
+            <button class="inline-link" type="button" onclick="showResetForm()">Recuperar</button>
           </div>
         </div>
 
-        <!-- REGISTER -->
         <div class="form hidden" id="form-register">
           <div class="form-group">
-            <label class="form-label">Nombre de Usuario</label>
-            <input class="form-input" id="reg-username" type="text" placeholder="ozama_king" maxlength="20" autocomplete="username"/>
+            <label class="form-label" for="reg-username">Nombre de usuario</label>
+            <input class="form-input" id="reg-username" type="text" placeholder="ozama_king" minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}" autocomplete="username"/>
           </div>
           <div class="form-group">
-            <label class="form-label">Email</label>
-            <input class="form-input" id="reg-email" type="email" placeholder="tu@email.com" autocomplete="email"/>
+            <label class="form-label" for="reg-email">Email</label>
+            <input class="form-input" id="reg-email" type="email" placeholder="tu@email.com" autocomplete="email" maxlength="120"/>
           </div>
           <div class="form-group">
-            <label class="form-label">Contraseña</label>
-            <input class="form-input" id="reg-password" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"/>
+            <label class="form-label" for="reg-password">Contrasena</label>
+            <input class="form-input" id="reg-password" type="password" placeholder="Minimo 6 caracteres" autocomplete="new-password" minlength="6" maxlength="128"/>
           </div>
           <div class="form-group">
-            <label class="form-label">País</label>
+            <label class="form-label" for="reg-country">Pais</label>
             <select class="form-input select-country" id="reg-country">
-              <option value="DO">🇩🇴 República Dominicana</option>
-              <option value="US">🇺🇸 Estados Unidos</option>
-              <option value="ES">🇪🇸 España</option>
-              <option value="MX">🇲🇽 México</option>
-              <option value="CO">🇨🇴 Colombia</option>
-              <option value="VE">🇻🇪 Venezuela</option>
-              <option value="PR">🇵🇷 Puerto Rico</option>
-              <option value="CU">🇨🇺 Cuba</option>
-              <option value="HT">🇭🇹 Haití</option>
-              <option value="BR">🇧🇷 Brasil</option>
-              <option value="AR">🇦🇷 Argentina</option>
-              <option value="FR">🇫🇷 Francia</option>
-              <option value="DE">🇩🇪 Alemania</option>
-              <option value="IT">🇮🇹 Italia</option>
-              <option value="PT">🇵🇹 Portugal</option>
-              <option value="GB">🇬🇧 Reino Unido</option>
-              <option value="CA">🇨🇦 Canadá</option>
-              <option value="OTHER">🌍 Otro</option>
+              <option value="DO">DO - Republica Dominicana</option>
+              <option value="US">US - Estados Unidos</option>
+              <option value="ES">ES - Espana</option>
+              <option value="MX">MX - Mexico</option>
+              <option value="CO">CO - Colombia</option>
+              <option value="VE">VE - Venezuela</option>
+              <option value="PR">PR - Puerto Rico</option>
+              <option value="CU">CU - Cuba</option>
+              <option value="HT">HT - Haiti</option>
+              <option value="BR">BR - Brasil</option>
+              <option value="AR">AR - Argentina</option>
+              <option value="FR">FR - Francia</option>
+              <option value="DE">DE - Alemania</option>
+              <option value="IT">IT - Italia</option>
+              <option value="PT">PT - Portugal</option>
+              <option value="GB">GB - Reino Unido</option>
+              <option value="CA">CA - Canada</option>
+              <option value="OTHER">Otro</option>
             </select>
           </div>
-          <button class="btn-main" id="btn-register" onclick="doRegister()">Crear Cuenta</button>
-          <div class="divider">o</div>
-          <div class="guest-link">
-            <a href="/lobby.html">Continuar sin cuenta →</a>
-          </div>
+          <div class="recovery-box" id="recovery-box"></div>
+          <button class="btn-main" id="btn-register" type="button" onclick="doRegister()">Crear cuenta</button>
         </div>
 
+        <div class="form hidden" id="form-reset">
+          <div class="reset-note">
+            Escribe tu usuario o email, el codigo de recuperacion que guardaste al registrarte y una nueva contrasena.
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="reset-identifier">Usuario o email</label>
+            <input class="form-input" id="reset-identifier" type="text" placeholder="tu_usuario" autocomplete="username" maxlength="80"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="reset-code">Codigo de recuperacion</label>
+            <input class="form-input" id="reset-code" type="text" placeholder="AB12CD34" maxlength="16" autocomplete="one-time-code" style="letter-spacing:4px;text-transform:uppercase;"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="reset-password">Nueva contrasena</label>
+            <input class="form-input" id="reset-password" type="password" placeholder="Minimo 6 caracteres" autocomplete="new-password" minlength="6" maxlength="128"/>
+          </div>
+          <button class="btn-main" id="btn-reset" type="button" onclick="doResetPassword()">Actualizar contrasena</button>
+          <div class="guest-link">
+            <button class="inline-link" type="button" onclick="switchTab('login')">Volver a iniciar sesion</button>
+          </div>
+        </div>
       </div>
-    </div>
-
+    </main>
   </div>
 
   <script>
-
-    // ── Helpers ────────────────────────────────────────────────
     function showMsg(text, type = 'error') {
       const el = document.getElementById('msg');
       el.textContent = text;
@@ -427,27 +723,50 @@
       el.className = 'msg';
     }
 
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[char]));
+    }
+
     function setLoading(btnId, loading) {
       const btn = document.getElementById(btnId);
+      const labels = {
+        'btn-login': 'Entrar',
+        'btn-register': 'Crear cuenta',
+        'btn-reset': 'Actualizar contrasena',
+      };
       if (loading) {
         btn.disabled = true;
-        btn.innerHTML = `<span class="spinner"></span> Procesando…`;
+        btn.innerHTML = '<span class="spinner"></span> Procesando';
       } else {
         btn.disabled = false;
-        btn.textContent = btnId === 'btn-login' ? 'Entrar' : 'Crear Cuenta';
+        btn.textContent = labels[btnId] || 'Continuar';
       }
     }
 
-    // ── Tabs ───────────────────────────────────────────────────
     function switchTab(tab) {
       clearMsg();
+      const registerBtn = document.getElementById('btn-register');
+      registerBtn.textContent = 'Crear cuenta';
+      registerBtn.onclick = doRegister;
       document.getElementById('tab-login').classList.toggle('active', tab === 'login');
       document.getElementById('tab-register').classList.toggle('active', tab === 'register');
       document.getElementById('form-login').classList.toggle('hidden', tab !== 'login');
       document.getElementById('form-register').classList.toggle('hidden', tab !== 'register');
+      document.getElementById('form-reset').classList.add('hidden');
+      document.getElementById('recovery-box')?.classList.remove('show');
     }
 
-    // ── Guardar sesión ─────────────────────────────────────────
+    function showResetForm() {
+      clearMsg();
+      document.getElementById('tab-login').classList.remove('active');
+      document.getElementById('tab-register').classList.remove('active');
+      document.getElementById('form-login').classList.add('hidden');
+      document.getElementById('form-register').classList.add('hidden');
+      document.getElementById('form-reset').classList.remove('hidden');
+    }
+
     function saveSession(token, user) {
       localStorage.setItem('ozama-token', token);
       localStorage.setItem('ozama-user', JSON.stringify(user));
@@ -455,7 +774,7 @@
 
     function getSession() {
       const token = localStorage.getItem('ozama-token');
-      const user  = JSON.parse(localStorage.getItem('ozama-user') || 'null');
+      const user = JSON.parse(localStorage.getItem('ozama-user') || 'null');
       return { token, user };
     }
 
@@ -471,12 +790,10 @@
       window.location.href = '/lobby.html';
     }
 
-    // ── Mostrar panel si ya hay sesión ─────────────────────────
     function checkExistingSession() {
       const { token, user } = getSession();
       if (!token || !user) return;
 
-      // Verificar que el token sigue válido
       fetch('/api/user/me', {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -490,26 +807,27 @@
       const panel = document.getElementById('logged-in-panel');
       panel.style.display = 'flex';
 
-      const initial = (user.username || '?')[0].toUpperCase();
-      document.getElementById('user-avatar').textContent = initial;
-      document.getElementById('user-name-display').textContent = user.username;
+      const initial = escapeHtml((user.username || '?')[0].toUpperCase());
+      const avatar = document.getElementById('user-avatar');
+      if (user.avatarImage) avatar.innerHTML = `<img src="${escapeHtml(user.avatarImage)}" alt="">`;
+      else avatar.textContent = initial;
+      document.getElementById('user-name-display').textContent = user.username || 'Jugador';
       document.getElementById('user-elo').textContent = `ELO ${user.elo ?? 1200}`;
     }
 
-    // ── LOGIN ──────────────────────────────────────────────────
     async function doLogin() {
       clearMsg();
       const identifier = document.getElementById('login-identifier').value.trim();
-      const password   = document.getElementById('login-password').value;
+      const password = document.getElementById('login-password').value;
 
       if (!identifier || !password) {
-        showMsg('Completa todos los campos.'); return;
+        showMsg('Completa todos los campos.');
+        return;
       }
 
       setLoading('btn-login', true);
-
       try {
-        const res  = await fetch('/api/auth/login', {
+        const res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ identifier, password }),
@@ -517,39 +835,43 @@
         const data = await res.json();
 
         if (!res.ok) {
-          showMsg(data.error || 'Error al iniciar sesión.'); return;
+          showMsg(data.error || 'Error al iniciar sesion.');
+          return;
         }
 
         saveSession(data.token, data.user);
-        showMsg('¡Bienvenido de vuelta!', 'success');
-        setTimeout(() => showLoggedIn(data.user), 600);
-
+        showMsg('Bienvenido de vuelta.', 'success');
+        setTimeout(() => showLoggedIn(data.user), 500);
       } catch (err) {
-        showMsg('Sin conexión con el servidor.');
+        showMsg('Sin conexion con el servidor.');
       } finally {
         setLoading('btn-login', false);
       }
     }
 
-    // ── REGISTER ───────────────────────────────────────────────
     async function doRegister() {
       clearMsg();
       const username = document.getElementById('reg-username').value.trim();
-      const email    = document.getElementById('reg-email').value.trim();
+      const email = document.getElementById('reg-email').value.trim().toLowerCase();
       const password = document.getElementById('reg-password').value;
-      const country  = document.getElementById('reg-country').value;
+      const country = document.getElementById('reg-country').value;
 
       if (!username || !email || !password) {
-        showMsg('Completa todos los campos.'); return;
+        showMsg('Completa todos los campos.');
+        return;
+      }
+      if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) {
+        showMsg('El usuario solo puede usar letras, numeros y guion bajo.');
+        return;
       }
       if (password.length < 6) {
-        showMsg('La contraseña debe tener al menos 6 caracteres.'); return;
+        showMsg('La contrasena debe tener al menos 6 caracteres.');
+        return;
       }
 
       setLoading('btn-register', true);
-
       try {
-        const res  = await fetch('/api/auth/register', {
+        const res = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, email, password, country }),
@@ -557,32 +879,82 @@
         const data = await res.json();
 
         if (!res.ok) {
-          showMsg(data.error || 'Error al registrarse.'); return;
+          showMsg(data.error || 'Error al registrarse.');
+          return;
         }
 
         saveSession(data.token, data.user);
-        showMsg('¡Cuenta creada! Bienvenido a Ozama Chess.', 'success');
-        setTimeout(() => showLoggedIn(data.user), 800);
-
+        const recoveryBox = document.getElementById('recovery-box');
+        if (data.recoveryCode && recoveryBox) {
+          recoveryBox.textContent = 'Guarda este codigo. Lo necesitaras si olvidas tu contrasena.';
+          const code = document.createElement('span');
+          code.className = 'recovery-code';
+          code.textContent = data.recoveryCode;
+          recoveryBox.appendChild(code);
+          recoveryBox.classList.add('show');
+        }
+        showMsg('Cuenta creada. Guarda tu codigo de recuperacion antes de salir.', 'success');
+        const btn = document.getElementById('btn-register');
+        btn.textContent = 'Entrar al lobby';
+        btn.onclick = goToLobby;
       } catch (err) {
-        showMsg('Sin conexión con el servidor.');
+        showMsg('Sin conexion con el servidor.');
       } finally {
-        setLoading('btn-register', false);
+        const btn = document.getElementById('btn-register');
+        if (btn.onclick !== goToLobby) setLoading('btn-register', false);
+        else btn.disabled = false;
       }
     }
 
-    // ── Enter key ──────────────────────────────────────────────
+    async function doResetPassword() {
+      clearMsg();
+      const identifier = document.getElementById('reset-identifier').value.trim();
+      const recoveryCode = document.getElementById('reset-code').value.trim().toUpperCase();
+      const newPassword = document.getElementById('reset-password').value;
+
+      if (!identifier || !recoveryCode || !newPassword) {
+        showMsg('Completa todos los campos.');
+        return;
+      }
+      if (newPassword.length < 6) {
+        showMsg('La nueva contrasena debe tener al menos 6 caracteres.');
+        return;
+      }
+
+      setLoading('btn-reset', true);
+      try {
+        const res = await fetch('/api/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier, recoveryCode, newPassword }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          showMsg(data.error || 'No se pudo actualizar la contrasena.');
+          return;
+        }
+
+        showMsg(data.message || 'Contrasena actualizada.', 'success');
+        document.getElementById('reset-password').value = '';
+        setTimeout(() => switchTab('login'), 900);
+      } catch (err) {
+        showMsg('Sin conexion con el servidor.');
+      } finally {
+        setLoading('btn-reset', false);
+      }
+    }
+
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Enter') return;
       const loginVisible = !document.getElementById('form-login').classList.contains('hidden');
+      const resetVisible = !document.getElementById('form-reset').classList.contains('hidden');
       if (loginVisible) doLogin();
+      else if (resetVisible) doResetPassword();
       else doRegister();
     });
 
-    // ── Init ───────────────────────────────────────────────────
     checkExistingSession();
-
   </script>
-
 </body>
 </html>

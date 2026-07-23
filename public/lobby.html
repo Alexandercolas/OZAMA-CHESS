@@ -4,618 +4,1143 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>OZAMA CHESS — Lobby</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-    body {
-      background: radial-gradient(ellipse at top, #1a1a1a 0%, #090909 100%);
-      color: white;
-      font-family: 'Segoe UI', Arial, sans-serif;
+    :root {
+      --gold:  #C8983C;
+      --gold2: #E8C06A;
+      --amber: #8B6520;
+      --carbon:#0D0B08;
+      --s1:    #131008;
+      --s2:    #1C1710;
+      --s3:    #252015;
+      --teja:  #7A3A2A;
+      --text:  #E9E4DA;
+      --dim:   rgba(233,228,218,0.45);
+      --ghost: rgba(233,228,218,0.14);
+      --ft:    'Cormorant Garamond', Georgia, serif;
+      --fb:    'Inter', sans-serif;
+      --fm:    'IBM Plex Mono', monospace;
+    }
+
+    html, body {
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 30px 20px;
+      background: var(--carbon);
+      color: var(--text);
+      font-family: var(--fb);
+      overflow-x: hidden;
     }
 
-    /* User bar */
-    .user-bar {
-      position: fixed; top: 0; left: 0; right: 0;
-      padding: 8px 20px;
-      background: rgba(10,10,15,0.95);
-      border-bottom: 1px solid rgba(212,175,55,0.2);
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 60% 50% at 50% 0%,    rgba(200,152,60,0.08) 0%, transparent 65%),
+        radial-gradient(ellipse 35% 60% at 0%   50%,   rgba(122,58,42,0.05) 0%, transparent 55%),
+        radial-gradient(ellipse 35% 60% at 100% 50%,   rgba(92,61,30,0.04)  0%, transparent 55%);
+    }
+
+    /* ── APP SHELL ── */
+    .app {
+      position: relative; z-index: 1;
+      display: grid;
+      grid-template-rows: 52px 1fr;
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    .hd {
       display: flex; align-items: center; justify-content: space-between;
-      font-size: 11px; letter-spacing: 1px; z-index: 100;
-    }
-    .user-bar-left { color: rgba(255,255,255,0.35); }
-    .user-bar-right { display: flex; align-items: center; gap: 12px; }
-    .user-bar-name { color: #D4AF37; font-weight: 700; letter-spacing: 2px; }
-    .user-bar-elo  { color: rgba(255,255,255,0.3); font-size: 10px; }
-    .user-bar a { color: rgba(212,175,55,0.5); text-decoration: none; font-size: 10px; transition: color 0.2s; }
-    .user-bar a:hover { color: #D4AF37; }
-
-    .logo {
-      font-size: 30px; font-weight: 900; color: #D4AF37;
-      letter-spacing: 7px;
-      text-shadow: 0 0 30px rgba(212,175,55,0.5);
-      text-align: center; margin-bottom: 6px;
-    }
-    .logo-sub {
-      font-size: 10px; color: rgba(255,255,255,0.2);
-      letter-spacing: 5px; text-align: center; margin-bottom: 36px;
+      padding: 0 24px;
+      background: linear-gradient(90deg, #0A0805, #17120A, #0A0805);
+      border-bottom: 1px solid rgba(200,152,60,0.18);
+      position: sticky; top: 0; z-index: 50;
     }
 
-    .cards {
-      display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
-      max-width: 960px; width: 100%;
+    .hd::after {
+      content: '';
+      position: absolute; bottom: 0; left: 8%; right: 8%; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(200,152,60,0.45), transparent);
     }
 
+    .hd-logo {
+      font-family: var(--ft);
+      font-size: 18px; font-weight: 700; color: var(--gold);
+      letter-spacing: 6px; text-transform: uppercase;
+      text-shadow: 0 0 24px rgba(200,152,60,0.2);
+      display: flex; align-items: baseline; gap: 8px;
+    }
+
+    .heritage-stripes {
+      display: inline-grid;
+      grid-template-columns: 14px 4px 14px;
+      gap: 3px;
+      width: 38px;
+      height: 4px;
+      vertical-align: middle;
+    }
+    .heritage-stripes::before,
+    .heritage-stripes::after,
+    .heritage-stripes span { content: ''; display: block; height: 4px; }
+    .heritage-stripes::before { background: #1A3A6B; }
+    .heritage-stripes span { background: #F2EEE4; }
+    .heritage-stripes::after { background: #C0392B; }
+
+    .hd-sub {
+      font-family: var(--fb); font-size: 7px;
+      letter-spacing: 3px; color: var(--ghost); text-transform: uppercase;
+    }
+
+    .hd-user {
+      display: flex; align-items: center; gap: 12px;
+    }
+
+    .hd-user-av {
+      width: 32px; height: 32px;
+      border: 1.5px solid var(--amber);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--ft); font-size: 15px; font-weight: 700;
+      color: var(--text); background: var(--s3); cursor: pointer;
+      overflow: hidden;
+    }
+    .hd-user-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    .hd-user-info { text-align: right; }
+
+    .hd-user-name {
+      font-family: var(--fb); font-size: 11px; font-weight: 700;
+      color: var(--gold); letter-spacing: 1px; text-transform: uppercase;
+    }
+
+    .hd-user-elo {
+      font-family: var(--fm); font-size: 10px; color: var(--ghost); letter-spacing: 1px;
+    }
+
+    .hd-logout {
+      padding: 5px 14px; border: 1px solid rgba(200,152,60,0.2);
+      background: transparent; color: var(--dim);
+      font-family: var(--fb); font-size: 9px; font-weight: 600;
+      letter-spacing: 2px; text-transform: uppercase;
+      cursor: pointer; transition: all 0.2s;
+    }
+
+    .hd-logout:hover { border-color: var(--teja); color: var(--teja); }
+
+    /* ── BODY ── */
+    .body {
+      display: grid;
+      grid-template-columns: 158px 1fr;
+    }
+
+    /* ── SIDEBAR ── */
+    .sb {
+      background: linear-gradient(180deg, #111008, #0C0A05);
+      border-right: 1px solid rgba(200,152,60,0.13);
+      display: flex; flex-direction: column;
+      position: sticky; top: 52px;
+      height: calc(100vh - 52px);
+      overflow: hidden;
+    }
+
+    .sb::before {
+      content: ''; position: absolute; inset: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 100% 30% at 50% 100%, rgba(122,58,42,0.1) 0%, transparent 55%),
+        radial-gradient(ellipse  80% 18% at 50% 0%,   rgba(200,152,60,0.04) 0%, transparent 50%);
+    }
+
+    .sb-nav {
+      position: relative; z-index: 1;
+      flex: 1; padding: 14px 0;
+      display: flex; flex-direction: column; overflow-y: auto;
+    }
+
+    .sb-div {
+      height: 1px; margin: 5px 14px;
+      background: linear-gradient(90deg, transparent, rgba(200,152,60,0.1), transparent);
+    }
+
+    .sb-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 14px; text-decoration: none; cursor: pointer;
+      transition: all 0.2s; border-left: 2px solid transparent;
+      position: relative;
+    }
+
+    .sb-item::before {
+      content: ''; position: absolute; inset: 0; background: transparent; transition: background 0.2s;
+    }
+
+    .sb-item:hover { border-left-color: rgba(200,152,60,0.42); }
+    .sb-item:hover::before { background: linear-gradient(90deg, rgba(200,152,60,0.07), transparent 80%); }
+    .sb-item.on { border-left-color: var(--gold); }
+    .sb-item.on::before { background: linear-gradient(90deg, rgba(200,152,60,0.1), transparent 80%); }
+
+    .sb-icon { width: 16px; height: 16px; display: grid; place-items: center; flex-shrink: 0; color: var(--ghost); position: relative; z-index: 1; transition: color 0.2s; }
+    .sb-icon svg { width: 16px; height: 16px; display: block; }
+    .sb-item:hover .sb-icon, .sb-item.on .sb-icon { color: var(--gold); }
+
+    .sb-txt { position: relative; z-index: 1; }
+    .sb-name { font-family: var(--fb); font-size: 9px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); display: block; transition: color 0.2s; }
+    .sb-desc { font-family: var(--fb); font-size: 7px; color: var(--ghost); letter-spacing: 1px; display: block; margin-top: 1px; }
+    .sb-item:hover .sb-name, .sb-item.on .sb-name { color: var(--gold2); }
+
+    .sb-foot {
+      position: relative; z-index: 1;
+      padding: 10px 14px; border-top: 1px solid rgba(200,152,60,0.07);
+      font-family: var(--ft); font-style: italic; font-size: 8px;
+      color: rgba(200,152,60,0.15); letter-spacing: 1px; text-align: center; line-height: 1.8;
+    }
+
+    /* ================================================================
+       MAIN LOBBY CONTENT
+       ================================================================ */
+
+    .main {
+      padding: 32px 40px 48px;
+      min-height: calc(100vh - 52px);
+      position: relative;
+    }
+
+    /* Title section */
+    .lobby-title {
+      text-align: center; margin-bottom: 36px;
+    }
+
+    .lobby-title h1 {
+      font-family: var(--ft);
+      font-size: 38px; font-weight: 700; color: var(--gold);
+      letter-spacing: 10px; text-transform: uppercase;
+      text-shadow: 0 0 40px rgba(200,152,60,0.25);
+      line-height: 1;
+    }
+
+    .lobby-title p {
+      font-family: var(--fb); font-size: 9px; font-weight: 400;
+      letter-spacing: 6px; color: var(--ghost); text-transform: uppercase;
+      margin-top: 6px;
+    }
+
+    .lobby-title-div {
+      display: flex; align-items: center; gap: 16px;
+      margin-top: 12px; justify-content: center;
+    }
+
+    .lobby-title-div::before, .lobby-title-div::after {
+      content: ''; width: 80px; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(200,152,60,0.3));
+    }
+    .lobby-title-div::after { background: linear-gradient(90deg, rgba(200,152,60,0.3), transparent); }
+
+    .lobby-title-div span {
+      font-family: var(--ft); font-style: italic;
+      font-size: 11px; color: rgba(200,152,60,0.3); letter-spacing: 2px;
+    }
+
+    /* ── CARDS ROW ── */
+    .cards-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    /* Colonial Card */
     .card {
-      background: #111118;
-      border: 1.5px solid rgba(212,175,55,0.2);
-      border-radius: 18px; padding: 28px 24px;
-      width: 280px;
-      display: flex; flex-direction: column; align-items: center; gap: 14px;
-      transition: border-color 0.25s;
+      min-height: 260px;
+      background:
+        linear-gradient(160deg, rgba(255,255,255,0.035), transparent 28%),
+        radial-gradient(ellipse at 50% 0%, rgba(200,152,60,0.10), transparent 58%),
+        linear-gradient(160deg, #1A1510, #0E0C08 74%);
+      border: 1px solid rgba(200,152,60,0.30);
+      padding: 30px 24px 22px;
+      position: relative;
+      transition: transform 0.25s, border-color 0.3s, box-shadow 0.3s;
+      display: flex; flex-direction: column; align-items: center;
+      gap: 14px;
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,0.03),
+        inset 0 18px 36px rgba(200,152,60,0.035),
+        0 14px 38px rgba(0,0,0,0.42);
+      overflow: hidden;
     }
-    .card:hover { border-color: rgba(212,175,55,0.4); }
 
-    /* Card destacada para Quick Match */
-    .card.card-featured {
-      border-color: rgba(212,175,55,0.5);
-      background: linear-gradient(160deg, #111118 60%, rgba(212,175,55,0.06));
-      box-shadow: 0 0 30px rgba(212,175,55,0.1);
+    .card > * { position: relative; z-index: 1; }
+
+    .card .btn-primary { margin-top: auto; }
+
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(200,152,60,0.68);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,0.04),
+        inset 0 18px 36px rgba(200,152,60,0.055),
+        0 18px 44px rgba(0,0,0,0.54),
+        0 0 28px rgba(200,152,60,0.11);
     }
 
-    .card-icon { font-size: 36px; }
+    /* Ornamental corners */
+    .card::before, .card::after {
+      content: '';
+      position: absolute;
+      width: 16px; height: 16px;
+    }
+
+    .card::before {
+      top: -1px; left: -1px;
+      border-top: 2px solid var(--gold);
+      border-left: 2px solid var(--gold);
+      box-shadow: -2px -2px 10px rgba(200,152,60,0.2);
+    }
+
+    .card::after {
+      bottom: -1px; right: -1px;
+      border-bottom: 2px solid var(--gold);
+      border-right: 2px solid var(--gold);
+      box-shadow: 2px 2px 10px rgba(200,152,60,0.2);
+    }
+
+    .card-corner-tr, .card-corner-bl {
+      position: absolute;
+      width: 16px; height: 16px;
+    }
+
+    .card-corner-tr {
+      top: -1px; right: -1px;
+      border-top: 2px solid var(--gold);
+      border-right: 2px solid var(--gold);
+    }
+
+    .card-corner-bl {
+      bottom: -1px; left: -1px;
+      border-bottom: 2px solid var(--gold);
+      border-left: 2px solid var(--gold);
+    }
+
+    /* Top accent line */
+    .card-top-line {
+      position: absolute; top: 0; left: 15%; right: 15%; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(200,152,60,0.4), transparent);
+    }
+
+    .card-icon {
+      font-size: 38px; line-height: 1;
+      color: var(--gold);
+      text-shadow: 0 0 18px rgba(200,152,60,0.34), 0 2px 0 rgba(0,0,0,0.55);
+      filter: sepia(0.35) saturate(1.2) drop-shadow(0 0 12px rgba(200,152,60,0.28));
+    }
+
+    .card-icon svg { width: 34px; height: 34px; display: block; margin: 0 auto; }
+
     .card-title {
-      font-size: 13px; font-weight: 800; letter-spacing: 3px;
-      color: #D4AF37; text-transform: uppercase; text-align: center;
+      font-family: var(--ft);
+      font-size: 17px; font-weight: 700; color: var(--gold2);
+      letter-spacing: 4px; text-transform: uppercase; text-align: center;
+      text-shadow: 0 0 16px rgba(200,152,60,0.2);
     }
+
     .card-desc {
-      font-size: 12px; color: rgba(255,255,255,0.35);
-      text-align: center; line-height: 1.6;
+      font-family: var(--fb); font-size: 11px; color: var(--dim);
+      text-align: center; line-height: 1.6; letter-spacing: 0.5px;
     }
 
-    .input-name {
-      width: 100%; padding: 10px 14px;
-      background: #1A1A28;
-      border: 1.5px solid rgba(212,175,55,0.2);
-      border-radius: 10px; color: white;
-      font-size: 14px; outline: none;
-    }
-    .input-name:focus { border-color: #D4AF37; }
-    .input-name[readonly] { opacity: 0.6; cursor: default; border-color: rgba(212,175,55,0.1); }
-
-    .input-code {
-      width: 100%; padding: 12px 14px;
-      background: #1A1A28;
-      border: 1.5px solid rgba(212,175,55,0.2);
-      border-radius: 10px; color: #D4AF37;
-      font-size: 20px; font-weight: 800; letter-spacing: 6px;
-      text-align: center; text-transform: uppercase; outline: none;
-    }
-    .input-code:focus { border-color: #D4AF37; }
-
-    .btn {
-      width: 100%; padding: 12px 20px; border: none;
-      border-radius: 50px; font-size: 12px; font-weight: 800;
-      letter-spacing: 2px; text-transform: uppercase; cursor: pointer;
-      transition: all 0.22s;
-    }
-    .btn-gold {
-      background: linear-gradient(135deg, #D4AF37, #8B6914); color: #0A0A0A;
-    }
-    .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212,175,55,0.4); }
-
-    .btn-outline {
-      background: transparent; color: #D4AF37;
-      border: 1.5px solid rgba(212,175,55,0.4);
-    }
-    .btn-outline:hover { border-color: #D4AF37; background: rgba(212,175,55,0.06); }
-
-    .btn-danger {
-      background: transparent; color: rgba(255,255,255,0.4);
-      border: 1.5px solid rgba(255,255,255,0.15);
-    }
-    .btn-danger:hover { color: #ef4444; border-color: #ef4444; }
-
-    .hidden { display: none !important; }
-
-    .code-display {
-      font-size: 28px; font-weight: 900; letter-spacing: 8px;
-      color: #D4AF37; text-shadow: 0 0 20px rgba(212,175,55,0.4);
-      text-align: center;
-    }
-
-    .waiting {
-      display: flex; align-items: center; gap: 8px;
-      font-size: 11px; color: rgba(255,255,255,0.35); letter-spacing: 2px;
-    }
-    .dot { width: 6px; height: 6px; background: #D4AF37; border-radius: 50%; animation: pulse 1.2s ease-in-out infinite; }
-    .dot:nth-child(2){ animation-delay:.2s; }
-    .dot:nth-child(3){ animation-delay:.4s; }
-    @keyframes pulse { 0%,100%{opacity:.2;} 50%{opacity:1;} }
-
-    .divider { width: 40px; height: 1px; background: linear-gradient(90deg,transparent,#D4AF37,transparent); }
-
-    .error-msg { font-size: 11px; color: #ef4444; letter-spacing: 1px; text-align: center; min-height: 16px; }
-
-    .invite-link {
-      width: 100%; padding: 9px 10px;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(212,175,55,0.18);
-      border-radius: 8px; color: rgba(255,255,255,0.55);
-      font-size: 11px; text-align: center; outline: none;
-    }
-
-    /* Matchmaking searching state */
-    .mm-searching {
-      display: flex; flex-direction: column; align-items: center; gap: 14px;
-      width: 100%;
-    }
-
-    .mm-spinner {
-      width: 48px; height: 48px;
-      border: 3px solid rgba(212,175,55,0.15);
-      border-top-color: #D4AF37;
-      border-radius: 50%;
-      animation: spin 0.9s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .mm-status {
-      font-size: 12px; color: rgba(255,255,255,0.5);
-      letter-spacing: 2px; text-align: center;
-    }
-
-    .mm-timer {
-      font-size: 28px; font-weight: 900; color: #D4AF37;
-      letter-spacing: 2px;
-    }
-
-    /* ELO badge */
+    /* Elo badge */
     .elo-badge {
-      background: rgba(212,175,55,0.1);
-      border: 1px solid rgba(212,175,55,0.25);
-      border-radius: 20px; padding: 4px 12px;
-      font-size: 11px; font-weight: 700;
-      color: #D4AF37; letter-spacing: 2px;
+      font-family: var(--fm); font-size: 11px; font-weight: 700;
+      color: var(--ghost); letter-spacing: 1px;
+      padding: 4px 14px;
+      border: 1px solid rgba(200,152,60,0.15);
+      background: rgba(200,152,60,0.04);
+      width: 100%; text-align: center;
     }
 
-    .local-link {
-      margin-top: 28px; font-size: 12px; color: rgba(255,255,255,0.2);
+    /* Input */
+    .card-input {
+      width: 100%; padding: 9px 14px;
+      background: rgba(7,6,5,0.74);
+      border: 1px solid rgba(200,152,60,0.22);
+      color: var(--text); font-family: var(--fb); font-size: 12px;
+      outline: none; transition: border-color 0.2s;
+      text-align: center; letter-spacing: 1px;
+      box-shadow: inset 0 1px 8px rgba(0,0,0,0.45);
     }
-    .local-link a { color: rgba(212,175,55,0.45); text-decoration: none; }
+
+    .card-input:focus {
+      border-color: rgba(200,152,60,0.62);
+      box-shadow: inset 0 1px 8px rgba(0,0,0,0.45), 0 0 0 2px rgba(200,152,60,0.08);
+    }
+    .card-input::placeholder { color: var(--ghost); letter-spacing: 2px; text-transform: uppercase; font-size: 10px; }
+
+    /* Primary button */
+    .btn-primary {
+      width: 100%; padding: 11px 20px;
+      background: linear-gradient(180deg, #D5A94E, #B9842C 58%, #7A5521);
+      border: 1px solid rgba(232,192,106,0.50); color: var(--carbon);
+      font-family: var(--fb); font-size: 11px; font-weight: 700;
+      letter-spacing: 3px; text-transform: uppercase;
+      cursor: pointer; transition: all 0.25s;
+      position: relative; overflow: hidden;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 16px rgba(0,0,0,0.38);
+    }
+
+    .btn-primary::before {
+      content: '';
+      position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+      transition: left 0.4s;
+    }
+
+    .btn-primary:hover {
+      border-color: rgba(232,192,106,0.85);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.30), 0 0 0 1px rgba(200,152,60,0.18), 0 5px 24px rgba(200,152,60,0.35);
+    }
+    .btn-primary:hover::before { left: 100%; }
+    .btn-primary:active { transform: translateY(1px); }
+
+    .btn-primary:disabled {
+      opacity: 0.4; cursor: not-allowed;
+      background: rgba(139,101,32,0.4);
+    }
+
+    /* Status text */
+    .card-status {
+      font-family: var(--fb); font-size: 10px; font-weight: 600;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: var(--gold); text-align: center;
+      min-height: 16px;
+    }
+
+    /* ── CHALLENGE SECTION ── */
+    .challenge-section {
+      background:
+        radial-gradient(ellipse at 14% 50%, rgba(200,152,60,0.10), transparent 36%),
+        linear-gradient(160deg, #1A1510, #0E0C08);
+      border: 1px solid rgba(200,152,60,0.28);
+      padding: 22px 28px;
+      position: relative;
+      display: flex; align-items: center; gap: 24px;
+      margin-bottom: 24px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03), 0 14px 34px rgba(0,0,0,0.35);
+    }
+
+    .challenge-section::before {
+      top: -1px; left: -1px; border-top: 2px solid var(--gold); border-left: 2px solid var(--gold);
+      content: ''; position: absolute; width: 16px; height: 16px;
+    }
+
+    .challenge-section::after {
+      bottom: -1px; right: -1px; border-bottom: 2px solid var(--gold); border-right: 2px solid var(--gold);
+      content: ''; position: absolute; width: 16px; height: 16px;
+    }
+
+    .challenge-icon {
+      font-size: 28px; flex-shrink: 0; color: var(--gold);
+      filter: drop-shadow(0 0 10px rgba(200,152,60,0.3));
+    }
+    .challenge-icon svg { width: 32px; height: 32px; display: block; }
+
+    .challenge-info { flex-shrink: 0; }
+
+    .challenge-title {
+      font-family: var(--ft);
+      font-size: 15px; font-weight: 700; color: var(--gold);
+      letter-spacing: 4px; text-transform: uppercase;
+    }
+
+    .challenge-desc {
+      font-family: var(--fb); font-size: 10px; color: var(--dim);
+      letter-spacing: 0.5px; margin-top: 3px;
+    }
+
+    .challenge-form {
+      flex: 1; display: flex; align-items: center; gap: 10px;
+    }
+
+    .challenge-input {
+      flex: 1; padding: 9px 14px;
+      background: rgba(13,11,8,0.8);
+      border: 1px solid rgba(200,152,60,0.18);
+      color: var(--text); font-family: var(--fb); font-size: 12px;
+      outline: none; transition: border-color 0.2s;
+      letter-spacing: 1px;
+    }
+
+    .challenge-input:focus { border-color: rgba(200,152,60,0.5); }
+    .challenge-input::placeholder { color: var(--ghost); }
+
+    .challenge-btn {
+      padding: 9px 20px; flex-shrink: 0;
+      background: linear-gradient(180deg, #D5A94E, #B9842C 58%, #7A5521);
+      border: 1px solid rgba(232,192,106,0.45); color: var(--carbon);
+      font-family: var(--fb); font-size: 10px; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase;
+      cursor: pointer; transition: all 0.2s;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 4px 14px rgba(0,0,0,0.32);
+    }
+
+    .challenge-btn:hover { box-shadow: 0 4px 20px rgba(200,152,60,0.3); }
+
+    .challenge-status {
+      font-family: var(--fb); font-size: 10px; font-weight: 600;
+      letter-spacing: 1px; color: var(--gold); flex-shrink: 0; min-width: 120px;
+    }
+
+    /* ── ROOM CODE DISPLAY ── */
+    .room-code-display {
+      display: none;
+      align-items: center; width: 100%;
+    }
+
+    .room-code-display.show { display: flex; }
+
+    .room-code-value {
+      font-family: var(--fm); font-size: 22px; font-weight: 700;
+      color: var(--gold); letter-spacing: 6px; text-align: center;
+      width: 100%;
+      padding: 10px 20px; border: 1px solid rgba(200,152,60,0.3);
+      background: rgba(200,152,60,0.05); cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+      user-select: all;
+    }
+
+    .room-code-value:hover {
+      background: rgba(200,152,60,0.1);
+      border-color: rgba(232,192,106,0.5);
+      box-shadow: 0 0 18px rgba(200,152,60,0.13);
+    }
+
+    /* ── PLAYERS ONLINE SECTION ── */
+    .players-section {
+      background: linear-gradient(160deg, #1A1510, #111008);
+      border: 1px solid rgba(200,152,60,0.15);
+      padding: 20px 24px;
+      position: relative;
+    }
+
+    .players-section-title {
+      font-family: var(--ft);
+      font-size: 13px; font-weight: 700; color: var(--gold);
+      letter-spacing: 4px; text-transform: uppercase;
+      margin-bottom: 14px;
+      display: flex; align-items: center; gap: 10px;
+    }
+
+    .players-section-title::after {
+      content: ''; flex: 1; height: 1px;
+      background: linear-gradient(90deg, rgba(200,152,60,0.2), transparent);
+    }
+
+    .online-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #4ADE80;
+      box-shadow: 0 0 6px rgba(74,222,128,0.5);
+      flex-shrink: 0;
+    }
+
+    .players-list {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      max-height: 120px; overflow-y: auto;
+    }
+
+    .player-chip {
+      display: flex; align-items: center; gap: 6px;
+      padding: 5px 12px;
+      background: rgba(200,152,60,0.05);
+      border: 1px solid rgba(200,152,60,0.12);
+      transition: all 0.2s; cursor: pointer;
+    }
+
+    .player-chip:hover {
+      background: rgba(200,152,60,0.1);
+      border-color: rgba(200,152,60,0.3);
+    }
+
+    .player-chip-name {
+      font-family: var(--fb); font-size: 10px; font-weight: 600;
+      color: var(--text); letter-spacing: 1px; text-transform: uppercase;
+    }
+
+    .player-chip-elo {
+      font-family: var(--fm); font-size: 9px; color: var(--ghost);
+    }
+
+    .player-chip-flag img { width: 16px; height: 11px; object-fit: cover; }
+
+    .player-chip-friend {
+      margin-left: 2px;
+      padding: 3px 7px;
+      border: 1px solid rgba(200,152,60,0.25);
+      background: rgba(200,152,60,0.08);
+      color: var(--gold);
+      font-family: var(--fb);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      cursor: pointer;
+    }
+    .player-chip-friend:hover { background: rgba(200,152,60,0.18); }
+
+    .players-empty {
+      font-family: var(--ft); font-style: italic; font-size: 12px;
+      color: var(--ghost); letter-spacing: 1px;
+    }
+
+    /* Waiting overlay inside card */
+    .waiting-indicator {
+      display: none;
+      flex-direction: column; align-items: center; gap: 10px; width: 100%;
+    }
+
+    .waiting-indicator.show { display: flex; }
+
+    .waiting-dots {
+      display: flex; gap: 6px;
+    }
+
+    .waiting-dots span {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--gold); opacity: 0.3;
+      animation: wdot 1.2s ease-in-out infinite;
+    }
+
+    .waiting-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .waiting-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes wdot {
+      0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+      40%           { opacity: 1;   transform: scale(1.2); }
+    }
+
+    .waiting-text {
+      font-family: var(--fb); font-size: 10px; font-weight: 600;
+      letter-spacing: 2px; color: var(--gold); text-transform: uppercase;
+    }
+
+    /* ── CHALLENGE MODAL ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.88);
+      display: flex; justify-content: center; align-items: center;
+      z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.25s;
+    }
+
+    .modal-overlay.show { opacity: 1; pointer-events: all; }
+
+    .modal-card {
+      background: linear-gradient(160deg, #1C1710, #131008);
+      border: 1px solid var(--amber);
+      outline: 1px solid rgba(200,152,60,0.15); outline-offset: 5px;
+      padding: 40px 48px; text-align: center;
+      animation: ci 0.3s ease; position: relative;
+      min-width: 320px;
+    }
+
+    .modal-card::before {
+      content: ''; position: absolute; top: 0; left: 10%; right: 10%; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    }
+
+    @keyframes ci { from { transform: scale(0.9) translateY(16px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+
+    .modal-icon { font-size: 44px; margin-bottom: 10px; }
+    .modal-title { font-family: var(--ft); font-size: 22px; font-weight: 700; letter-spacing: 5px; color: var(--gold); margin-bottom: 8px; }
+    .modal-sub { font-size: 12px; color: var(--dim); letter-spacing: 1px; margin-bottom: 24px; }
+
+    .modal-buttons { display: flex; gap: 12px; justify-content: center; }
+
+    .btn-accept {
+      padding: 10px 24px;
+      background: linear-gradient(135deg, var(--gold), var(--amber));
+      border: none; color: var(--carbon);
+      font-family: var(--fb); font-size: 10px; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-accept:hover { box-shadow: 0 4px 16px rgba(200,152,60,0.35); }
+
+    .btn-decline {
+      padding: 10px 24px;
+      background: transparent; color: var(--dim);
+      border: 1px solid rgba(255,255,255,0.1);
+      font-family: var(--fb); font-size: 10px; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-decline:hover { color: var(--teja); border-color: var(--teja); }
+
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(200,152,60,0.18); }
   </style>
 </head>
 <body>
 
-  <!-- Barra de usuario -->
-  <div class="user-bar">
-    <span class="user-bar-left">OZAMA CHESS</span>
-    <div class="user-bar-right" id="user-bar-right">
-      <a href="/login.html">Iniciar sesión →</a>
+<div class="app">
+
+  <!-- HEADER -->
+  <header class="hd">
+    <div class="hd-logo">
+      ♟ OZAMA CHESS
+      <span class="hd-sub">Dominican Heritage Edition</span>
     </div>
-  </div>
-
-  <div style="height:44px;"></div>
-
-  <div class="logo">OZAMA CHESS ♟</div>
-  <div class="logo-sub">DOMINICAN HERITAGE EDITION</div>
-
-  <div class="cards">
-
-    <!-- JUEGO RÁPIDO -->
-    <div class="card card-featured">
-      <div class="card-icon">⚡</div>
-      <div class="card-title">Juego Rápido</div>
-      <div class="card-desc">Emparejamiento automático con un rival disponible.</div>
-
-      <!-- Estado inicial -->
-      <div id="mm-initial" style="width:100%;display:flex;flex-direction:column;gap:12px;">
-        <div id="mm-elo-badge" class="elo-badge hidden">ELO 1200</div>
-        <button class="btn btn-gold" onclick="startQuickMatch()">⚡ Buscar Rival</button>
+    <div class="hd-user">
+      <div class="hd-user-info">
+        <div class="hd-user-name" id="hd-username">—</div>
+        <div class="hd-user-elo"  id="hd-elo">ELO —</div>
       </div>
-
-      <!-- Estado buscando -->
-      <div id="mm-searching" class="mm-searching hidden">
-        <div class="mm-spinner"></div>
-        <div class="mm-status">BUSCANDO RIVAL…</div>
-        <div class="mm-timer" id="mm-timer">0:00</div>
-        <button class="btn btn-danger" onclick="cancelQuickMatch()">Cancelar</button>
-      </div>
-
-      <div class="error-msg" id="mm-error"></div>
+      <div class="hd-user-av" id="hd-avatar" onclick="window.location.href='/profile.html'">?</div>
+      <button class="hd-logout" id="logout-btn">Salir</button>
     </div>
+  </header>
 
-    <!-- CREAR -->
-    <div class="card">
-      <div class="card-icon">⚪</div>
-      <div class="card-title">Crear Partida</div>
-      <div class="card-desc">Crea una sala y comparte el enlace.</div>
+  <!-- BODY -->
+  <div class="body">
 
-      <div id="create-initial" style="width:100%;display:flex;flex-direction:column;gap:12px;">
-        <input class="input-name" id="create-name" type="text" maxlength="20" placeholder="Tu nombre"/>
-        <button class="btn btn-gold" onclick="createRoom()">Crear Sala</button>
-      </div>
+    <!-- SIDEBAR -->
+    <aside class="sb">
+      <nav class="sb-nav">
+        <a class="sb-item on" href="/lobby.html">
+          <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 20h10v2H7v-2Zm2-3h6l1 2H8l1-2Zm2-7h2l2 7H9l2-7Zm1-8 5 4-5 4-5-4 5-4Z"/></svg></span>
+          <div class="sb-txt"><span class="sb-name">Jugar</span><span class="sb-desc">Partida rápida</span></div>
+        </a>
+        <a class="sb-item" href="/lobby.html#bot">
+          <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2 19 6v6c0 5-3 9-7 11-4-2-7-6-7-11V6l7-4Zm0 4-4 2v4c0 3 1.5 5.5 4 7 2.5-1.5 4-4 4-7V8l-4-2Zm-1 4h2v2h2v2h-2v2h-2v-2H9v-2h2v-2Z"/></svg></span>
+          <div class="sb-txt"><span class="sb-name">Bot</span><span class="sb-desc">Practicar IA</span></div>
+        </a>
+        <a class="sb-item" href="/lobby.html#salas">
+          <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 3h2v18H5V3Zm4 1h10l-3 4 3 4H9V4Z"/></svg></span>
+          <div class="sb-txt"><span class="sb-name">Salas</span><span class="sb-desc">Crear o unirse</span></div>
+        </a>
+        <a class="sb-item" href="/lobby.html#desafios">
+          <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m6 3 5 5-2 2-5-5V3h2Zm12 0h2v2l-5 5-2-2 5-5ZM4 20l6-6 2 2-6 6H4v-2Zm10-4 2-2 6 6v2h-2l-6-6Z"/></svg></span>
+          <div class="sb-txt"><span class="sb-name">Desafíos</span><span class="sb-desc">Retar jugador</span></div>
+        </a>
+        <div class="sb-div"></div>
+        <a class="sb-item" href="/profile.html#perfil">
+          <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 12c4 0 8 2.2 8 5v1H4v-1c0-2.8 4-5 8-5Z"/></svg></span>
+          <div class="sb-txt"><span class="sb-name">Perfil</span><span class="sb-desc">Estadísticas</span></div>
+        </a>
+        <a class="sb-item" href="/profile.html#historial">
+          <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 4h14v3H5V4Zm0 5h14v3H5V9Zm0 5h9v3H5v-3Zm11 0h3v3h-3v-3Z"/></svg></span>
+          <div class="sb-txt"><span class="sb-name">Historial</span><span class="sb-desc">Partidas recientes</span></div>
+        </a>
+        <a class="sb-item" href="/leaderboard.html">
+          <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 4h10v3h3v4c0 3-2 5-5 5h-1v2h3v2H7v-2h3v-2H9c-3 0-5-2-5-5V7h3V4Zm2 2v8h6V6H9Zm8 3v4c1-.4 2-1.2 2-2V9h-2ZM5 9v2c0 .8 1 1.6 2 2V9H5Z"/></svg></span>
+          <div class="sb-txt"><span class="sb-name">Ranking</span><span class="sb-desc">Hall of Fame</span></div>
+        </a>
+        <a class="sb-item" href="/profile.html#ajustes">
+          <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m12 2 2 3 4-.5 1.5 3.5-3 2 1 4-3 2-3-2-3 2-3-2 1-4-3-2L6 4.5 10 5l2-3Zm0 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"/></svg></span>
+          <div class="sb-txt"><span class="sb-name">Ajustes</span><span class="sb-desc">Perfil y país</span></div>
+        </a>
+        <div class="sb-div"></div>
+        <a class="sb-item" id="logout-sb">
+          <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 11h10v2H4v-2Zm4-5 1.5 1.5L6 11l3.5 3.5L8 16l-6-5 6-5Zm7-2h5v16h-5v-2h3V6h-3V4Z"/></svg></span>
+          <div class="sb-txt"><span class="sb-name">Cerrar sesión</span><span class="sb-desc">Salir de la cuenta</span></div>
+        </a>
+      </nav>
+      <div class="sb-foot"><span class="heritage-stripes"><span></span></span><br>Dominican Heritage</div>
+    </aside>
 
-      <div id="create-waiting" class="hidden"
-        style="width:100%;display:flex;flex-direction:column;align-items:center;gap:14px;">
-        <div style="font-size:10px;color:rgba(255,255,255,0.25);letter-spacing:3px;">ENLACE DE INVITACIÓN</div>
-        <div class="code-display" id="room-code-display">----</div>
-        <input class="invite-link" id="invite-link" type="text" readonly value=""/>
-        <button class="btn btn-outline" onclick="copyCode()" id="copy-btn">📋 Copiar enlace</button>
-        <div class="divider"></div>
-        <div class="waiting">
-          <div class="dot"></div><div class="dot"></div><div class="dot"></div>
-          <span>Esperando rival…</span>
+    <!-- MAIN CONTENT -->
+    <main class="main">
+
+      <!-- TITLE -->
+      <div class="lobby-title">
+        <h1>OZAMA CHESS</h1>
+        <p>Dominican Heritage Edition</p>
+        <div class="lobby-title-div">
+          <span><span class="heritage-stripes"><span></span></span></span>
         </div>
       </div>
-    </div>
 
-    <!-- UNIRSE -->
-    <div class="card">
-      <div class="card-icon">⚫</div>
-      <div class="card-title">Unirse</div>
-      <div class="card-desc">Pega el enlace de invitación o el código.</div>
+      <!-- CARDS -->
+      <div class="cards-row">
 
-      <input class="input-name" id="join-name" type="text" maxlength="20" placeholder="Tu nombre"/>
-      <input class="input-code" id="join-input" type="text" maxlength="160" placeholder="ENLACE O CÓDIGO"/>
-      <div class="error-msg" id="join-error"></div>
-      <button class="btn btn-gold" onclick="joinRoom()">Unirse</button>
-    </div>
+        <!-- JUEGO RÁPIDO -->
+        <div class="card" id="card-quick">
+          <div class="card-corner-tr"></div><div class="card-corner-bl"></div>
+          <div class="card-top-line"></div>
+          <div class="card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M13 2 4 14h6l-1 8 10-13h-6l1-7Z"/></svg></div>
+          <div class="card-title">Juego Rápido</div>
+          <div class="card-desc">Emparejamiento automático con un rival disponible.</div>
+          <div class="elo-badge" id="quick-elo-badge">ELO 1200</div>
 
-    <!-- DESAFIAR POR NOMBRE -->
-    <div class="card">
-      <div class="card-icon">⚔️</div>
-      <div class="card-title">Desafiar Jugador</div>
-      <div class="card-desc">Busca un jugador por nombre y desafíalo directamente.</div>
-
-      <div style="width:100%;display:flex;flex-direction:column;gap:12px;">
-        <div style="display:flex;gap:8px;">
-          <input class="input-name" id="search-input" type="text"
-            maxlength="20" placeholder="Buscar usuario…"
-            style="flex:1;"
-          />
-          <button class="btn btn-gold" onclick="searchUser()" style="width:auto;padding:10px 16px;">🔍</button>
-        </div>
-
-        <!-- Resultado de búsqueda -->
-        <div id="search-result" class="hidden"
-          style="background:rgba(212,175,55,0.06);border:1px solid rgba(212,175,55,0.2);
-                 border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px;">
-          <div id="search-flag" style="font-size:20px;"></div>
-          <div style="flex:1;">
-            <div id="search-name" style="font-size:14px;font-weight:700;color:#D4AF37;"></div>
-            <div id="search-elo"  style="font-size:11px;color:rgba(255,255,255,0.3);letter-spacing:1px;"></div>
-            <div id="search-status" style="font-size:10px;letter-spacing:1px;margin-top:2px;"></div>
+          <!-- Waiting indicator (hidden by default) -->
+          <div class="waiting-indicator" id="waiting-indicator">
+            <div class="waiting-dots">
+              <span></span><span></span><span></span>
+            </div>
+            <div class="waiting-text">Buscando rival…</div>
           </div>
-          <button class="btn btn-gold" id="challenge-btn" onclick="sendChallenge()"
-            style="width:auto;padding:8px 14px;font-size:11px;">
-            ⚔️ Desafiar
+
+          <button class="btn-primary" id="find-match-btn">
+            Buscar Rival
           </button>
+          <div class="card-status" id="quick-status"></div>
         </div>
 
-        <div class="error-msg" id="search-error"></div>
-        <div id="challenge-status" style="font-size:11px;color:rgba(212,175,55,0.7);text-align:center;letter-spacing:1px;min-height:16px;"></div>
+        <!-- OZAMA BOT -->
+        <div class="card" id="card-bot">
+          <div class="card-corner-tr"></div><div class="card-corner-bl"></div>
+          <div class="card-top-line"></div>
+          <div class="card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m12 3 2.2 4.6L19 5l-1.5 9H6.5L5 5l4.8 2.6L12 3Zm-5 13h10v3H7v-3Zm1 4h8v2H8v-2Z"/></svg></div>
+          <div class="card-title">Ozama Bot</div>
+          <div class="card-desc">Practica contra la IA local antes de retar jugadores.</div>
+          <select class="card-input" id="bot-difficulty" aria-label="Dificultad del bot">
+            <option value="easy">Aprendiz</option>
+            <option value="medium" selected>Centinela</option>
+            <option value="hard">Maestro</option>
+            <option value="master">Alcázar</option>
+          </select>
+          <button class="btn-primary" id="start-bot-btn">
+            Jugar vs Bot
+          </button>
+          <div class="card-status" id="bot-status"></div>
+        </div>
+
+        <!-- CREAR SALA -->
+        <div class="card" id="card-create">
+          <div class="card-corner-tr"></div><div class="card-corner-bl"></div>
+          <div class="card-top-line"></div>
+          <div class="card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 21V8h3V5H5V2h5v3H8v3h8V5h-2V2h5v3h-2v3h3v13h-6v-5h-4v5H4Zm3-3h2v-4h6v4h2v-7H7v7Z"/></svg></div>
+          <div class="card-title">Crear Sala</div>
+          <div class="card-desc">Crea una sala y comparte el código con tus amigos.</div>
+          <input class="card-input" id="create-username-input" type="text" placeholder="Tu nombre" maxlength="20"/>
+
+          <!-- Room code display (after creating) -->
+          <div class="room-code-display" id="room-code-display">
+            <div class="room-code-value" id="room-code-value" title="Haz clic para copiar">——————</div>
+          </div>
+
+          <button class="btn-primary" id="create-room-btn">
+            Crear Sala
+          </button>
+          <div class="card-status" id="create-status"></div>
+        </div>
+
+        <!-- UNIRSE -->
+        <div class="card" id="card-join">
+          <div class="card-corner-tr"></div><div class="card-corner-bl"></div>
+          <div class="card-top-line"></div>
+          <div class="card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7.8 14.7a4 4 0 0 1 0-5.7l2.1-2.1a4 4 0 0 1 5.7 0l.8.8-1.9 1.9-.8-.8a1.4 1.4 0 0 0-2 0L9.6 10.9a1.4 1.4 0 0 0 0 2l.8.8-1.9 1.9-.7-.9Zm.7 1.6 1.9-1.9.8.8a1.4 1.4 0 0 0 2 0l2.1-2.1a1.4 1.4 0 0 0 0-2l-.8-.8 1.9-1.9.8.8a4 4 0 0 1 0 5.7l-2.1 2.1a4 4 0 0 1-5.7 0l-.9-.7Zm2.4-3.4 2-2 2.2 2.2-2 2-2.2-2.2Z"/></svg></div>
+          <div class="card-title">Unirse</div>
+          <div class="card-desc">Ingresa el código de la sala para unirte a la partida.</div>
+          <input class="card-input" id="join-username-input" type="text" placeholder="Tu nombre" maxlength="20"/>
+          <input class="card-input" id="room-code-input" type="text" placeholder="Código de sala" maxlength="10" style="letter-spacing:4px;text-transform:uppercase;"/>
+          <button class="btn-primary" id="join-room-btn">
+            Unirse
+          </button>
+          <div class="card-status" id="join-status"></div>
+        </div>
+
       </div>
+
+      <!-- DESAFIAR JUGADOR -->
+      <div class="challenge-section" id="desafios">
+        <div class="challenge-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m6 3 5 5-2 2-5-5V3h2Zm12 0h2v2l-5 5-2-2 5-5ZM4 20l6-6 2 2-6 6H4v-2Zm10-4 2-2 6 6v2h-2l-6-6Z"/></svg></div>
+        <div class="challenge-info">
+          <div class="challenge-title">Desafiar Jugador</div>
+          <div class="challenge-desc">Busca un jugador por nombre y desafíalo directamente.</div>
+        </div>
+        <div class="challenge-form">
+          <input class="challenge-input" id="challenge-username" type="text" placeholder="Nombre de usuario…" maxlength="30"/>
+          <button class="challenge-btn" id="challenge-btn">Desafiar</button>
+        </div>
+        <div class="challenge-status" id="challenge-status"></div>
+      </div>
+
+      <!-- JUGADORES EN LÍNEA -->
+      <div class="players-section">
+        <div class="players-section-title">
+          <div class="online-dot"></div>
+          Jugadores en línea
+        </div>
+        <div class="players-list" id="players-online-list">
+          <div class="players-empty">Nadie conectado aún…</div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- CHALLENGE MODAL -->
+<div class="modal-overlay" id="challenge-modal">
+  <div class="modal-card">
+    <div class="modal-icon">OC</div>
+    <div class="modal-title">DESAFÍO RECIBIDO</div>
+    <div class="modal-sub" id="challenge-modal-sub">Un jugador te desafía</div>
+    <div class="modal-buttons">
+      <button class="btn-accept"  id="challenge-accept-btn">Aceptar</button>
+      <button class="btn-decline" id="challenge-decline-btn">Rechazar</button>
     </div>
-
-
   </div>
+</div>
 
-  <div class="local-link">
-    ¿Sin rival? <a href="/game.html" onclick="startLocalGame(event)">Modo local →</a>
-    · IA:
-    <a href="/game.html" onclick="startBotGame(event, 'easy')">Fácil</a>
-    <a href="/game.html" onclick="startBotGame(event, 'medium')">Medio</a>
-    <a href="/game.html" onclick="startBotGame(event, 'hard')">Difícil</a>
-    <a href="/game.html" onclick="startBotGame(event, 'master')">Maestro</a>
-  </div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  // ── Auth check ──
+  const user = JSON.parse(localStorage.getItem('ozama-user') || 'null');
+  const _token = localStorage.getItem('ozama-token') || user?.token || user?.jwt || user?.accessToken || '';
+  if (!user) { window.location.href = '/login.html'; }
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const _token = localStorage.getItem('ozama-token');
-    const _user  = JSON.parse(localStorage.getItem('ozama-user') || 'null');
+  // ── Header user info ──
+  const hdUsername = document.getElementById('hd-username');
+  const hdElo      = document.getElementById('hd-elo');
+  const hdAvatar   = document.getElementById('hd-avatar');
+  const qBadge     = document.getElementById('quick-elo-badge');
 
-    const socket = io({ auth: { token: _token || '' } });
+  if (user) {
+    const initial = (user.username || '?').charAt(0).toUpperCase();
+    hdUsername.textContent = user.username || '—';
+    hdElo.textContent      = `ELO ${user.elo || 1200}`;
+    if (user.avatarImage) hdAvatar.innerHTML = `<img src="${escapeHtml(user.avatarImage)}" alt="">`;
+    else hdAvatar.textContent = initial;
+    if (qBadge) qBadge.textContent = `ELO ${user.elo || 1200}`;
+    // Pre-fill name inputs
+    document.getElementById('create-username-input').value = user.username || '';
+    document.getElementById('join-username-input').value   = user.username || '';
+  }
 
-    let myRoomCode = null;
-    let myColor    = null;
-    let _mmInterval = null;
-    let _mmSeconds  = 0;
+  // ── Logout ──
+  function doLogout() {
+    localStorage.removeItem('ozama-user');
+    localStorage.removeItem('ozama-token');
+    sessionStorage.clear();
+    window.location.href = '/login.html';
+  }
 
-    function initUserBar() {
-      const bar = document.getElementById('user-bar-right');
-      if (_user && _token) {
-        bar.innerHTML = `
-          <span class="user-bar-name">${_user.username}</span>
-          <span class="user-bar-elo">ELO ${_user.elo ?? 1200}</span>
-          <a href="/profile.html">Perfil</a>
-        `;
-        const badge = document.getElementById('mm-elo-badge');
-        if (badge) { badge.textContent = `ELO ${_user.elo ?? 1200}`; badge.classList.remove('hidden'); }
+  document.getElementById('logout-btn')?.addEventListener('click', doLogout);
+  document.getElementById('logout-sb')?.addEventListener('click', doLogout);
 
-        const nameVal = _user.username;
-        ['create-name','join-name'].forEach(id => {
-          const el = document.getElementById(id);
-          if (el) { el.value = nameVal; el.readOnly = true; }
-        });
-      } else {
-        bar.innerHTML = `<a href="/login.html">Iniciar sesión →</a>`;
-      }
-    }
+  // ── Socket ──
+  const socket = io({ auth: { token: _token } });
+  let _challengerSocketId = null;
 
-    function getInviteUrl(code) {
-      const url = new URL(window.location.href);
-      url.pathname = '/lobby.html';
-      url.searchParams.set('room', code);
-      return url.toString();
-    }
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[char]));
+  }
 
-    function extractRoomCode(value) {
-      const raw = String(value || '').trim();
-      if (!raw) return '';
-      try {
-        const url = new URL(raw, window.location.origin);
-        const room = url.searchParams.get('room');
-        if (room) return room.toUpperCase().trim();
-      } catch (_) {}
-      return raw.toUpperCase().replace(/[^A-Z0-9]/g, '').trim();
-    }
-
-    // â”€â”€ QUICK MATCH â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    function startQuickMatch() {
-      const name    = _user?.username || 'Jugador';
-      const country = _user?.country  || 'DO';
-      socket.emit('quick-match', { playerName: name, country });
-    }
-
-    function cancelQuickMatch() {
-      socket.emit('quick-match-cancel');
-      stopMmTimer();
-      document.getElementById('mm-searching').classList.add('hidden');
-      document.getElementById('mm-initial').classList.remove('hidden');
-      document.getElementById('mm-error').textContent = '';
-    }
-
-    function startMmTimer() {
-      _mmSeconds = 0;
-      stopMmTimer();
-      _mmInterval = setInterval(() => {
-        _mmSeconds++;
-        const m = Math.floor(_mmSeconds / 60);
-        const s = String(_mmSeconds % 60).padStart(2, '0');
-        const el = document.getElementById('mm-timer');
-        if (el) el.textContent = `${m}:${s}`;
-      }, 1000);
-    }
-
-    function stopMmTimer() {
-      if (_mmInterval) { clearInterval(_mmInterval); _mmInterval = null; }
-    }
-
-    socket.on('matchmaking-searching', () => {
-      document.getElementById('mm-initial').classList.add('hidden');
-      document.getElementById('mm-searching').classList.remove('hidden');
-      document.getElementById('mm-error').textContent = '';
-      startMmTimer();
+  socket.on('connect', () => {
+    socket.emit('player-online', {
+      username: user?.username,
+      elo: user?.elo || 1200,
+      country: user?.country || 'DO',
     });
-
-    socket.on('matchmaking-cancelled', () => {
-      stopMmTimer();
-      document.getElementById('mm-searching').classList.add('hidden');
-      document.getElementById('mm-initial').classList.remove('hidden');
-    });
-
-    // â”€â”€ CREAR SALA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    function createRoom() {
-      sessionStorage.clear();
-      const url = new URL(window.location.href);
-      url.searchParams.delete('room');
-      window.history.replaceState(null, '', url.pathname);
-      socket.emit('create-room', {
-        playerName: document.getElementById('create-name').value.trim() || 'Jugador 1',
-        country: _user?.country || 'DO',
-      });
-    }
-
-    // â”€â”€ UNIRSE A SALA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    function joinRoom() {
-      sessionStorage.clear();
-      const code = extractRoomCode(document.getElementById('join-input').value);
-      const name = document.getElementById('join-name').value.trim() || 'Jugador 2';
-      if (code.length < 4) { document.getElementById('join-error').textContent = 'Pega el enlace completo o ingresa el código.'; return; }
-      document.getElementById('join-error').textContent = '';
-      socket.emit('join-room', { code, playerName: name, country: _user?.country || 'DO' });
-    }
-
-    // â”€â”€ ROOM CREATED â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    socket.on('room-created', ({ code, color }) => {
-      myRoomCode = code; myColor = color;
-      document.getElementById('room-code-display').textContent = code;
-      document.getElementById('invite-link').value = getInviteUrl(code);
-      document.getElementById('create-initial').classList.add('hidden');
-      document.getElementById('create-waiting').classList.remove('hidden');
-    });
-
-    socket.on('room-joined', ({ code, color }) => { myRoomCode = code; myColor = color; });
-
-    // â”€â”€ GAME START â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    socket.on('game-start', ({ code, color, playerInfo }) => {
-      stopMmTimer();
-      const assignedColor = color || myColor;
-      const playerNames = {
-        w: playerInfo?.w?.name || 'Jugador 1',
-        b: playerInfo?.b?.name || 'Jugador 2',
-      };
-      sessionStorage.setItem('ozama-room',   code);
-      sessionStorage.setItem('ozama-color',  assignedColor);
-      sessionStorage.setItem('ozama-names',  JSON.stringify(playerNames));
-      sessionStorage.setItem('ozama-player-info', JSON.stringify(playerInfo || {}));
-      sessionStorage.setItem('ozama-myname', assignedColor === 'w' ? playerNames.w : playerNames.b);
-      if (_token) sessionStorage.setItem('ozama-token', _token);
-      window.location.href = '/game.html';
-    });
-
-    socket.on('room-error', (msg) => { document.getElementById('join-error').textContent = msg; });
-
-    // â”€â”€ COPY CODE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    function copyCode() {
-      const inviteUrl = getInviteUrl(myRoomCode);
-      const input = document.getElementById('invite-link');
-      if (input) { input.value = inviteUrl; input.select(); }
-      navigator.clipboard.writeText(inviteUrl).then(() => {
-        const btn = document.getElementById('copy-btn');
-        btn.textContent = '✅ Copiado';
-        setTimeout(() => { btn.textContent = '📋 Copiar enlace'; }, 2000);
-      }).catch(() => { document.getElementById('copy-btn').textContent = 'Selecciona el enlace'; });
-    }
-
-    // â”€â”€ Auto-fill cÃ³digo desde URL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    const inviteCode = new URLSearchParams(window.location.search).get('room');
-    if (inviteCode) {
-      const ji = document.getElementById('join-input');
-      if (ji) { ji.value = getInviteUrl(inviteCode.toUpperCase().trim()); ji.focus(); }
-    }
-
-    document.getElementById('join-input').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') joinRoom();
-    });
-
-    initUserBar();
-
-    // â”€â”€ BUSCAR USUARIO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    let _foundUser = null;
-    let _challengerSocketId = null;
-
-    function searchUser() {
-      const username = document.getElementById('search-input').value.trim();
-      if (!username) return;
-      document.getElementById('search-error').textContent = '';
-      document.getElementById('search-result').classList.add('hidden');
-      document.getElementById('challenge-status').textContent = '';
-      socket.emit('search-user', { username });
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('search-input').addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') searchUser();
-      });
-    });
-
-    socket.on('search-user-result', ({ user, error }) => {
-      if (error) {
-        document.getElementById('search-error').textContent = error;
-        document.getElementById('search-result').classList.add('hidden');
-        return;
-      }
-      _foundUser = user;
-      document.getElementById('search-error').textContent = '';
-      document.getElementById('search-result').classList.remove('hidden');
-
-      const code = (user.country || 'DO').toLowerCase();
-      document.getElementById('search-flag').innerHTML =
-        `<img src="https://flagcdn.com/24x18/${code}.png" style="width:24px;height:16px;border-radius:2px;" onerror="this.outerHTML='🌍'"/>`;
-      document.getElementById('search-name').textContent = user.username;
-      document.getElementById('search-elo').textContent  = `ELO ${user.elo ?? 1200}`;
-
-      const statusEl = document.getElementById('search-status');
-      statusEl.textContent = user.isOnline ? '🟢 En línea' : '⚫ Desconectado';
-      statusEl.style.color = user.isOnline ? '#2ecc71' : 'rgba(255,255,255,0.25)';
-
-      const btn = document.getElementById('challenge-btn');
-      if (btn) btn.style.opacity = user.isOnline ? '1' : '0.4';
-    });
-
-    function sendChallenge() {
-      if (!_foundUser?.isOnline) return;
-      if (!_user) {
-        document.getElementById('search-error').textContent = 'Debes iniciar sesión para desafiar.';
-        return;
-      }
-      socket.emit('challenge-send', { targetUsername: _foundUser.username });
-      document.getElementById('challenge-status').textContent = `⏳ Desafío enviado a ${_foundUser.username}…`;
-    }
-
-    socket.on('challenge-sent', ({ to }) => {
-      document.getElementById('challenge-status').textContent = `⏳ Esperando respuesta de ${to}…`;
-    });
-
-    socket.on('challenge-error', (msg) => {
-      document.getElementById('search-error').textContent = msg;
-      document.getElementById('challenge-status').textContent = '';
-    });
-
-    socket.on('challenge-declined', ({ by }) => {
-      document.getElementById('challenge-status').textContent = `❌ ${by} rechazó el desafío.`;
-    });
-
-    // â”€â”€ RECIBIR DESAFÃO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    socket.on('challenge-received', ({ from, socketId }) => {
-  _challengerSocketId = socketId;
-  const code = (from.country || 'DO').toLowerCase();
-
-  // Crear modal en página en vez de confirm()
-  const overlay = document.createElement('div');
-  overlay.id = 'challenge-modal';
-  Object.assign(overlay.style, {
-    position:'fixed', inset:'0', background:'rgba(0,0,0,0.75)',
-    display:'flex', alignItems:'center', justifyContent:'center', zIndex:'999'
   });
-  overlay.innerHTML = `
-    <div style="background:#111118;border:1.5px solid rgba(212,175,55,0.4);border-radius:18px;
-                padding:32px 28px;text-align:center;max-width:320px;width:90%;display:flex;flex-direction:column;gap:16px;">
-      <div style="font-size:36px;">⚔️</div>
-      <div style="color:#D4AF37;font-size:13px;font-weight:800;letter-spacing:3px;">DESAFÍO RECIBIDO</div>
-      <div style="color:rgba(255,255,255,0.5);font-size:12px;">
-        <img src="https://flagcdn.com/20x15/${code}.png" style="width:20px;vertical-align:middle;border-radius:2px;" onerror="this.outerHTML='🌍'"/>
-        <strong style="color:#D4AF37;">${from.username}</strong> (ELO ${from.elo}) te desafía
-      </div>
-      <div style="display:flex;gap:12px;justify-content:center;">
-        <button id="ch-accept" style="flex:1;padding:12px;background:linear-gradient(135deg,#D4AF37,#8B6914);
-          color:#0A0A0A;border:none;border-radius:50px;font-weight:800;font-size:12px;
-          letter-spacing:2px;cursor:pointer;">✔ ACEPTAR</button>
-        <button id="ch-decline" style="flex:1;padding:12px;background:transparent;color:#ef4444;
-          border:1.5px solid #ef4444;border-radius:50px;font-weight:800;font-size:12px;
-          letter-spacing:2px;cursor:pointer;">✗ RECHAZAR</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(overlay);
 
-  document.getElementById('ch-accept').onclick = () => {
-    overlay.remove();
-    socket.emit('challenge-accept', { challengerSocketId: socketId });
-  };
-  document.getElementById('ch-decline').onclick = () => {
-    overlay.remove();
-    socket.emit('challenge-decline', { challengerSocketId: socketId });
-  };
-});
+  // ── Helpers ──
+  function setStatus(id, msg, color = '#C8983C') {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = msg; el.style.color = color; }
+  }
 
-    function startLocalGame(event) {
-      event.preventDefault();
-      sessionStorage.clear();
-      window.location.href = '/game.html';
+  function goToGame(roomCode, color, playerInfo, names) {
+    sessionStorage.setItem('ozama-room',   roomCode);
+    sessionStorage.setItem('ozama-color',  color);
+    if (playerInfo) sessionStorage.setItem('ozama-player-info', JSON.stringify(playerInfo));
+    if (names)      sessionStorage.setItem('ozama-names', JSON.stringify(names));
+    window.location.href = '/game.html';
+  }
+
+  // ── JUEGO RÁPIDO ──
+  let _searching = false;
+
+  document.getElementById('find-match-btn')?.addEventListener('click', () => {
+    if (_searching) {
+      socket.emit('quick-match-cancel');
+      _searching = false;
+      document.getElementById('find-match-btn').textContent = 'Buscar Rival';
+      document.getElementById('waiting-indicator').classList.remove('show');
+      setStatus('quick-status', '');
+      return;
     }
+    socket.emit('quick-match', { playerName: user?.username || 'Jugador', country: user?.country || 'DO' });
+    _searching = true;
+    document.getElementById('find-match-btn').textContent = 'Cancelar';
+    document.getElementById('waiting-indicator').classList.add('show');
+    setStatus('quick-status', 'Buscando rival…');
+  });
 
-    function startBotGame(event, difficulty = 'medium') {
-      event.preventDefault();
-      sessionStorage.clear();
-      const human = _user
-        ? { name: _user.username, country: _user.country || 'DO', avatar: _user.avatar || 0, elo: _user.elo || 1200 }
-        : { name: 'Jugador', country: 'DO', avatar: 0, elo: 1200 };
-      const bot = { name: 'Ozama Bot', country: 'DO', avatar: 5, elo: 1200 };
-      sessionStorage.setItem('ozama-bot-mode', 'true');
-      sessionStorage.setItem('ozama-bot-color', 'b');
-      sessionStorage.setItem('ozama-bot-difficulty', difficulty);
-      sessionStorage.setItem('ozama-player-info', JSON.stringify({ w: human, b: bot }));
-      sessionStorage.setItem('ozama-names', JSON.stringify({ w: human.name, b: bot.name }));
-      window.location.href = '/game.html';
+  socket.on('match-found', ({ roomCode, code, color, playerInfo, names }) => {
+    _searching = false;
+    setStatus('quick-status', '¡Rival encontrado!');
+    setTimeout(() => goToGame(roomCode || code, color, playerInfo, names), 800);
+  });
+
+  socket.on('matchmaking-cancelled', () => {
+    _searching = false;
+    document.getElementById('find-match-btn').textContent = 'Buscar Rival';
+    document.getElementById('waiting-indicator').classList.remove('show');
+    setStatus('quick-status', '');
+  });
+
+  // ── OZAMA BOT ──
+  document.getElementById('start-bot-btn')?.addEventListener('click', () => {
+    const difficulty = document.getElementById('bot-difficulty')?.value || 'medium';
+    sessionStorage.removeItem('ozama-room');
+    sessionStorage.removeItem('ozama-color');
+    sessionStorage.removeItem('ozama-names');
+    sessionStorage.removeItem('ozama-player-info');
+    sessionStorage.removeItem('ozama-myname');
+    sessionStorage.removeItem('ozama-token');
+    sessionStorage.setItem('ozama-bot-mode', 'true');
+    sessionStorage.setItem('ozama-bot-color', 'b');
+    sessionStorage.setItem('ozama-bot-difficulty', difficulty);
+    setStatus('bot-status', 'Preparando tablero…');
+    window.location.href = '/game.html';
+  });
+
+  // ── CREAR SALA ──
+  document.getElementById('create-room-btn')?.addEventListener('click', () => {
+    const username = document.getElementById('create-username-input').value.trim() || user?.username;
+    if (!username) { setStatus('create-status', 'Ingresa tu nombre', '#ef4444'); return; }
+    socket.emit('create-room', { playerName: username, country: user?.country || 'DO' });
+    setStatus('create-status', 'Creando sala…');
+    document.getElementById('create-room-btn').disabled = true;
+  });
+
+  socket.on('room-created', ({ roomCode, code }) => {
+    const cleanCode = String(roomCode || code || '').trim().toUpperCase();
+    if (!cleanCode) { setStatus('create-status', 'No se recibió código', '#ef4444'); return; }
+    sessionStorage.setItem('ozama-room', cleanCode);
+    const display = document.getElementById('room-code-display');
+    const codeEl  = document.getElementById('room-code-value');
+    display.classList.add('show');
+    codeEl.textContent = cleanCode;
+    setStatus('create-status', 'Código listo. Tócalo para copiar.');
+    document.getElementById('create-room-btn').disabled = false;
+
+    // Copy on click
+    codeEl.onclick = () => {
+      navigator.clipboard?.writeText(cleanCode);
+      const orig = codeEl.textContent;
+      codeEl.textContent = 'COPIADO';
+      setTimeout(() => codeEl.textContent = orig, 900);
+    };
+  });
+
+  socket.on('game-start', ({ roomCode, code, color, playerInfo, names, clockW, clockB }) => {
+    const rc = roomCode || code || sessionStorage.getItem('ozama-room');
+    goToGame(rc, color, playerInfo, names);
+  });
+
+  // ── UNIRSE ──
+  document.getElementById('join-room-btn')?.addEventListener('click', () => {
+    const username = document.getElementById('join-username-input').value.trim() || user?.username;
+    const code     = document.getElementById('room-code-input').value.trim().toUpperCase();
+    if (!username) { setStatus('join-status', 'Ingresa tu nombre', '#ef4444'); return; }
+    if (!code)     { setStatus('join-status', 'Ingresa el código', '#ef4444'); return; }
+    socket.emit('join-room', { code, playerName: username, country: user?.country || 'DO' });
+    setStatus('join-status', 'Uniéndose…');
+  });
+
+  socket.on('join-error', ({ message }) => {
+    setStatus('join-status', message || 'Error al unirse', '#ef4444');
+  });
+
+  socket.on('room-error', (message) => {
+    setStatus('join-status', message || 'Error de sala', '#ef4444');
+    document.getElementById('create-room-btn').disabled = false;
+  });
+
+  // ── DESAFIAR ──
+  document.getElementById('challenge-btn')?.addEventListener('click', () => {
+    const username = document.getElementById('challenge-username').value.trim();
+    if (!username) { setStatus('challenge-status', 'Ingresa un nombre', '#ef4444'); return; }
+    socket.emit('challenge-send', { targetUsername: username });
+    setStatus('challenge-status', 'Desafío enviado…');
+  });
+
+  socket.on('challenge-sent', () => {
+    setStatus('challenge-status', 'Desafío enviado');
+  });
+
+  socket.on('challenge-error', (message) => {
+    setStatus('challenge-status', message || 'No se pudo enviar el desafío', '#ef4444');
+  });
+
+  socket.on('challenge-declined', ({ username, by } = {}) => {
+    setStatus('challenge-status', `${username || by || 'El jugador'} rechazó`, '#ef4444');
+  });
+
+  // ── CHALLENGE RECEIVED ──
+  socket.on('challenge-received', ({ from, socketId }) => {
+    _challengerSocketId = socketId;
+    const flag = (from.country||'DO').toLowerCase();
+    document.getElementById('challenge-modal-sub').innerHTML =
+      `<img src="https://flagcdn.com/20x15/${flag}.png" style="width:18px;vertical-align:middle;margin-right:6px;border-radius:1px;" onerror="this.style.display='none'"/>
+       <strong style="color:#C8983C">${from.username}</strong> (ELO ${from.elo}) te desafía`;
+
+    document.getElementById('challenge-modal').classList.add('show');
+  });
+
+  document.getElementById('challenge-accept-btn')?.addEventListener('click', () => {
+    document.getElementById('challenge-modal').classList.remove('show');
+    socket.emit('challenge-accept', { challengerSocketId: _challengerSocketId });
+  });
+
+  document.getElementById('challenge-decline-btn')?.addEventListener('click', () => {
+    document.getElementById('challenge-modal').classList.remove('show');
+    socket.emit('challenge-decline', { challengerSocketId: _challengerSocketId });
+    _challengerSocketId = null;
+  });
+
+  // ── PLAYERS ONLINE ──
+  socket.on('players-online', (players) => {
+    const list = document.getElementById('players-online-list');
+    if (!list) return;
+    const others = players.filter(p => p.username !== user?.username);
+    if (!others.length) {
+      list.innerHTML = '<div class="players-empty">Nadie más conectado aún…</div>';
+      return;
     }
-  </script>
+    list.innerHTML = others.map(p => {
+      const flag = (p.country||'DO').toLowerCase();
+      const username = escapeHtml(p.username || 'Jugador');
+      const disabled = p.inGame ? ' · EN PARTIDA' : '';
+      return `<div class="player-chip" onclick="challengePlayer('${username}')">
+        <div class="player-chip-flag"><img src="https://flagcdn.com/20x15/${flag}.png" onerror="this.style.display='none'"/></div>
+        <span class="player-chip-name">${username}</span>
+        <span class="player-chip-elo">${p.elo||1200}${disabled}</span>
+        <button class="player-chip-friend" onclick="addFriendFromLobby(event, '${username}')">Amigo</button>
+      </div>`;
+    }).join('');
+  });
+
+  function challengePlayer(username) {
+    document.getElementById('challenge-username').value = username;
+    document.getElementById('challenge-username').focus();
+    document.getElementById('desafios').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  async function addFriendFromLobby(event, username) {
+    event.stopPropagation();
+    try {
+      const res = await fetch(`/api/user/friends/${encodeURIComponent(username)}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${_token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'No se pudo agregar.');
+      setStatus('challenge-status', `${username} agregado a amigos`);
+    } catch (err) {
+      setStatus('challenge-status', err.message || 'No se pudo agregar amigo', '#ef4444');
+    }
+  }
+
+  // ── URL hash navigation ──
+  if (window.location.hash === '#salas') {
+    document.getElementById('card-create')?.scrollIntoView({ behavior: 'smooth' });
+  } else if (window.location.hash === '#desafios') {
+    document.getElementById('desafios')?.scrollIntoView({ behavior: 'smooth' });
+  } else if (window.location.hash === '#bot') {
+    document.getElementById('card-bot')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+</script>
 </body>
 </html>

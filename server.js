@@ -20,15 +20,35 @@ const User            = require('./models/User');
 
 const authRoutes      = require('./routes/auth');
 const userRoutes      = require('./routes/user');
+const adminRoutes     = require('./routes/admin');
+const eventRoutes     = require('./routes/events');
 
 const app    = express();
 const server = http.createServer(app);
 const io     = new Server(server);
 
-app.use(express.json());
+app.disable('x-powered-by');
+app.use(express.json({ limit: '600kb' }));
+app.use((req, res, next) => {
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('X-Frame-Options', 'DENY');
+  res.set('Referrer-Policy', 'no-referrer');
+  res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
+app.use((req, res, next) => {
+  if (req.path === '/' || req.path.endsWith('.html')) {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+  }
+  next();
+});
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/events', eventRoutes);
 
 app.get('/api/health/db', (_req, res) => {
   res.json({
@@ -49,6 +69,7 @@ app.get('/api/matches/recent', async (_req, res) => {
 
 // ── Salas en memoria ─────────────────────────────────────────────
 const rooms = new Map();
+const onlinePlayers = new Map();
 
 // ── Cola de matchmaking ──────────────────────────────────────────
 // { socketId, playerInfo, joinedAt }
@@ -126,8 +147,13 @@ function playerSnapshot(info) {
     name: info.name || 'Jugador',
     country: info.country || 'DO',
     avatar: info.avatar || 0,
+    avatarImage: info.avatarImage || '',
     elo: info.elo || 1200,
   };
+}
+
+function broadcastOnlinePlayers() {
+  io.emit('players-online', [...onlinePlayers.values()]);
 }
 
 const PIECE = { PAWN: 'p', KNIGHT: 'n', BISHOP: 'b', ROOK: 'r', QUEEN: 'q', KING: 'k' };
@@ -465,10 +491,10 @@ io.on('connection', (socket) => {
 
   async function getPlayerInfo(playerName, fallbackCountry = 'DO') {
     if (socket.data.userId) {
-      const user = await User.findById(socket.data.userId).select('username country avatar elo').lean();
-      if (user) return { userId: user._id, name: user.username, country: user.country, avatar: user.avatar, elo: user.elo };
+      const user = await User.findById(socket.data.userId).select('username country avatar avatarImage elo').lean();
+      if (user) return { userId: user._id, name: user.username, country: user.country, avatar: user.avatar, avatarImage: user.avatarImage, elo: user.elo };
     }
-    return { userId: null, name: playerName || 'Jugador', country: fallbackCountry, avatar: 0, elo: 1200 };
+    return { userId: null, name: playerName || 'Jugador', country: fallbackCountry, avatar: 0, avatarImage: '', elo: 1200 };
   }
 
   async function createMatchBetween(wSocket, wInfo, bSocket, bInfo, code) {
@@ -494,15 +520,18 @@ io.on('connection', (socket) => {
       { roomCode: code },
       { $set: {
         roomCode: code,
-        'players.white.socketId': wSocket.id, 'players.white.userId': wInfo.userId, 'players.white.name': wInfo.name, 'players.white.country': wInfo.country, 'players.white.avatar': wInfo.avatar,
-        'players.black.socketId': bSocket.id, 'players.black.userId': bInfo.userId, 'players.black.name': bInfo.name, 'players.black.country': bInfo.country, 'players.black.avatar': bInfo.avatar,
-        match: match._id || null, fen: 'startpos', turn: 'w', status: 'playing', lastActivityAt: new Date(),
+        'players.white.socketId': wSocket.id, 'players.white.userId': wInfo.userId, 'players.white.name': wInfo.name, 'players.white.country': wInfo.country, 'players.white.avatar': wInfo.avatar, 'players.white.avatarImage': wInfo.avatarImage || '',
+        'players.black.socketId': bSocket.id, 'players.black.userId': bInfo.userId, 'players.black.name': bInfo.name, 'players.black.country': bInfo.country, 'players.black.avatar': bInfo.avatar, 'players.black.avatarImage': bInfo.avatarImage || '',
+        match: match?._id || null, fen: 'startpos', turn: 'w', status: 'playing', lastActivityAt: new Date(),
       }},
       { upsert: true, new: true }
     ).catch(() => {});
 
     wSocket.join(code); wSocket.data.roomCode = code; wSocket.data.color = 'w'; wSocket.data.playerName = wInfo.name;
     bSocket.join(code); bSocket.data.roomCode = code; bSocket.data.color = 'b'; bSocket.data.playerName = bInfo.name;
+    if (onlinePlayers.has(wSocket.id)) onlinePlayers.get(wSocket.id).inGame = true;
+    if (onlinePlayers.has(bSocket.id)) onlinePlayers.get(bSocket.id).inGame = true;
+    broadcastOnlinePlayers();
 
     wSocket.emit('game-start', { code, color: 'w', playerInfo: { w: wInfo, b: bInfo }, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
     bSocket.emit('game-start', { code, color: 'b', playerInfo: { w: wInfo, b: bInfo }, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
@@ -581,6 +610,10 @@ io.on('connection', (socket) => {
     socket.data.roomCode   = code;
     socket.data.color      = 'w';
     socket.data.playerName = pInfo.name;
+    if (onlinePlayers.has(socket.id)) {
+      onlinePlayers.get(socket.id).inGame = true;
+      broadcastOnlinePlayers();
+    }
 
     socket.emit('room-created', { code, color: 'w', playerInfo: pInfo });
 
@@ -589,7 +622,7 @@ io.on('connection', (socket) => {
       { $set: {
         roomCode: code,
         'players.white.socketId': socket.id, 'players.white.userId': pInfo.userId,
-        'players.white.name': pInfo.name,    'players.white.country': pInfo.country, 'players.white.avatar': pInfo.avatar,
+        'players.white.name': pInfo.name,    'players.white.country': pInfo.country, 'players.white.avatar': pInfo.avatar, 'players.white.avatarImage': pInfo.avatarImage || '',
         'players.black.socketId': null, 'players.black.name': '',
         fen: 'startpos', turn: 'w', status: 'waiting', lastActivityAt: new Date(),
       }},
@@ -624,14 +657,17 @@ io.on('connection', (socket) => {
 
     await Room.updateOne({ roomCode: cleanCode }, { $set: {
       'players.black.socketId': socket.id, 'players.black.userId': pInfo.userId,
-      'players.black.name': pInfo.name,    'players.black.country': pInfo.country, 'players.black.avatar': pInfo.avatar,
-      match: match._id || null, turn: room.currentTurn, status: 'playing', lastActivityAt: new Date(),
+      'players.black.name': pInfo.name,    'players.black.country': pInfo.country, 'players.black.avatar': pInfo.avatar, 'players.black.avatarImage': pInfo.avatarImage || '',
+      match: match?._id || null, turn: room.currentTurn, status: 'playing', lastActivityAt: new Date(),
     }}).catch((err) => console.warn('[DB] No se pudo actualizar sala:', err.message));
 
     socket.join(cleanCode);
     socket.data.roomCode   = cleanCode;
     socket.data.color      = 'b';
     socket.data.playerName = pInfo.name;
+    if (onlinePlayers.has(socket.id)) onlinePlayers.get(socket.id).inGame = true;
+    if (onlinePlayers.has(room.white)) onlinePlayers.get(room.white).inGame = true;
+    broadcastOnlinePlayers();
 
     socket.emit('room-joined', { code: cleanCode, color: 'b', playerInfo: pInfo });
     io.to(room.white).emit('game-start', { code: cleanCode, color: 'w', playerInfo: { w: wInfo, b: pInfo }, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
@@ -802,7 +838,7 @@ if (room.white && room.black && !room.clockInterval) {
       }).catch(() => null);
       if (match) room.matchId = match._id;
       await Room.updateOne({ roomCode: code }, { $set: {
-        match: match._id || room.matchId || null, turn: 'w', status: 'playing', lastActivityAt: new Date(),
+        match: match?._id || room.matchId || null, turn: 'w', status: 'playing', lastActivityAt: new Date(),
       }}).catch(() => {});
       io.to(code).emit('rematch-start', { clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
       startClock(code);
@@ -816,6 +852,19 @@ if (room.white && room.black && !room.clockInterval) {
     socket.to(code).emit('rematch-declined');
   });
 
+  socket.on('player-online', async ({ username, elo = 1200, country = 'DO' } = {}) => {
+    const info = await getPlayerInfo(username, country);
+    onlinePlayers.set(socket.id, {
+      username: info.name,
+      country: info.country,
+      avatar: info.avatar || 0,
+      avatarImage: info.avatarImage || '',
+      elo: info.elo || elo || 1200,
+      inGame: !!socket.data.roomCode,
+    });
+    broadcastOnlinePlayers();
+  });
+
   // ── Buscar usuario online ─────────────────────────────────────
   socket.on('search-user', async ({ username }) => {
     if (!username || username.trim().length < 2) {
@@ -825,7 +874,7 @@ if (room.white && room.black && !room.clockInterval) {
     try {
       const user = await User.findOne({
         username: { $regex: username.trim(), $options: 'i' }
-      }).select('username country elo stats').lean();
+      }).select('username country avatar avatarImage elo stats').lean();
 
       if (!user) {
         socket.emit('search-user-result', { error: 'Usuario no encontrado.' });
@@ -875,10 +924,10 @@ if (room.white && room.black && !room.clockInterval) {
       return;
     }
 
-    const challenger = await User.findById(socket.data.userId).select('username country elo').lean();
+    const challenger = await User.findById(socket.data.userId).select('username country avatar avatarImage elo').lean();
 
     targetSocket.emit('challenge-received', {
-      from: { username: challenger.username, country: challenger.country, elo: challenger.elo },
+      from: { username: challenger.username, country: challenger.country, avatar: challenger.avatar, avatarImage: challenger.avatarImage, elo: challenger.elo },
       socketId: socket.id,
     });
 
@@ -897,10 +946,10 @@ if (room.white && room.black && !room.clockInterval) {
     const pInfo = await getPlayerInfo();
     const cInfo = await (async () => {
       if (challengerSocket.data.userId) {
-        const u = await User.findById(challengerSocket.data.userId).select('username country avatar elo').lean();
-        if (u) return { userId: u._id, name: u.username, country: u.country, avatar: u.avatar, elo: u.elo };
+        const u = await User.findById(challengerSocket.data.userId).select('username country avatar avatarImage elo').lean();
+        if (u) return { userId: u._id, name: u.username, country: u.country, avatar: u.avatar, avatarImage: u.avatarImage, elo: u.elo };
       }
-      return { userId: null, name: challengerSocket.data.playerName || 'Jugador', country: 'DO', avatar: 0, elo: 1200 };
+      return { userId: null, name: challengerSocket.data.playerName || 'Jugador', country: 'DO', avatar: 0, avatarImage: '', elo: 1200 };
     })();
 
     let code;
@@ -925,6 +974,9 @@ if (room.white && room.black && !room.clockInterval) {
 
   // ── Desconexión ───────────────────────────────────────────────
   socket.on('disconnect', () => {
+    onlinePlayers.delete(socket.id);
+    broadcastOnlinePlayers();
+
     const qIdx = matchQueue.findIndex(e => e.socketId === socket.id);
     if (qIdx !== -1) matchQueue.splice(qIdx, 1);
 

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>OZAMA CHESS â€” Perfil</title>
-  <link href="https://fonts.googleapis.com/css2family=Cinzel:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <title>OZAMA CHESS - Perfil</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -25,7 +25,7 @@
       padding: 0 0 60px;
     }
 
-    /* â”€â”€ Topbar â”€â”€ */
+    /* Topbar */
     .topbar {
       position: sticky; top: 0; z-index: 100;
       display: flex; align-items: center; justify-content: space-between;
@@ -39,6 +39,14 @@
       font-size: 16px; font-weight: 900;
       color: var(--gold); letter-spacing: 4px;
       text-decoration: none;
+      display: inline-flex; align-items: center; gap: 10px;
+    }
+    .topbar-logo::before {
+      content: '';
+      width: 8px; height: 18px;
+      border: 1px solid rgba(212,175,55,0.55);
+      background: linear-gradient(180deg, rgba(212,175,55,0.38), rgba(139,105,20,0.12));
+      box-shadow: 0 0 14px rgba(212,175,55,0.18);
     }
 
     .topbar-nav { display: flex; align-items: center; gap: 16px; }
@@ -49,7 +57,7 @@
     }
     .topbar-nav a:hover { color: var(--gold); }
 
-    /* â”€â”€ Hero del perfil â”€â”€ */
+    /* Hero del perfil */
     .profile-hero {
       background: linear-gradient(160deg, #0E0E1A 0%, #0A0A14 100%);
       border-bottom: 1px solid rgba(212,175,55,0.1);
@@ -66,6 +74,15 @@
       font-size: 36px; font-weight: 900; color: #0A0A0A;
       box-shadow: 0 0 30px rgba(212,175,55,0.3);
       flex-shrink: 0;
+      overflow: hidden;
+    }
+    .avatar-ring img,
+    .avatar-choice img,
+    .friend-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
     .avatar-0 { background: linear-gradient(135deg, #1A3A6B, #D4AF37); }
     .avatar-1 { background: linear-gradient(135deg, #C0392B, #D4AF37); }
@@ -86,6 +103,14 @@
     }
 
     .profile-country { font-size: 20px; }
+    .country-code {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 28px; height: 20px;
+      border: 1px solid rgba(212,175,55,0.18);
+      color: var(--gold);
+      font-size: 10px; font-weight: 700; letter-spacing: 1px;
+      background: rgba(212,175,55,0.06);
+    }
 
     .elo-display {
       background: rgba(212,175,55,0.1);
@@ -96,7 +121,28 @@
       letter-spacing: 2px;
     }
 
-    /* â”€â”€ Stats grid â”€â”€ */
+    .plan-badge {
+      min-height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 5px 14px;
+      border: 1px solid rgba(212,175,55,0.24);
+      background: rgba(212,175,55,0.06);
+      color: var(--dim);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .plan-badge.premium {
+      color: var(--gold);
+      border-color: rgba(212,175,55,0.44);
+      box-shadow: 0 0 18px rgba(212,175,55,0.16);
+    }
+
+    /* Stats grid */
     .container { max-width: 800px; margin: 0 auto; padding: 28px 20px 0; }
 
     .stats-grid {
@@ -132,7 +178,7 @@
     .stat-card.losses .stat-value { color: #e74c3c; }
     .stat-card.draws  .stat-value { color: rgba(255,255,255,0.5); }
 
-    /* â”€â”€ SecciÃ³n historial â”€â”€ */
+    /* Seccion historial */
     .section-title {
       font-family: 'Cinzel', serif;
       font-size: 13px; font-weight: 700;
@@ -143,7 +189,7 @@
       border-bottom: 1px solid rgba(212,175,55,0.1);
     }
 
-    /* â”€â”€ Lista de partidas â”€â”€ */
+    /* Lista de partidas */
     .match-list { display: flex; flex-direction: column; gap: 8px; }
 
     .match-row {
@@ -192,7 +238,7 @@
       text-align: right; min-width: 60px;
     }
 
-    /* â”€â”€ Loading / empty â”€â”€ */
+    /* Loading / empty */
     .loading {
       text-align: center; padding: 40px 20px;
       color: var(--dim); font-size: 13px; letter-spacing: 2px;
@@ -213,7 +259,7 @@
       color: var(--dim); font-size: 12px; letter-spacing: 2px;
     }
 
-    /* â”€â”€ Edit paÃ­s â”€â”€ */
+    /* Edit pais */
     .edit-section {
       background: var(--surface);
       border: 1px solid rgba(212,175,55,0.1);
@@ -275,13 +321,101 @@
       letter-spacing: 2px; cursor: pointer; transition: all 0.2s;
     }
     .btn-save:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(212,175,55,0.3); }
+    .btn-save.secondary {
+      background: rgba(212,175,55,0.08);
+      border: 1px solid rgba(212,175,55,0.25);
+      color: var(--gold);
+    }
+
+    .photo-upload {
+      position: relative;
+      overflow: hidden;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 34px;
+      padding: 8px 12px;
+      border: 1px solid rgba(212,175,55,0.25);
+      border-radius: 8px;
+      color: var(--gold);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      background: rgba(212,175,55,0.06);
+    }
+    .photo-upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+    .friends-panel {
+      background: var(--surface);
+      border: 1px solid rgba(212,175,55,0.1);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 28px;
+    }
+    .friends-form {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .friends-input {
+      flex: 1;
+      min-width: 0;
+      padding: 10px 12px;
+      background: var(--surface2);
+      border: 1px solid rgba(212,175,55,0.18);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'Rajdhani', sans-serif;
+      outline: none;
+    }
+    .friends-input:focus { border-color: var(--gold); }
+    .friends-list { display: grid; gap: 8px; }
+    .friend-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      border: 1px solid rgba(212,175,55,0.08);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.02);
+    }
+    .friend-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+      font-family: 'Cinzel', serif;
+      font-weight: 900;
+      color: #080808;
+      background: linear-gradient(135deg, var(--gold), #8B6914);
+    }
+    .friend-main { flex: 1; min-width: 0; }
+    .friend-name { font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .friend-meta { font-size: 11px; color: var(--dim); margin-top: 2px; }
 
     .save-msg {
       font-size: 11px; color: #2ecc71;
       letter-spacing: 1px; display: none;
     }
 
-    /* â”€â”€ PaginaciÃ³n â”€â”€ */
+    .plan-note {
+      width: 100%;
+      padding-top: 12px;
+      border-top: 1px solid rgba(212,175,55,0.08);
+      color: var(--dim);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .plan-note strong { color: var(--gold); font-family: 'Cinzel', serif; letter-spacing: 1px; }
+
+    /* Paginacion */
     .pagination {
       display: flex; justify-content: center; gap: 8px; margin-top: 20px;
     }
@@ -300,7 +434,7 @@
     }
     .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
-    /* â”€â”€ No logueado â”€â”€ */
+    /* No logueado */
     .not-logged {
       display: flex; flex-direction: column; align-items: center;
       justify-content: center; min-height: 60vh; gap: 16px; text-align: center;
@@ -319,6 +453,7 @@
 
     @media (max-width: 600px) {
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .friends-form { flex-direction: column; }
       .match-date { display: none; }
       .profile-hero { padding: 28px 16px 24px; }
     }
@@ -328,10 +463,10 @@
 
   <!-- Topbar -->
   <nav class="topbar">
-    <a href="/lobby.html" class="topbar-logo">â™Ÿ OZAMA CHESS</a>
+    <a href="/lobby.html" class="topbar-logo">OZAMA CHESS</a>
     <div class="topbar-nav">
-      <a href="/lobby.html">â† Lobby</a>
-      <a href="/login.html" id="nav-logout" onclick="logout(); return false;">Cerrar sesiÃ³n</a>
+      <a href="/lobby.html">Lobby</a>
+      <a href="/login.html" id="nav-logout" onclick="logout(); return false;">Cerrar sesion</a>
     </div>
   </nav>
 
@@ -339,18 +474,24 @@
   <div id="main-content"></div>
 
   <script>
-    const _token = localStorage.getItem('ozama-token');
     const _user  = JSON.parse(localStorage.getItem('ozama-user') || 'null');
+    const _token = localStorage.getItem('ozama-token') || _user?.token || _user?.jwt || _user?.accessToken || '';
 
     function getFlag(country) {
-      if (!country || country === 'OTHER') return 'ðŸŒ';
+      if (!country || country === 'OTHER') return '<span class="country-code">--</span>';
       const code = String(country).trim().toLowerCase();
-      if (!/^[a-z]{2}$/.test(code)) return 'ðŸŒ';
-      return `<img src="https://flagcdn.com/32x24/${code}.png" alt="${code.toUpperCase()}" style="width:28px;height:20px;border-radius:2px;object-fit:cover;vertical-align:middle;" onerror="this.outerHTML='ðŸŒ'"/>`;
+      if (!/^[a-z]{2}$/.test(code)) return '<span class="country-code">--</span>';
+      return `<img src="https://flagcdn.com/32x24/${code}.png" alt="${code.toUpperCase()}" style="width:28px;height:20px;border-radius:2px;object-fit:cover;vertical-align:middle;" onerror="this.outerHTML='<span class=&quot;country-code&quot;>${code.toUpperCase()}</span>'"/>`;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[char]));
     }
 
     function avatarClass(avatar) {
-      const index = Number.isFinite(Number(avatar))  Number(avatar) : 0;
+      const index = Number.isFinite(Number(avatar)) ? Number(avatar) : 0;
       return `avatar-${Math.abs(index) % 6}`;
     }
 
@@ -358,11 +499,74 @@
       const value = Math.abs(Number(avatar) || 0) % 6;
       const input = document.getElementById('avatar-select');
       const ring = document.getElementById('avatar-ring');
+      const imageInput = document.getElementById('avatar-image-value');
       if (input) input.value = value;
-      if (ring) ring.className = `avatar-ring ${avatarClass(value)}`;
+      if (imageInput) imageInput.value = '';
+      if (ring) {
+        ring.className = `avatar-ring ${avatarClass(value)}`;
+        ring.textContent = ring.dataset.initial || '';
+      }
       document.querySelectorAll('.avatar-choice').forEach((btn) => {
         btn.classList.toggle('active', Number(btn.dataset.avatar) === value);
       });
+    }
+
+    function resizeAvatarImage(file) {
+      return new Promise((resolve, reject) => {
+        if (!file || !/^image\/(png|jpeg|webp)$/.test(file.type)) {
+          reject(new Error('Formato no valido.'));
+          return;
+        }
+        if (file.size > 3 * 1024 * 1024) {
+          reject(new Error('La foto debe pesar menos de 3 MB.'));
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+          const img = new Image();
+          img.onload = () => {
+            const size = 256;
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = size;
+            canvas.height = size;
+            const sourceSize = Math.min(img.width, img.height);
+            const sx = Math.max(0, (img.width - sourceSize) / 2);
+            const sy = Math.max(0, (img.height - sourceSize) / 2);
+            ctx.drawImage(img, sx, sy, sourceSize, sourceSize, 0, 0, size, size);
+            resolve(canvas.toDataURL('image/jpeg', 0.82));
+          };
+          img.onerror = () => reject(new Error('No se pudo leer la imagen.'));
+          img.src = reader.result;
+        };
+        reader.onerror = () => reject(new Error('No se pudo abrir el archivo.'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function handleAvatarImage(event) {
+      try {
+        const image = await resizeAvatarImage(event.target.files?.[0]);
+        const input = document.getElementById('avatar-image-value');
+        const ring = document.getElementById('avatar-ring');
+        if (input) input.value = image;
+        if (ring) {
+          ring.className = 'avatar-ring';
+          ring.innerHTML = `<img src="${image}" alt="">`;
+        }
+        document.querySelectorAll('.avatar-choice').forEach((btn) => btn.classList.remove('active'));
+      } catch (err) {
+        alert(err.message || 'No se pudo preparar la foto.');
+      } finally {
+        event.target.value = '';
+      }
+    }
+
+    function clearAvatarImage() {
+      const input = document.getElementById('avatar-image-value');
+      if (input) input.value = '';
+      selectAvatar(document.getElementById('avatar-select')?.value || 0);
     }
 
     function logout() {
@@ -380,39 +584,52 @@
     function renderNotLogged() {
       document.getElementById('main-content').innerHTML = `
         <div class="not-logged">
-          <div style="font-size:52px;">â™Ÿ</div>
+          <div style="font-family:'Cinzel',serif;font-size:34px;color:var(--gold);letter-spacing:4px;">OC</div>
           <h2>ACCESO REQUERIDO</h2>
           <p>Necesitas una cuenta para ver tu perfil.</p>
-          <a href="/login.html" class="btn-login">Iniciar SesiÃ³n</a>
+          <a href="/login.html" class="btn-login">Iniciar sesion</a>
         </div>
       `;
     }
 
     function renderProfile(user, history, total, page) {
+      user.stats = user.stats || { wins: 0, losses: 0, draws: 0 };
       const gamesPlayed = (user.stats.wins || 0) + (user.stats.losses || 0) + (user.stats.draws || 0);
       const winRate = gamesPlayed > 0 ? Math.round((user.stats.wins || 0) / gamesPlayed * 100) : 0;
       const avatar = Math.abs(Number(user.avatar) || 0) % 6;
+      const initial = escapeHtml((user.username || '?')[0].toUpperCase());
+      const username = escapeHtml(user.username || 'Jugador');
+      const avatarImage = user.avatarImage || '';
+      const premiumUntil = user.premiumUntil ? new Date(user.premiumUntil) : null;
+      const premiumActive = user.plan === 'premium' && (!premiumUntil || premiumUntil > new Date());
+      const planLabel = premiumActive ? 'Premium' : 'Free';
+      const planNote = premiumActive
+        ? 'Premium activo: beneficios visuales, avatares exclusivos y estadisticas avanzadas cuando se activen.'
+        : 'Plan Free activo. Premium llegara despues como experiencia de confort, sin ventajas competitivas.';
+      const heroAvatar = avatarImage
+        ? `<div class="avatar-ring" id="avatar-ring" data-initial="${initial}"><img src="${escapeHtml(avatarImage)}" alt=""></div>`
+        : `<div class="avatar-ring ${avatarClass(avatar)}" id="avatar-ring" data-initial="${initial}">${initial}</div>`;
 
       const matchRows = history.length === 0 ?
-         `<div class="empty-msg">â™Ÿ Sin partidas registradas aÃºn</div>`
+         `<div class="empty-msg">Sin partidas registradas aun</div>`
         : history.map(m => {
             const isWhite = m.whitePlayer.userId === user._id || m.whitePlayer.userId === user.id;
             const myColor = isWhite ? 'w' : 'b';
             const rivalPlayer = isWhite ? m.blackPlayer : m.whitePlayer;
-            const rival   = rivalPlayer.name;
+            const rival   = escapeHtml(rivalPlayer.name || 'Desconocido');
             const result  = m.result;
             const movesCount = Array.isArray(m.moves) ? m.moves.length : 0;
 
             let won, badge, icon, eloClass, eloText, resultText;
             if (result === 'draw') {
-              won = null; badge = 'badge-draw'; icon = 'ðŸ¤';
-              eloClass = 'elo-flat'; eloText = 'Â±0'; resultText = 'Tablas';
+              won = null; badge = 'badge-draw'; icon = '=';
+              eloClass = 'elo-flat'; eloText = '+0'; resultText = 'Tablas';
             } else if ((result === 'white_win' && myColor === 'w') || (result === 'black_win' && myColor === 'b')) {
-              won = true; badge = 'badge-win'; icon = 'ðŸ†';
+              won = true; badge = 'badge-win'; icon = 'W';
               const change = myColor === 'w' ? m.eloChange.white : m.eloChange.black;
               eloClass = 'elo-up'; eloText = change != null ? `+${change}` : '+'; resultText = 'Victoria';
             } else {
-              won = false; badge = 'badge-loss'; icon = 'ðŸ˜”';
+              won = false; badge = 'badge-loss'; icon = 'L';
               const change = myColor === 'w' ? m.eloChange.white : m.eloChange.black;
               eloClass = 'elo-down'; eloText = change != null ? `${change}` : '-'; resultText = result === 'abandoned' ? 'Abandono' : 'Derrota';
             }
@@ -421,7 +638,7 @@
               <div class="match-row">
                 <div class="match-result-badge ${badge}">${icon}</div>
                 <div class="match-info">
-                  <div class="match-vs">${getFlag(rivalPlayer.country)} vs ${rival || 'Desconocido'}</div>
+                  <div class="match-vs">${getFlag(rivalPlayer.country)} vs ${rival}</div>
                   <div class="match-detail">${resultText} · ${myColor === 'w' ? 'Blancas' : 'Negras'} · ${movesCount} movidas · Sala ${m.roomCode || ''}</div>
                 </div>
                 <div class="match-elo-change ${eloClass}">${eloText}</div>
@@ -433,28 +650,29 @@
       const totalPages = Math.ceil(total / 10);
       const paginationHtml = totalPages > 1 ? `
         <div class="pagination">
-          <button class="page-btn" onclick="loadPage(${page - 1})" ${page <= 1 ? 'disabled' : ''}>â† Ant</button>
+          <button class="page-btn" onclick="loadPage(${page - 1})" ${page <= 1 ? 'disabled' : ''}>Ant</button>
           <button class="page-btn active">${page} / ${totalPages}</button>
-          <button class="page-btn" onclick="loadPage(${page + 1})" ${page >= totalPages ? 'disabled' : ''}>Sig â†’</button>
+          <button class="page-btn" onclick="loadPage(${page + 1})" ${page >= totalPages ? 'disabled' : ''}>Sig</button>
         </div>
       ` : '';
 
       document.getElementById('main-content').innerHTML = `
         <!-- Hero -->
-        <div class="profile-hero">
-          <div class="avatar-ring ${avatarClass(avatar)}" id="avatar-ring">${(user.username || '')[0].toUpperCase()}</div>
-          <div class="profile-name">${user.username}</div>
+        <div class="profile-hero" id="perfil">
+          ${heroAvatar}
+          <div class="profile-name">${username}</div>
           <div class="profile-meta">
             <span class="profile-country">${getFlag(user.country)}</span>
             <span>${user.country || 'DO'}</span>
           </div>
           <div class="elo-display">ELO ${user.elo ? user.elo : 1200}</div>
+          <div class="plan-badge ${premiumActive ? 'premium' : ''}">${planLabel}</div>
         </div>
 
         <div class="container">
 
           <!-- Stats -->
-          <div class="stats-grid">
+          <div class="stats-grid" id="estadisticas">
             <div class="stat-card wins">
               <div class="stat-value">${user.stats.wins || 0}</div>
               <div class="stat-label">Victorias</div>
@@ -474,35 +692,52 @@
           </div>
 
           <!-- Editar perfil -->
-          <div class="edit-section">
+          <div class="edit-section" id="ajustes">
             <span class="edit-label">Avatar</span>
             <input type="hidden" id="avatar-select" value="${avatar}">
+            <input type="hidden" id="avatar-image-value" value="${escapeHtml(avatarImage)}">
             <div class="avatar-picker">
               ${[0,1,2,3,4,5].map(i => `
-                <button type="button" class="avatar-choice ${avatarClass(i)} ${i === avatar ? 'active' : ''}" data-avatar="${i}" onclick="selectAvatar(${i})">${(user.username || '')[0].toUpperCase()}</button>
+                <button type="button" class="avatar-choice ${avatarClass(i)} ${!avatarImage && i === avatar ? 'active' : ''}" data-avatar="${i}" onclick="selectAvatar(${i})">${initial}</button>
               `).join('')}
             </div>
-            <span class="edit-label">PaÃ­s</span>
+            <label class="photo-upload">Foto
+              <input type="file" accept="image/png,image/jpeg,image/webp" onchange="handleAvatarImage(event)">
+            </label>
+            <button class="btn-save secondary" onclick="clearAvatarImage()">Quitar foto</button>
+            <span class="edit-label">Pais</span>
             <select class="edit-select" id="country-select">
-              <option value="DO" ${user.country==='DO' ? 'selected' : ''}>ðŸ‡©ðŸ‡´ RepÃºblica Dominicana</option>
-              <option value="US" ${user.country==='US' ? 'selected' : ''}>ðŸ‡ºðŸ‡¸ Estados Unidos</option>
-              <option value="ES" ${user.country==='ES' ? 'selected' : ''}>ðŸ‡ªðŸ‡¸ EspaÃ±a</option>
-              <option value="MX" ${user.country==='MX' ? 'selected' : ''}>ðŸ‡²ðŸ‡½ MÃ©xico</option>
-              <option value="CO" ${user.country==='CO' ? 'selected' : ''}>ðŸ‡¨ðŸ‡´ Colombia</option>
-              <option value="VE" ${user.country==='VE' ? 'selected' : ''}>ðŸ‡»ðŸ‡ª Venezuela</option>
-              <option value="PR" ${user.country==='PR' ? 'selected' : ''}>ðŸ‡µðŸ‡· Puerto Rico</option>
-              <option value="CU" ${user.country==='CU' ? 'selected' : ''}>ðŸ‡¨ðŸ‡º Cuba</option>
-              <option value="HT" ${user.country==='HT' ? 'selected' : ''}>ðŸ‡­ðŸ‡¹ HaitÃ­</option>
-              <option value="BR" ${user.country==='BR' ? 'selected' : ''}>ðŸ‡§ðŸ‡· Brasil</option>
-              <option value="AR" ${user.country==='AR' ? 'selected' : ''}>ðŸ‡¦ðŸ‡· Argentina</option>
-              <option value="OTHER" ${user.country==='OTHER' ? 'selected' : ''}>ðŸŒ Otro</option>
+              <option value="DO" ${user.country==='DO' ? 'selected' : ''}>DO - Republica Dominicana</option>
+              <option value="US" ${user.country==='US' ? 'selected' : ''}>US - Estados Unidos</option>
+              <option value="ES" ${user.country==='ES' ? 'selected' : ''}>ES - Espana</option>
+              <option value="MX" ${user.country==='MX' ? 'selected' : ''}>MX - Mexico</option>
+              <option value="CO" ${user.country==='CO' ? 'selected' : ''}>CO - Colombia</option>
+              <option value="VE" ${user.country==='VE' ? 'selected' : ''}>VE - Venezuela</option>
+              <option value="PR" ${user.country==='PR' ? 'selected' : ''}>PR - Puerto Rico</option>
+              <option value="CU" ${user.country==='CU' ? 'selected' : ''}>CU - Cuba</option>
+              <option value="HT" ${user.country==='HT' ? 'selected' : ''}>HT - Haiti</option>
+              <option value="BR" ${user.country==='BR' ? 'selected' : ''}>BR - Brasil</option>
+              <option value="AR" ${user.country==='AR' ? 'selected' : ''}>AR - Argentina</option>
+              <option value="OTHER" ${user.country==='OTHER' ? 'selected' : ''}>Otro</option>
             </select>
             <button class="btn-save" onclick="saveProfile()">Guardar</button>
-            <span class="save-msg" id="save-msg">âœ… Guardado</span>
+            <span class="save-msg" id="save-msg">Guardado</span>
+            <div class="plan-note"><strong>Plan ${planLabel}</strong><br>${planNote}</div>
+          </div>
+
+          <div class="friends-panel" id="amigos">
+            <div class="section-title">Amigos</div>
+            <div class="friends-form">
+              <input class="friends-input" id="friend-username" maxlength="20" placeholder="Nombre de usuario">
+              <button class="btn-save" onclick="addFriend()">Agregar</button>
+            </div>
+            <div class="friends-list" id="friends-list">
+              <div class="empty-msg">Cargando amigos...</div>
+            </div>
           </div>
 
           <!-- Historial -->
-          <div class="section-title">Historial de Partidas</div>
+          <div class="section-title" id="historial">Historial de Partidas</div>
           <div class="match-list" id="match-list">${matchRows}</div>
           ${paginationHtml}
 
@@ -524,6 +759,7 @@
         const userData = await userRes.json();
 
         renderProfile(userData.user, data.matches, data.total, page);
+        loadFriends();
       } catch (err) {
         document.getElementById('match-list').innerHTML =
           '<div class="empty-msg">No se pudo cargar el historial.</div>';
@@ -533,6 +769,7 @@
     async function saveProfile() {
       const country = document.getElementById('country-select').value;
       const avatar = Number(document.getElementById('avatar-select').value || 0);
+      const avatarImage = document.getElementById('avatar-image-value')?.value || '';
       try {
         const res = await fetch('/api/user/me', {
           method: 'PATCH',
@@ -540,23 +777,116 @@
             'Content-Type': 'application/json',
             Authorization: `Bearer ${_token}`,
           },
-          body: JSON.stringify({ country, avatar }),
+          body: JSON.stringify({ country, avatar, avatarImage }),
         });
         if (!res.ok) throw new Error();
         const data = await res.json();
 
         // Actualizar localStorage
-        const updatedUser = { ..._user, country: data.user.country, avatar: data.user.avatar };
+        const updatedUser = {
+          ..._user,
+          country: data.user.country,
+          avatar: data.user.avatar,
+          avatarImage: data.user.avatarImage,
+          plan: data.user.plan,
+          premiumUntil: data.user.premiumUntil,
+          subscriptionStatus: data.user.subscriptionStatus,
+        };
         localStorage.setItem('ozama-user', JSON.stringify(updatedUser));
 
         const msg = document.getElementById('save-msg');
         if (msg) { msg.style.display = 'inline'; setTimeout(() => { msg.style.display = 'none'; }, 2000); }
+        const historyData = await reloadHistory();
+        renderProfile(data.user, historyData.matches, historyData.total, 1);
+        loadFriends();
       } catch (err) {
         alert('Error al guardar.');
       }
     }
 
-    // â”€â”€ Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function renderFriends(friends = []) {
+      const list = document.getElementById('friends-list');
+      if (!list) return;
+      if (!friends.length) {
+        list.innerHTML = '<div class="empty-msg">Todavia no has agregado amigos.</div>';
+        return;
+      }
+      list.innerHTML = friends.map((friend) => {
+        const name = escapeHtml(friend.username || 'Jugador');
+        const initial = escapeHtml((friend.username || '?')[0].toUpperCase());
+        const img = friend.avatarImage
+          ? `<img src="${escapeHtml(friend.avatarImage)}" alt="">`
+          : initial;
+        const games = (friend.stats?.wins || 0) + (friend.stats?.losses || 0) + (friend.stats?.draws || 0);
+        return `
+          <div class="friend-row">
+            <div class="friend-avatar ${avatarClass(friend.avatar)}">${img}</div>
+            <div class="friend-main">
+              <div class="friend-name">${getFlag(friend.country)} ${name}</div>
+              <div class="friend-meta">ELO ${friend.elo || 1200} · ${games} partidas</div>
+            </div>
+            <button class="page-btn" onclick="removeFriend('${name}')">Quitar</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function loadFriends() {
+      const list = document.getElementById('friends-list');
+      if (!list) return;
+      try {
+        const res = await fetch('/api/user/friends', {
+          headers: { Authorization: `Bearer ${_token}` }
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        renderFriends(data.friends || []);
+      } catch (err) {
+        list.innerHTML = '<div class="empty-msg">No se pudieron cargar los amigos.</div>';
+      }
+    }
+
+    async function addFriend() {
+      const input = document.getElementById('friend-username');
+      const username = input?.value.trim();
+      if (!username) return;
+      try {
+        const res = await fetch(`/api/user/friends/${encodeURIComponent(username)}`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${_token}` }
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'No se pudo agregar.');
+        input.value = '';
+        await loadFriends();
+      } catch (err) {
+        alert(err.message || 'No se pudo agregar.');
+      }
+    }
+
+    async function removeFriend(username) {
+      try {
+        const res = await fetch(`/api/user/friends/${encodeURIComponent(username)}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${_token}` }
+        });
+        if (!res.ok) throw new Error();
+        await loadFriends();
+      } catch (err) {
+        alert('No se pudo quitar el amigo.');
+      }
+    }
+
+    async function reloadHistory() {
+      const res = await fetch('/api/user/history?page=1&limit=10', {
+        headers: { Authorization: `Bearer ${_token}` }
+      });
+      if (!res.ok) return { matches: [], total: 0 };
+      const data = await res.json();
+      return { matches: data.matches || [], total: data.total || 0 };
+    }
+
+    // Init
     async function init() {
       if (!_token || !_user) { renderNotLogged(); return; }
 
@@ -564,7 +894,7 @@
       document.getElementById('main-content').innerHTML = `
         <div class="loading">
           <div class="spinner"></div>
-          Cargando perfilâ€¦
+          Cargando perfil...
         </div>
       `;
 
@@ -580,9 +910,13 @@
         const histData = histRes.ok ? await histRes.json() : { matches: [], total: 0 };
 
         renderProfile(userData.user, histData.matches, histData.total, 1);
+        loadFriends();
+        if (window.location.hash) {
+          setTimeout(() => document.querySelector(window.location.hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+        }
       } catch (err) {
         document.getElementById('main-content').innerHTML =
-          '<div class="loading">Error cargando el perfil. Recarga la pÃ¡gina.</div>';
+          '<div class="loading">Error cargando el perfil. Recarga la pagina.</div>';
       }
     }
 

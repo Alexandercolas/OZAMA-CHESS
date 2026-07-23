@@ -3,6 +3,19 @@
 const jwt  = require('jsonwebtoken');
 const User = require('../models/User');
 
+function adminEmails() {
+  return String(process.env.ADMIN_EMAILS || '')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function userIsAdmin(user) {
+  if (!user) return false;
+  if (user.isAdmin) return true;
+  return adminEmails().includes(String(user.email || '').toLowerCase());
+}
+
 // ── Middleware obligatorio ──────────────────────────────────────
 async function requireAuth(req, res, next) {
   try {
@@ -43,4 +56,13 @@ async function optionalAuth(req, res, next) {
   next();
 }
 
-module.exports = { requireAuth, optionalAuth };
+async function requireAdmin(req, res, next) {
+  await requireAuth(req, res, () => {
+    if (!userIsAdmin(req.user)) {
+      return res.status(403).json({ error: 'Acceso admin requerido.' });
+    }
+    return next();
+  });
+}
+
+module.exports = { requireAuth, optionalAuth, requireAdmin, userIsAdmin };
