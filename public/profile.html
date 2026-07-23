@@ -225,6 +225,7 @@
     .match-detail {
       font-size: 11px; color: var(--dim);
       letter-spacing: 1px; margin-top: 3px;
+      overflow: hidden; text-overflow: ellipsis;
     }
 
     .match-elo-change {
@@ -487,6 +488,10 @@
       .photo-upload, .btn-save, .edit-select { width: 100%; }
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
       .friends-form { flex-direction: column; }
+      .match-row { gap: 10px; padding: 12px; }
+      .match-result-badge { width: 34px; height: 34px; font-size: 15px; border-radius: 8px; }
+      .match-detail { white-space: nowrap; max-width: 100%; }
+      .match-elo-change { font-size: 12px; min-width: 34px; }
       .match-date { display: none; }
       .profile-hero { padding: 28px 16px 24px; }
     }

@@ -699,6 +699,7 @@
       .body {
         display: flex;
         flex-direction: column;
+        overflow-x: hidden;
       }
 
       .sb {
@@ -715,20 +716,31 @@
         overflow-x: auto;
         overflow-y: hidden;
         gap: 4px;
+        max-width: 100vw;
+        -webkit-overflow-scrolling: touch;
       }
 
       .sb-div, .sb-foot { display: none; }
       .sb-item {
         flex: 0 0 auto;
+        max-width: 132px;
         border-left: 0;
         border-bottom: 2px solid transparent;
         padding: 9px 12px;
+      }
+      .sb-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
       .sb-item.on { border-bottom-color: var(--gold); }
       .sb-desc { display: none; }
 
       .main {
         padding: 24px 16px 36px;
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: hidden;
       }
 
       .lobby-title { margin-bottom: 24px; }
@@ -746,6 +758,7 @@
       .cards-row {
         grid-template-columns: 1fr;
         gap: 14px;
+        width: 100%;
       }
       .card {
         min-height: auto;

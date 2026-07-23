@@ -723,18 +723,34 @@
 
     @media (max-width: 760px) {
       :root { --sq: clamp(36px, calc((100vw - 24px) / 8), 44px); }
+      html, body { overflow-x: hidden; }
       .app { grid-template-rows: auto 1fr; }
       .hd { padding: 10px 12px; gap: 10px; min-height: 52px; }
       .hd-logo { font-size: 15px; letter-spacing: 4px; }
       .hd-sub, .hd-banner, .hd-turns { display: none; }
       .body { grid-template-columns: 1fr; }
       .sb { display: none; }
-      .main { padding: 14px 10px 22px; gap: 12px; overflow-y: visible; }
-      .bc-banner { width: calc(var(--sq) * 8); letter-spacing: 2px; justify-content: center; }
+      .main {
+        width: 100%;
+        max-width: 100vw;
+        padding: 14px 10px 22px;
+        gap: 12px;
+        overflow-x: hidden;
+        overflow-y: visible;
+        justify-content: center;
+      }
+      .bc {
+        width: calc(var(--sq) * 8);
+        max-width: 100%;
+        flex: 0 0 auto;
+      }
+      .bc-banner { width: 100%; letter-spacing: 2px; justify-content: center; }
       .bc-banner::before, .bc-banner::after { display: none; }
       .pp {
         width: calc((var(--sq) * 8 - 12px) / 2);
+        max-width: calc((100vw - 32px) / 2);
         min-width: 0;
+        flex: 0 1 calc((var(--sq) * 8 - 12px) / 2);
       }
       .pp-top { padding: 12px 10px 10px; }
       .pp-player { gap: 8px; }
@@ -750,9 +766,10 @@
       .pc-captured-piece svg { width: 15px; height: 15px; }
       .chat-col {
         width: calc(var(--sq) * 8);
-        max-width: calc(var(--sq) * 8);
+        max-width: 100%;
         min-width: 0;
         height: 240px;
+        flex: 0 0 auto;
       }
       .bc-bottom { flex-wrap: wrap; }
       .bc-btn { flex: 1 1 50%; min-height: 38px; }
