@@ -181,6 +181,8 @@ function createGameState() {
     castlingRights: { w: { kingside: true, queenside: true }, b: { kingside: true, queenside: true } },
     enPassantTarget: null,
     halfMoveClock: 0,
+    moveCount: 0,
+    lastMove: null,
   };
 }
 
@@ -194,6 +196,19 @@ function enemy(color) {
 
 function cloneBoard(board) {
   return board.map(row => row.map(cell => (cell ? { ...cell } : null)));
+}
+
+function createGameSnapshot(game) {
+  if (!game) return null;
+  return {
+    board: cloneBoard(game.board),
+    turn: game.turn || COLOR.WHITE,
+    castlingRights: game.castlingRights || { w: { kingside: true, queenside: true }, b: { kingside: true, queenside: true } },
+    enPassantTarget: game.enPassantTarget || null,
+    halfMoveClock: game.halfMoveClock || 0,
+    moveCount: game.moveCount || 0,
+    lastMove: game.lastMove || null,
+  };
 }
 
 function findKing(board, color) {
@@ -402,6 +417,11 @@ function applyValidatedMove(game, from, to, promotion) {
   }
   game.halfMoveClock = piece.type === PIECE.PAWN || isCapture ? 0 : game.halfMoveClock + 1;
   game.turn = enemy(piece.color);
+  game.moveCount = (game.moveCount || 0) + 1;
+  game.lastMove = {
+    from: { row: from.row, col: from.col },
+    to: { row: to.row, col: to.col },
+  };
 }
 
 function validateAndApplyMove(game, playerColor, from, to, promotion) {
@@ -698,9 +718,10 @@ io.on('connection', (socket) => {
 
     socket.emit('rejoin-ok', {
       playerInfo: room.playerInfo,
-      currentTurn: room.currentTurn,
+      currentTurn: room.game?.turn || room.currentTurn,
       clockW: room.clockW || DEFAULT_TIME_MS,
       clockB: room.clockB || DEFAULT_TIME_MS,
+      game: createGameSnapshot(room.game),
     });
     socket.to(roomCode).emit('opponent-reconnected', { playerName: socket.data.playerName });
     // Si ambos jugadores están en sala, reanudar reloj

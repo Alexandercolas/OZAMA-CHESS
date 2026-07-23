@@ -208,6 +208,57 @@ function inBounds(r,c){return r>=0&&r<8&&c>=0&&c<8;}
 function enemy(color){return color===COLOR.WHITE?COLOR.BLACK:COLOR.WHITE;}
 function cloneBoard(b){return b.map(r=>r.map(c=>c ? {...c} : null));}
 
+function normalizeBoardSnapshot(board){
+  if(!Array.isArray(board)||board.length!==8) return null;
+  const normalized=board.map(row=>{
+    if(!Array.isArray(row)||row.length!==8) return null;
+    return row.map(piece=>{
+      if(!piece) return null;
+      if(!Object.values(PIECE).includes(piece.type)||!Object.values(COLOR).includes(piece.color)) return null;
+      return {type:piece.type,color:piece.color};
+    });
+  });
+  return normalized.some(row=>!row)?null:normalized;
+}
+
+function capturedFromBoard(board){
+  const base={p:8,n:2,b:2,r:2,q:1,k:1};
+  const seen={w:{p:0,n:0,b:0,r:0,q:0,k:0},b:{p:0,n:0,b:0,r:0,q:0,k:0}};
+  board.flat().forEach(piece=>{ if(piece) seen[piece.color][piece.type]=(seen[piece.color][piece.type]||0)+1; });
+  const capturedByW=[], capturedByB=[];
+  [PIECE.QUEEN,PIECE.ROOK,PIECE.BISHOP,PIECE.KNIGHT,PIECE.PAWN].forEach(type=>{
+    const missingWhite=Math.max(0,(base[type]||0)-(seen.w[type]||0));
+    const missingBlack=Math.max(0,(base[type]||0)-(seen.b[type]||0));
+    for(let i=0;i<missingBlack;i++) capturedByW.push({type,color:COLOR.BLACK});
+    for(let i=0;i<missingWhite;i++) capturedByB.push({type,color:COLOR.WHITE});
+  });
+  return {capturedByW,capturedByB};
+}
+
+function restoreGameSnapshot(snapshot,{clockW,clockB}={}){
+  const board=normalizeBoardSnapshot(snapshot?.board);
+  if(!board) return false;
+  state.board=board;
+  state.turn=snapshot.turn===COLOR.BLACK?COLOR.BLACK:COLOR.WHITE;
+  state.selected=null; state.legalMoves=[];
+  state.castlingRights=snapshot.castlingRights||{w:{kingside:true,queenside:true},b:{kingside:true,queenside:true}};
+  state.enPassantTarget=snapshot.enPassantTarget||null;
+  state.status=STATUS.PLAYING; state.winner=null;
+  state.moveCount=Number(snapshot.moveCount)||0;
+  state.halfMoveClock=Number(snapshot.halfMoveClock)||0;
+  state.moveHistory=[];
+  state.promotionPending=null; state._pendingHistoryEntry=null;
+  state.lastMove=snapshot.lastMove||null;
+  state._autoPromotionPiece=null; state._finishReported=false; state._pendingOnlineMove=null;
+  const captures=capturedFromBoard(board);
+  state.capturedByW=captures.capturedByW;
+  state.capturedByB=captures.capturedByB;
+  CLOCK.stop();
+  if(Number.isFinite(clockW)&&Number.isFinite(clockB)) CLOCK.set(clockW,clockB);
+  renderBoard(); updateStatusDisplay();
+  return true;
+}
+
 function findKing(board,color){
   for(let r=0;r<8;r++) for(let c=0;c<8;c++) if(board[r][c]?.type===PIECE.KING&&board[r][c]?.color===color) return{row:r,col:c};
   return null;
@@ -795,6 +846,17 @@ function setupOnlineSocket() {
     document.getElementById('rematch-overlay')?.classList.add('hidden');
     startNewGame();
     CLOCK.set(clockW || 600000, clockB || 600000);
+  });
+
+  socket.on('rejoin-ok', ({ currentTurn, clockW, clockB, game } = {}) => {
+    const restored = restoreGameSnapshot(game, { clockW, clockB });
+    if (!restored) {
+      state.turn = currentTurn === COLOR.BLACK ? COLOR.BLACK : COLOR.WHITE;
+      CLOCK.stop();
+      CLOCK.set(clockW || 600000, clockB || 600000);
+      renderBoard();
+      updateStatusDisplay();
+    }
   });
 
   socket.on('rejoin-failed', (message) => {
