@@ -1048,8 +1048,8 @@
             Una plataforma de ajedrez con energia dominicana: estrategia pura, duelo rapido y una identidad visual sobria.
           </p>
           <div class="hero-actions">
-            <a class="btn-primary" href="/lobby.html" id="cta-play">Jugar ahora</a>
-            <a class="btn-secondary" href="/lobby.html#bot" id="cta-bot">VS OZAMA BOT</a>
+            <a class="btn-primary" href="/login.html" id="cta-play">Jugar ahora</a>
+            <a class="btn-secondary" href="/login.html" id="cta-bot">VS OZAMA BOT</a>
             <a class="btn-secondary" href="/login.html" id="cta-register">Crear cuenta</a>
           </div>
           <div class="hero-meta" aria-label="Funciones principales">
@@ -1232,8 +1232,8 @@
             empieza a sentirse como el juego premium que merece ser.
           </p>
           <div class="hero-actions" style="justify-content:center">
-            <a class="btn-primary" href="/lobby.html" id="final-play">Entrar al lobby</a>
-            <a class="btn-secondary" href="/lobby.html#bot" id="final-bot">VS OZAMA BOT</a>
+            <a class="btn-primary" href="/login.html" id="final-play">Entrar al lobby</a>
+            <a class="btn-secondary" href="/login.html" id="final-bot">VS OZAMA BOT</a>
             <a class="btn-secondary" href="/login.html" id="final-login">Iniciar sesión</a>
           </div>
         </div>
@@ -1257,8 +1257,12 @@
     if (storedUser && storedToken) {
       const navProfile = document.getElementById('nav-profile');
       const navCta = document.getElementById('nav-cta');
+      const ctaPlay = document.getElementById('cta-play');
+      const ctaBot = document.getElementById('cta-bot');
       const ctaRegister = document.getElementById('cta-register');
       const rankingRegister = document.getElementById('ranking-register');
+      const finalPlay = document.getElementById('final-play');
+      const finalBot = document.getElementById('final-bot');
       const finalLogin = document.getElementById('final-login');
 
       if (navProfile) {
@@ -1270,6 +1274,8 @@
         navCta.textContent = 'Ir al lobby';
         navCta.href = '/lobby.html';
       }
+      if (ctaPlay) ctaPlay.href = '/lobby.html';
+      if (ctaBot) ctaBot.href = '/lobby.html#bot';
       if (ctaRegister) {
         ctaRegister.textContent = 'Ver perfil';
         ctaRegister.href = '/profile.html';
@@ -1278,6 +1284,8 @@
         rankingRegister.textContent = 'Ver mi perfil';
         rankingRegister.href = '/profile.html';
       }
+      if (finalPlay) finalPlay.href = '/lobby.html';
+      if (finalBot) finalBot.href = '/lobby.html#bot';
       if (finalLogin) {
         finalLogin.textContent = 'Ver perfil';
         finalLogin.href = '/profile.html';

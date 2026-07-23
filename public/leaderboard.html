@@ -390,8 +390,8 @@
     </a>
     <nav class="nav">
       <a href="/">Inicio</a>
-      <a href="/lobby.html">Lobby</a>
-      <a href="/profile.html">Perfil</a>
+      <a href="/login.html" id="nav-lobby">Lobby</a>
+      <a href="/login.html" id="nav-profile">Perfil</a>
     </nav>
   </header>
 
@@ -402,8 +402,8 @@
         <h1>Ranking<br>Ozama</h1>
         <p>Una tabla de bronce para medir progreso real: ELO, victorias, partidas y rendimiento competitivo de los jugadores registrados.</p>
         <div class="actions">
-          <a class="btn primary" href="/lobby.html">Jugar ahora</a>
-          <a class="btn" href="/profile.html">Ver perfil</a>
+          <a class="btn primary" href="/login.html" id="rank-play">Jugar ahora</a>
+          <a class="btn" href="/login.html" id="rank-profile">Ver perfil</a>
         </div>
       </div>
       <aside class="summary" aria-label="Resumen del ranking">
@@ -443,7 +443,18 @@
   </main>
 
   <script>
-    const storedUser = JSON.parse(localStorage.getItem('ozama-user') || 'null');
+    const storedUser = (() => {
+      try { return JSON.parse(localStorage.getItem('ozama-user') || 'null'); }
+      catch (_) { return null; }
+    })();
+    const storedToken = localStorage.getItem('ozama-token') || storedUser?.token || storedUser?.jwt || storedUser?.accessToken || '';
+
+    if (storedUser && storedToken) {
+      document.getElementById('nav-lobby')?.setAttribute('href', '/lobby.html');
+      document.getElementById('nav-profile')?.setAttribute('href', '/profile.html');
+      document.getElementById('rank-play')?.setAttribute('href', '/lobby.html');
+      document.getElementById('rank-profile')?.setAttribute('href', '/profile.html');
+    }
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>"']/g, (char) => ({
