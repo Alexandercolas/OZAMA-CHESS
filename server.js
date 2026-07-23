@@ -106,11 +106,13 @@ function startClock(code) {
     const ranOut = turn === 'w' ? room.clockW === 0 : room.clockB === 0;
     if (ranOut) {
       stopClock(room);
+      room.status = 'finished';
       const winner = turn === 'w' ? 'b' : 'w';
       const result = winner === 'w' ? 'white_win' : 'black_win';
       io.to(code).emit('time-out', { loser: turn, winner });
       const closed = await finishMatch(room.matchId, result, winner);
       if (closed) await applyEloForRoom(room, result, code);
+      await Room.updateOne({ roomCode: code }, { $set: { status: 'finished', lastActivityAt: new Date() } }).catch(() => {});
     }
   }, 1000);
 }
@@ -268,6 +270,7 @@ async function getOrRestoreRoom(roomCode) {
     white: null,
     black: null,
     currentTurn: saved.turn || 'w',
+    status: saved.status || 'playing',
     rematchReady: new Set(),
     timer: null,
     playerInfo: {
@@ -449,6 +452,31 @@ function getLegalMovesForSquare(board, row, col, game) {
   return getPseudoLegalMoves(board, row, col, game).filter(to => !wouldLeaveKingInCheck(board, { row, col }, to, piece.color, game));
 }
 
+function playerHasLegalMove(game, color) {
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      if (game.board[row][col]?.color === color && getLegalMovesForSquare(game.board, row, col, game).length) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function getServerGameConclusion(game) {
+  if (!game) return null;
+  const turn = game.turn;
+  const canMove = playerHasLegalMove(game, turn);
+  const inCheck = isInCheck(game.board, turn);
+  if (inCheck && !canMove) {
+    const winner = enemy(turn);
+    return { result: winner === COLOR.WHITE ? 'white_win' : 'black_win', winner };
+  }
+  if (!inCheck && !canMove) return { result: 'draw', winner: null };
+  if ((game.halfMoveClock || 0) >= 100) return { result: 'draw', winner: null };
+  return null;
+}
+
 function applyValidatedMove(game, from, to, promotion) {
   const piece = game.board[from.row][from.col];
   const capturedPiece = game.board[to.row][to.col] ? { ...game.board[to.row][to.col] } : null;
@@ -603,7 +631,7 @@ io.on('connection', (socket) => {
     rooms.set(code, {
       white: wSocket.id, black: bSocket.id,
       currentTurn: 'w', rematchReady: new Set(),
-      timer: null, playerInfo: { w: wInfo, b: bInfo }, matchId: null,
+      timer: null, status: 'playing', playerInfo: { w: wInfo, b: bInfo }, matchId: null,
       game: createGameState(),
       clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS, clockInterval: null,
     });
@@ -706,7 +734,7 @@ io.on('connection', (socket) => {
     rooms.set(code, {
       white: socket.id, black: null,
       currentTurn: 'w', rematchReady: new Set(),
-      timer: null, playerInfo: { w: pInfo, b: null }, matchId: null,
+      timer: null, status: 'waiting', playerInfo: { w: pInfo, b: null }, matchId: null,
       game: createGameState(),
       clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS, clockInterval: null,
     });
@@ -756,6 +784,7 @@ io.on('connection', (socket) => {
     cancelTimer(room);
     room.black        = socket.id;
     room.playerInfo.b = pInfo;
+    room.status       = 'playing';
 
     const wInfo = room.playerInfo.w;
     const match = await Match.create({
@@ -851,6 +880,9 @@ if (room.white && room.black && !room.clockInterval) {
     if (!room.game) {
       emitMoveRejected(socket, room, 'Estado de sala inválido.'); return;
     }
+    if (room.status && room.status !== 'playing') {
+      emitMoveRejected(socket, room, 'La partida ya no está activa.'); return;
+    }
     if (!socket.rooms.has(code)) {
       emitMoveRejected(socket, room, 'Socket fuera de la sala.'); return;
     }
@@ -910,7 +942,9 @@ if (room.white && room.black && !room.clockInterval) {
   socket.on('player-resign', async ({ room: code, pgn = '' } = {}) => {
     const room   = rooms.get(code);
     if (!room) return;
+    if (!canUseRoomColor(room, socket.data.color, socket.data.userId)) return;
     stopClock(room);
+    room.status = 'finished';
     const loser  = socket.data.color;
     const winner = loser === 'w' ? 'b' : loser === 'b' ? 'w' : null;
     if (room.matchId && winner) {
@@ -927,11 +961,18 @@ if (room.white && room.black && !room.clockInterval) {
   socket.on('game-finished', async ({ room: code, result, winner = null, pgn = '' } = {}) => {
     const room = rooms.get(code);
     if (!room || !room.matchId) return;
-    stopClock(room);
+    if (!canUseRoomColor(room, socket.data.color, socket.data.userId)) return;
 
     const validResults = new Set(['white_win', 'black_win', 'draw', 'abandoned']);
     const validWinners = new Set(['w', 'b', null]);
     if (!validResults.has(result) || !validWinners.has(winner)) return;
+    const conclusion = getServerGameConclusion(room.game);
+    if (!conclusion || conclusion.result !== result || conclusion.winner !== winner) {
+      emitMoveRejected(socket, room, 'El servidor todavía no reconoce el final de la partida.');
+      return;
+    }
+    stopClock(room);
+    room.status = 'finished';
 
     const closed = await finishMatch(room.matchId, result, winner, pgn);
     if (!closed) return;
@@ -956,6 +997,7 @@ if (room.white && room.black && !room.clockInterval) {
     if (room.rematchReady.size >= 2) {
       stopClock(room);
       room.currentTurn  = 'w';
+      room.status       = 'playing';
       room.rematchReady = new Set();
       room.game = createGameState();
       room.clockW = DEFAULT_TIME_MS;
