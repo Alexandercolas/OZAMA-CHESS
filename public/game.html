@@ -1093,8 +1093,8 @@
       const adv=myS-rivS;
       const score = `
         <span class="pc-material">
-          <span class="pc-total">MAT ${myS}</span>
-          <span class="pc-advantage ${adv<0?'behind':''}">${adv>0?'+':''}${adv}</span>
+          <span class="pc-total" title="Valor total capturado">CAP ${myS}</span>
+          <span class="pc-advantage ${adv<0?'behind':''}" title="Diferencia de material">DIF ${adv>0?'+':''}${adv}</span>
         </span>`;
       const list = sorted.length
         ? sorted.map(p=>{
