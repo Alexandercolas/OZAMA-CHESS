@@ -900,12 +900,16 @@
         <div class="controls" style="display:none!important">
           <button id="new-game-btn">Nueva</button>
           <button id="resign-btn">Rendirse</button>
+          <button id="draw-offer-btn">Tablas</button>
         </div>
 
         <!-- Botones visibles -->
         <div class="bc-bottom">
-          <button class="bc-btn" onclick="document.getElementById('new-game-btn').click()">
+          <button class="bc-btn" id="visible-new-game-btn" onclick="document.getElementById('new-game-btn').click()">
             Nueva partida
+          </button>
+          <button class="bc-btn" id="visible-draw-btn" onclick="document.getElementById('draw-offer-btn').click()">
+            Ofrecer tablas
           </button>
           <button class="bc-btn danger" onclick="document.getElementById('resign-btn').click()">
             Rendirse
@@ -995,6 +999,30 @@
     <div style="display:flex;gap:10px;justify-content:center;">
       <button id="rematch-accept-btn"  class="control-btn">Aceptar</button>
       <button id="rematch-decline-btn" class="control-btn danger">Rechazar</button>
+    </div>
+  </div>
+</div>
+
+<div id="confirm-overlay" class="overlay hidden">
+  <div class="overlay-card" style="text-align:center;">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:34px;margin-bottom:8px;color:#C8983C;letter-spacing:4px;">OC</div>
+    <h2 id="confirm-title">CONFIRMAR</h2>
+    <p id="confirm-message">Esta acción no se puede deshacer.</p>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button id="confirm-accept-btn" class="control-btn danger">Confirmar</button>
+      <button id="confirm-cancel-btn" class="control-btn">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div id="draw-overlay" class="overlay hidden">
+  <div class="overlay-card" style="text-align:center;">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:34px;margin-bottom:8px;color:#C8983C;letter-spacing:4px;">OC</div>
+    <h2>TABLAS</h2>
+    <p id="draw-sub">Tu rival ofrece tablas.</p>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button id="draw-accept-btn" class="control-btn">Aceptar</button>
+      <button id="draw-decline-btn" class="control-btn danger">Rechazar</button>
     </div>
   </div>
 </div>

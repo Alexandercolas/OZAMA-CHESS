@@ -630,7 +630,7 @@ io.on('connection', (socket) => {
   async function createMatchBetween(wSocket, wInfo, bSocket, bInfo, code) {
     rooms.set(code, {
       white: wSocket.id, black: bSocket.id,
-      currentTurn: 'w', rematchReady: new Set(),
+      currentTurn: 'w', rematchReady: new Set(), drawOfferBy: null,
       timer: null, status: 'playing', playerInfo: { w: wInfo, b: bInfo }, matchId: null,
       game: createGameState(),
       clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS, clockInterval: null,
@@ -733,7 +733,7 @@ io.on('connection', (socket) => {
 
     rooms.set(code, {
       white: socket.id, black: null,
-      currentTurn: 'w', rematchReady: new Set(),
+      currentTurn: 'w', rematchReady: new Set(), drawOfferBy: null,
       timer: null, status: 'waiting', playerInfo: { w: pInfo, b: null }, matchId: null,
       game: createGameState(),
       clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS, clockInterval: null,
@@ -999,6 +999,7 @@ if (room.white && room.black && !room.clockInterval) {
       room.currentTurn  = 'w';
       room.status       = 'playing';
       room.rematchReady = new Set();
+      room.drawOfferBy  = null;
       room.game = createGameState();
       room.clockW = DEFAULT_TIME_MS;
       room.clockB = DEFAULT_TIME_MS;
@@ -1029,6 +1030,36 @@ if (room.white && room.black && !room.clockInterval) {
     const room = rooms.get(code);
     if (room) room.rematchReady = new Set();
     socket.to(code).emit('rematch-declined');
+  });
+
+  socket.on('draw-offer', ({ room: code }) => {
+    const room = rooms.get(code);
+    if (!room || room.status !== 'playing') return;
+    if (!canUseRoomColor(room, socket.data.color, socket.data.userId)) return;
+    room.drawOfferBy = socket.id;
+    socket.to(code).emit('draw-offered', { playerName: socket.data.playerName });
+  });
+
+  socket.on('draw-decline', ({ room: code }) => {
+    const room = rooms.get(code);
+    if (!room) return;
+    room.drawOfferBy = null;
+    socket.to(code).emit('draw-declined', { playerName: socket.data.playerName });
+  });
+
+  socket.on('draw-accept', async ({ room: code }) => {
+    const room = rooms.get(code);
+    if (!room || room.status !== 'playing' || !room.drawOfferBy) return;
+    if (!canUseRoomColor(room, socket.data.color, socket.data.userId)) return;
+    if (room.drawOfferBy === socket.id) return;
+    stopClock(room);
+    room.status = 'finished';
+    room.drawOfferBy = null;
+    const closed = await finishMatch(room.matchId, 'draw', null);
+    if (closed) await applyEloForRoom(room, 'draw', code);
+    await Room.updateOne({ roomCode: code }, { $set: { status: 'finished', lastActivityAt: new Date() } }).catch(() => {});
+    io.to(code).emit('draw-accepted', { playerName: socket.data.playerName });
+    console.log(`[G] Partida ${code} finalizada: draw por acuerdo`);
   });
 
   socket.on('player-online', async ({ username, elo = 1200, country = 'DO' } = {}) => {

@@ -25,21 +25,24 @@ function playSound(name) {
 }
 
 function _soundMove(ctx) {
-  _noise(ctx,{duration:.055,vol:.13,filter:520,type:'lowpass'});
-  _tone(ctx,{type:'triangle',freq:210,endFreq:128,vol:.16,duration:.12});
-  _tone(ctx,{type:'sine',freq:920,endFreq:620,vol:.045,duration:.055,delay:.018});
+  _noise(ctx,{duration:.04,vol:.12,filter:480,type:'lowpass'});
+  _tone(ctx,{type:'triangle',freq:190,endFreq:112,vol:.17,duration:.14});
+  _tone(ctx,{type:'sine',freq:880,endFreq:560,vol:.045,duration:.06,delay:.018});
+  _tone(ctx,{type:'triangle',freq:72,endFreq:58,vol:.08,duration:.11,delay:.025});
 }
 function _soundCapture(ctx) {
-  _noise(ctx,{duration:.035,vol:.34,filter:2600,type:'highpass'});
-  _noise(ctx,{duration:.16,vol:.24,filter:620,type:'lowpass',delay:.012});
-  _tone(ctx,{type:'sawtooth',freq:170,endFreq:58,vol:.28,duration:.25,delay:.006});
-  _tone(ctx,{type:'square',freq:1420,endFreq:780,vol:.08,duration:.055,delay:.018});
-  _tone(ctx,{type:'triangle',freq:420,endFreq:210,vol:.08,duration:.12,delay:.06});
+  _noise(ctx,{duration:.022,vol:.42,filter:3600,type:'highpass'});
+  _noise(ctx,{duration:.18,vol:.28,filter:560,type:'lowpass',delay:.008});
+  _tone(ctx,{type:'sawtooth',freq:190,endFreq:54,vol:.30,duration:.28,delay:.004});
+  _tone(ctx,{type:'square',freq:1650,endFreq:720,vol:.09,duration:.05,delay:.014});
+  _tone(ctx,{type:'triangle',freq:420,endFreq:178,vol:.10,duration:.16,delay:.052});
+  _tone(ctx,{type:'sine',freq:86,endFreq:54,vol:.12,duration:.22,delay:.07});
 }
 function _soundCheck(ctx) {
-  _tone(ctx,{type:'square',freq:520,endFreq:520,vol:.11,duration:.09});
-  _tone(ctx,{type:'square',freq:690,endFreq:690,vol:.11,duration:.09,delay:.105});
-  _tone(ctx,{type:'sine',freq:1380,endFreq:910,vol:.055,duration:.22,delay:.02});
+  _tone(ctx,{type:'square',freq:520,endFreq:520,vol:.10,duration:.08});
+  _tone(ctx,{type:'square',freq:700,endFreq:700,vol:.10,duration:.08,delay:.095});
+  _tone(ctx,{type:'sine',freq:1480,endFreq:880,vol:.06,duration:.24,delay:.018});
+  _noise(ctx,{duration:.08,vol:.08,filter:2200,type:'bandpass',delay:.04});
 }
 function _soundCastle(ctx) {
   _noise(ctx,{duration:.09,vol:.16,filter:430,type:'lowpass'});
@@ -48,10 +51,11 @@ function _soundCastle(ctx) {
   _tone(ctx,{type:'triangle',freq:240,endFreq:118,vol:.16,duration:.14,delay:.12});
 }
 function _soundGameover(ctx) {
-  _noise(ctx,{duration:.5,vol:.08,filter:360,type:'lowpass',delay:.04});
-  [{freq:260,delay:0},{freq:207,delay:.18},{freq:155,delay:.36},{freq:98,delay:.56}]
-    .forEach(({freq,delay})=>_tone(ctx,{type:'triangle',freq,endFreq:Math.max(50,freq*.62),vol:.14,duration:.82,delay}));
-  _tone(ctx,{type:'sine',freq:740,endFreq:420,vol:.055,duration:.9,delay:.08});
+  _noise(ctx,{duration:.62,vol:.10,filter:320,type:'lowpass',delay:.03});
+  [{freq:294,delay:0},{freq:220,delay:.18},{freq:165,delay:.38},{freq:98,delay:.62}]
+    .forEach(({freq,delay})=>_tone(ctx,{type:'triangle',freq,endFreq:Math.max(48,freq*.58),vol:.14,duration:.9,delay}));
+  _tone(ctx,{type:'sine',freq:760,endFreq:392,vol:.055,duration:1.05,delay:.08});
+  _tone(ctx,{type:'triangle',freq:74,endFreq:49,vol:.12,duration:.7,delay:.15});
 }
 function _tone(ctx,{type,freq,endFreq,vol,duration,delay=0}){
   const t=ctx.currentTime+delay, osc=ctx.createOscillator(), env=ctx.createGain();
@@ -854,11 +858,26 @@ function hideGameEnd() {
   document.getElementById('game-over-overlay')?.classList.add('hidden');
 }
 
-function resignGame() {
-  if (state.status === STATUS.CHECKMATE || state.status === STATUS.STALEMATE || state.status === STATUS.DRAW) return;
-  if (state.promotionPending) return;
-  if (!window.confirm('Seguro que quieres rendirte?')) return;
+function showConfirm(title, message, onAccept, acceptText = 'Confirmar') {
+  const overlay = document.getElementById('confirm-overlay');
+  const titleEl = document.getElementById('confirm-title');
+  const msgEl = document.getElementById('confirm-message');
+  const accept = document.getElementById('confirm-accept-btn');
+  const cancel = document.getElementById('confirm-cancel-btn');
+  if (!overlay || !accept || !cancel) {
+    if (window.confirm(message)) onAccept?.();
+    return;
+  }
+  if (titleEl) titleEl.textContent = title;
+  if (msgEl) msgEl.textContent = message;
+  accept.textContent = acceptText;
+  const close = () => overlay.classList.add('hidden');
+  accept.onclick = () => { close(); onAccept?.(); };
+  cancel.onclick = close;
+  overlay.classList.remove('hidden');
+}
 
+function completeResignation() {
   CLOCK.stop();
   playSound('gameover');
 
@@ -883,8 +902,35 @@ function resignGame() {
   });
 }
 
+function resignGame() {
+  if (state.status === STATUS.CHECKMATE || state.status === STATUS.STALEMATE || state.status === STATUS.DRAW) return;
+  if (state.promotionPending) return;
+  showConfirm(
+    'RENDIRSE',
+    IS_ONLINE
+      ? 'Si abandonas ahora, la partida contará como derrota y no se podrá deshacer.'
+      : 'Si abandonas ahora, la partida contra el bot terminará de inmediato.',
+    completeResignation,
+    'Rendirse'
+  );
+}
+
+function offerDraw() {
+  if (!IS_ONLINE || !socket) return;
+  if (state.status === STATUS.CHECKMATE || state.status === STATUS.STALEMATE || state.status === STATUS.DRAW) return;
+  showConfirm(
+    'OFRECER TABLAS',
+    'Tu rival podrá aceptar y la partida terminará como empate.',
+    () => socket.emit('draw-offer', { room: ROOM_CODE }),
+    'Ofrecer'
+  );
+}
+
 function setupControls() {
   document.getElementById('resign-btn')?.addEventListener('click', resignGame);
+  document.getElementById('draw-offer-btn')?.addEventListener('click', offerDraw);
+  document.getElementById('visible-new-game-btn')?.classList.toggle('hidden', IS_ONLINE);
+  document.getElementById('visible-draw-btn')?.classList.toggle('hidden', !IS_ONLINE);
   document.getElementById('new-game-btn')?.addEventListener('click', () => {
     if (IS_ONLINE) return;
     hideGameEnd();
@@ -909,6 +955,14 @@ function setupControls() {
   document.getElementById('rematch-decline-btn')?.addEventListener('click', () => {
     document.getElementById('rematch-overlay')?.classList.add('hidden');
     if (IS_ONLINE && socket) socket.emit('rematch-decline', { room: ROOM_CODE });
+  });
+  document.getElementById('draw-accept-btn')?.addEventListener('click', () => {
+    document.getElementById('draw-overlay')?.classList.add('hidden');
+    if (IS_ONLINE && socket) socket.emit('draw-accept', { room: ROOM_CODE });
+  });
+  document.getElementById('draw-decline-btn')?.addEventListener('click', () => {
+    document.getElementById('draw-overlay')?.classList.add('hidden');
+    if (IS_ONLINE && socket) socket.emit('draw-decline', { room: ROOM_CODE });
   });
 }
 
@@ -969,6 +1023,27 @@ function setupOnlineSocket() {
     document.getElementById('rematch-overlay')?.classList.add('hidden');
     startNewGame();
     CLOCK.set(clockW || 600000, clockB || 600000);
+  });
+
+  socket.on('draw-offered', ({ playerName } = {}) => {
+    const sub = document.getElementById('draw-sub');
+    if (sub) sub.textContent = `${playerName || 'Tu rival'} ofrece tablas.`;
+    document.getElementById('draw-overlay')?.classList.remove('hidden');
+  });
+
+  socket.on('draw-declined', ({ playerName } = {}) => {
+    document.getElementById('draw-overlay')?.classList.add('hidden');
+    if (typeof appendSystemMessage === 'function') appendSystemMessage(`${playerName || 'Tu rival'} rechazó las tablas`);
+  });
+
+  socket.on('draw-accepted', ({ playerName } = {}) => {
+    document.getElementById('draw-overlay')?.classList.add('hidden');
+    CLOCK.stop();
+    playSound('gameover');
+    state.status = STATUS.DRAW;
+    state.winner = null;
+    updateStatusDisplay();
+    showGameEnd('TABLAS', `${playerName || 'Tu rival'} aceptó el empate.`, { online: true, canPlayAgain: false });
   });
 
   socket.on('rejoin-ok', ({ currentTurn, clockW, clockB, game } = {}) => {
