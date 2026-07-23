@@ -129,7 +129,6 @@ const BOT_LEVEL = sessionStorage.getItem('ozama-bot-difficulty') || 'medium';
 let _botThinking = false;
 let socket = null;
 let _applyingRemoteMove = false;
-let _onlineReady = !IS_ONLINE;
 
 let state = {
   board:[], turn:COLOR.WHITE, selected:null, legalMoves:[],
@@ -667,7 +666,6 @@ function renderBoard() {
 
 function handleSquareClick(r, c) {
   if (state.status === STATUS.CHECKMATE || state.status === STATUS.STALEMATE) return;
-  if (IS_ONLINE && !_onlineReady) return;
   if (IS_ONLINE && state.turn !== PLAYER_COLOR) return;
   if (IS_BOT_MODE && (state.turn === BOT_COLOR || _botThinking)) return;
 
@@ -965,14 +963,12 @@ function setupOnlineSocket() {
   socket.on('rematch-start', ({ clockW, clockB } = {}) => {
     hideGameEnd();
     document.getElementById('rematch-overlay')?.classList.add('hidden');
-    _onlineReady = true;
     startNewGame();
     CLOCK.set(clockW || 600000, clockB || 600000);
   });
 
   socket.on('rejoin-ok', ({ currentTurn, clockW, clockB, game } = {}) => {
     const restored = restoreGameSnapshot(game, { clockW, clockB });
-    _onlineReady = true;
     if (!restored) {
       state.turn = currentTurn === COLOR.BLACK ? COLOR.BLACK : COLOR.WHITE;
       CLOCK.stop();

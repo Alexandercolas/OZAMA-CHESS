@@ -814,8 +814,6 @@ if (room.white && room.black && !room.clockInterval) {
 
     const playerColor = socket.data.color;
     const roomSockets = [...(io.sockets.adapter.rooms.get(code) || [])];
-    const opponentSocketId = playerColor === 'w' ? room.black : playerColor === 'b' ? room.white : null;
-    const opponentSocket = opponentSocketId ? io.sockets.sockets.get(opponentSocketId) : null;
     console.log('[MOVE:SERVER:IN]', {
       socketId: socket.id, room: code, socketRoom: socket.data.roomCode,
       color: playerColor, turn: room.game?.turn, from, to, promotion,
@@ -828,9 +826,6 @@ if (room.white && room.black && !room.clockInterval) {
     }
     if (!socket.rooms.has(code)) {
       socket.emit('move-rejected', 'Socket fuera de la sala.'); return;
-    }
-    if (!opponentSocket?.connected || !opponentSocket.rooms.has(code)) {
-      socket.emit('move-rejected', 'Rival no conectado a la sala.'); return;
     }
 
     let validation;

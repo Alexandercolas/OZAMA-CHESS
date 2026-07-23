@@ -1096,6 +1096,7 @@
   function goToGame(roomCode, color, playerInfo, names) {
     sessionStorage.setItem('ozama-room',   roomCode);
     sessionStorage.setItem('ozama-color',  color);
+    sessionStorage.setItem('ozama-myname', user?.username || '');
     if (playerInfo) sessionStorage.setItem('ozama-player-info', JSON.stringify(playerInfo));
     if (names)      sessionStorage.setItem('ozama-names', JSON.stringify(names));
     window.location.href = '/game.html';
