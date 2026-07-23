@@ -109,6 +109,21 @@ const PLAYER_COLOR = RAW_PLAYER_COLOR === 'white' ? COLOR.WHITE
   : RAW_PLAYER_COLOR;
 let IS_ONLINE = !!(ROOM_CODE && (PLAYER_COLOR === COLOR.WHITE || PLAYER_COLOR === COLOR.BLACK));
 const IS_BOT_MODE = !IS_ONLINE && sessionStorage.getItem('ozama-bot-mode') === 'true';
+function readStoredUser() {
+  try { return JSON.parse(localStorage.getItem('ozama-user') || 'null'); }
+  catch { return null; }
+}
+const STORED_USER = readStoredUser();
+const STORED_TOKEN = localStorage.getItem('ozama-token') || STORED_USER?.token || STORED_USER?.jwt || STORED_USER?.accessToken || '';
+if (!STORED_USER || !STORED_TOKEN) {
+  sessionStorage.clear();
+  window.location.replace('/login.html');
+  throw new Error('AUTH_REQUIRED');
+}
+if (!IS_ONLINE && !IS_BOT_MODE) {
+  window.location.replace('/lobby.html');
+  throw new Error('GAME_SESSION_REQUIRED');
+}
 const BOT_COLOR = sessionStorage.getItem('ozama-bot-color') || COLOR.BLACK;
 const BOT_LEVEL = sessionStorage.getItem('ozama-bot-difficulty') || 'medium';
 let _botThinking = false;
@@ -830,7 +845,7 @@ function setupControls() {
 
 function setupOnlineSocket() {
   if (!IS_ONLINE || typeof io !== 'function') return;
-  socket = io({ auth: { token: sessionStorage.getItem('ozama-token') || localStorage.getItem('ozama-token') || '' } });
+  socket = io({ auth: { token: sessionStorage.getItem('ozama-token') || STORED_TOKEN || '' } });
 
   function rejoin() {
     socket.emit('rejoin', {
@@ -900,6 +915,14 @@ function setupOnlineSocket() {
     console.warn('[OZAMA] Rejoin fallido:', message);
     clearOnlineSession();
     window.location.href = '/lobby.html';
+  });
+
+  socket.on('auth-error', (message) => {
+    console.warn('[OZAMA] Auth socket:', message);
+    localStorage.removeItem('ozama-user');
+    localStorage.removeItem('ozama-token');
+    clearOnlineSession();
+    window.location.href = '/login.html';
   });
 
   socket.on('connect', rejoin);

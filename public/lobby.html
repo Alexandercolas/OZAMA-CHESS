@@ -1056,6 +1056,10 @@
   const socket = io({ auth: { token: _token } });
   let _challengerSocketId = null;
 
+  socket.on('auth-error', () => {
+    doLogout();
+  });
+
   function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, (char) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'

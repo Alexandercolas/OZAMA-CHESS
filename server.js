@@ -564,6 +564,14 @@ io.use((socket, next) => {
 io.on('connection', (socket) => {
   console.log(`[+] Conectado: ${socket.id} ${socket.data.userId ? '(auth)' : '(anon)'}`);
 
+  function requireSocketAuth(message = 'Debes iniciar sesión para jugar.') {
+    if (socket.data.userId) return true;
+    socket.emit('auth-error', message);
+    socket.emit('room-error', message);
+    socket.emit('challenge-error', message);
+    return false;
+  }
+
   async function getPlayerInfo(playerName, fallbackCountry = 'DO') {
     if (socket.data.userId) {
       const user = await User.findById(socket.data.userId).select('username country avatar avatarImage elo').lean();
@@ -618,6 +626,7 @@ io.on('connection', (socket) => {
 
   // ── MATCHMAKING: unirse a la cola ─────────────────────────────
   socket.on('quick-match', async ({ playerName = 'Jugador', country = 'DO' } = {}) => {
+    if (!requireSocketAuth()) return;
     const existingIdx = matchQueue.findIndex(e => e.socketId === socket.id);
     if (existingIdx !== -1) matchQueue.splice(existingIdx, 1);
 
@@ -669,6 +678,7 @@ io.on('connection', (socket) => {
 
   // ── Crear sala ────────────────────────────────────────────────
   socket.on('create-room', async ({ playerName = 'Jugador 1', country = 'DO' } = {}) => {
+    if (!requireSocketAuth()) return;
     let code;
     do { code = generateCode(); } while (rooms.has(code));
 
@@ -711,6 +721,7 @@ io.on('connection', (socket) => {
 
   // ── Unirse a sala ─────────────────────────────────────────────
   socket.on('join-room', async ({ code, playerName = 'Jugador 2', country = 'DO' }) => {
+    if (!requireSocketAuth()) return;
     const cleanCode = (code || '').toUpperCase().trim();
     const room      = rooms.get(cleanCode);
 
@@ -757,6 +768,7 @@ io.on('connection', (socket) => {
 
   // ── Reconexión ────────────────────────────────────────────────
   socket.on('rejoin', async ({ roomCode, color, playerName }) => {
+    if (!requireSocketAuth()) return;
     const room = await getOrRestoreRoom(roomCode);
     if (!room) { socket.emit('rejoin-failed', 'La sala ya no existe.'); return; }
     const cleanRoomCode = roomCode.toUpperCase().trim();
@@ -795,6 +807,7 @@ if (room.white && room.black && !room.clockInterval) {
 
   // ── Movida ────────────────────────────────────────────────────
   socket.on('player-move', async ({ room: code, from, to, promotion }) => {
+    if (!requireSocketAuth()) return;
     if (!code || !from || !to) return;
     const room = rooms.get(code);
     if (!room) { socket.emit('move-rejected', 'La sala ya no existe.'); return; }
@@ -948,6 +961,7 @@ if (room.white && room.black && !room.clockInterval) {
   });
 
   socket.on('player-online', async ({ username, elo = 1200, country = 'DO' } = {}) => {
+    if (!requireSocketAuth()) return;
     const info = await getPlayerInfo(username, country);
     onlinePlayers.set(socket.id, {
       username: info.name,
@@ -962,6 +976,7 @@ if (room.white && room.black && !room.clockInterval) {
 
   // ── Buscar usuario online ─────────────────────────────────────
   socket.on('search-user', async ({ username }) => {
+    if (!requireSocketAuth()) return;
     if (!username || username.trim().length < 2) {
       socket.emit('search-user-result', { error: 'Ingresa al menos 2 caracteres.' });
       return;
@@ -991,10 +1006,7 @@ if (room.white && room.black && !room.clockInterval) {
 
   // ── Enviar desafío ────────────────────────────────────────────
   socket.on('challenge-send', async ({ targetUsername }) => {
-    if (!socket.data.userId) {
-      socket.emit('challenge-error', 'Debes iniciar sesión para desafiar.');
-      return;
-    }
+    if (!requireSocketAuth('Debes iniciar sesión para desafiar.')) return;
 
     let targetSocket = null;
     for (const [, s] of io.sockets.sockets) {
@@ -1032,9 +1044,14 @@ if (room.white && room.black && !room.clockInterval) {
 
   // ── Aceptar desafío ───────────────────────────────────────────
   socket.on('challenge-accept', async ({ challengerSocketId }) => {
+    if (!requireSocketAuth()) return;
     const challengerSocket = io.sockets.sockets.get(challengerSocketId);
     if (!challengerSocket || !challengerSocket.connected) {
       socket.emit('challenge-error', 'El rival ya no está disponible.');
+      return;
+    }
+    if (!challengerSocket.data.userId) {
+      socket.emit('challenge-error', 'El rival perdió la sesión.');
       return;
     }
 
