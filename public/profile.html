@@ -349,7 +349,29 @@
       cursor: pointer;
       background: rgba(212,175,55,0.06);
     }
+    .photo-upload:hover {
+      border-color: var(--gold);
+      box-shadow: 0 0 14px rgba(212,175,55,0.18);
+    }
     .photo-upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .photo-tools {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .photo-hint {
+      width: 100%;
+      color: var(--dim);
+      font-size: 11px;
+      letter-spacing: 1px;
+    }
+    .photo-status {
+      color: var(--gold);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
 
     .friends-panel {
       background: var(--surface);
@@ -460,6 +482,9 @@
       .topbar-logo { font-size: 13px; letter-spacing: 2px; }
       .topbar-nav { width: 100%; justify-content: center; gap: 14px; }
       .topbar-nav a { font-size: 10px; letter-spacing: 1.3px; }
+      .edit-section { align-items: stretch; flex-direction: column; }
+      .avatar-picker, .photo-tools { width: 100%; }
+      .photo-upload, .btn-save, .edit-select { width: 100%; }
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
       .friends-form { flex-direction: column; }
       .match-date { display: none; }
@@ -508,8 +533,10 @@
       const input = document.getElementById('avatar-select');
       const ring = document.getElementById('avatar-ring');
       const imageInput = document.getElementById('avatar-image-value');
+      const photoStatus = document.getElementById('photo-status');
       if (input) input.value = value;
       if (imageInput) imageInput.value = '';
+      if (photoStatus) photoStatus.textContent = '';
       if (ring) {
         ring.className = `avatar-ring ${avatarClass(value)}`;
         ring.textContent = ring.dataset.initial || '';
@@ -558,11 +585,13 @@
         const image = await resizeAvatarImage(event.target.files?.[0]);
         const input = document.getElementById('avatar-image-value');
         const ring = document.getElementById('avatar-ring');
+        const photoStatus = document.getElementById('photo-status');
         if (input) input.value = image;
         if (ring) {
           ring.className = 'avatar-ring';
           ring.innerHTML = `<img src="${image}" alt="">`;
         }
+        if (photoStatus) photoStatus.textContent = 'Foto lista. Toca Guardar.';
         document.querySelectorAll('.avatar-choice').forEach((btn) => btn.classList.remove('active'));
       } catch (err) {
         alert(err.message || 'No se pudo preparar la foto.');
@@ -575,6 +604,8 @@
       const input = document.getElementById('avatar-image-value');
       if (input) input.value = '';
       selectAvatar(document.getElementById('avatar-select')?.value || 0);
+      const photoStatus = document.getElementById('photo-status');
+      if (photoStatus) photoStatus.textContent = 'Foto quitada. Toca Guardar.';
     }
 
     function logout() {
@@ -709,10 +740,15 @@
                 <button type="button" class="avatar-choice ${avatarClass(i)} ${!avatarImage && i === avatar ? 'active' : ''}" data-avatar="${i}" onclick="selectAvatar(${i})">${initial}</button>
               `).join('')}
             </div>
-            <label class="photo-upload">Foto
-              <input type="file" accept="image/png,image/jpeg,image/webp" onchange="handleAvatarImage(event)">
-            </label>
-            <button class="btn-save secondary" onclick="clearAvatarImage()">Quitar foto</button>
+            <span class="edit-label">Foto de perfil</span>
+            <div class="photo-tools">
+              <label class="photo-upload">Subir foto
+                <input type="file" accept="image/png,image/jpeg,image/webp" onchange="handleAvatarImage(event)">
+              </label>
+              <button class="btn-save secondary" onclick="clearAvatarImage()">Quitar foto</button>
+              <span class="photo-status" id="photo-status">${avatarImage ? 'Foto activa' : ''}</span>
+              <div class="photo-hint">PNG, JPG o WebP. Se recorta en cuadrado y se guarda al tocar Guardar.</div>
+            </div>
             <span class="edit-label">Pais</span>
             <select class="edit-select" id="country-select">
               <option value="DO" ${user.country==='DO' ? 'selected' : ''}>DO - Republica Dominicana</option>
