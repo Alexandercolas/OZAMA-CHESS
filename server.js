@@ -211,6 +211,61 @@ function createGameSnapshot(game) {
   };
 }
 
+function restoreGameFromSnapshot(snapshot) {
+  if (!snapshot || !Array.isArray(snapshot.board) || snapshot.board.length !== 8) return createGameState();
+  return {
+    board: cloneBoard(snapshot.board),
+    turn: snapshot.turn === COLOR.BLACK ? COLOR.BLACK : COLOR.WHITE,
+    castlingRights: snapshot.castlingRights || { w: { kingside: true, queenside: true }, b: { kingside: true, queenside: true } },
+    enPassantTarget: snapshot.enPassantTarget || null,
+    halfMoveClock: snapshot.halfMoveClock || 0,
+    moveCount: snapshot.moveCount || 0,
+    lastMove: snapshot.lastMove || null,
+  };
+}
+
+function roomPlayerInfo(player) {
+  if (!player) return null;
+  return {
+    userId: player.userId || null,
+    name: player.name || 'Jugador',
+    country: player.country || 'DO',
+    avatar: player.avatar || 0,
+    avatarImage: player.avatarImage || '',
+    elo: player.elo || 1200,
+  };
+}
+
+async function getOrRestoreRoom(roomCode) {
+  const code = (roomCode || '').toUpperCase().trim();
+  if (!code) return null;
+  const existing = rooms.get(code);
+  if (existing) return existing;
+
+  const saved = await Room.findOne({ roomCode: code, status: { $in: ['waiting', 'playing'] } }).lean().catch(() => null);
+  if (!saved) return null;
+
+  const room = {
+    white: null,
+    black: null,
+    currentTurn: saved.turn || 'w',
+    rematchReady: new Set(),
+    timer: null,
+    playerInfo: {
+      w: roomPlayerInfo(saved.players?.white),
+      b: roomPlayerInfo(saved.players?.black),
+    },
+    matchId: saved.match || null,
+    game: restoreGameFromSnapshot(saved.gameState),
+    clockW: saved.clockW || DEFAULT_TIME_MS,
+    clockB: saved.clockB || DEFAULT_TIME_MS,
+    clockInterval: null,
+  };
+  room.currentTurn = room.game.turn || room.currentTurn;
+  rooms.set(code, room);
+  return room;
+}
+
 function findKing(board, color) {
   for (let row = 0; row < 8; row++) {
     for (let col = 0; col < 8; col++) {
@@ -542,7 +597,8 @@ io.on('connection', (socket) => {
         roomCode: code,
         'players.white.socketId': wSocket.id, 'players.white.userId': wInfo.userId, 'players.white.name': wInfo.name, 'players.white.country': wInfo.country, 'players.white.avatar': wInfo.avatar, 'players.white.avatarImage': wInfo.avatarImage || '',
         'players.black.socketId': bSocket.id, 'players.black.userId': bInfo.userId, 'players.black.name': bInfo.name, 'players.black.country': bInfo.country, 'players.black.avatar': bInfo.avatar, 'players.black.avatarImage': bInfo.avatarImage || '',
-        match: match?._id || null, fen: 'startpos', turn: 'w', status: 'playing', lastActivityAt: new Date(),
+        match: match?._id || null, fen: 'startpos', turn: 'w', gameState: createGameSnapshot(room.game),
+        clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS, status: 'playing', lastActivityAt: new Date(),
       }},
       { upsert: true, new: true }
     ).catch(() => {});
@@ -644,7 +700,8 @@ io.on('connection', (socket) => {
         'players.white.socketId': socket.id, 'players.white.userId': pInfo.userId,
         'players.white.name': pInfo.name,    'players.white.country': pInfo.country, 'players.white.avatar': pInfo.avatar, 'players.white.avatarImage': pInfo.avatarImage || '',
         'players.black.socketId': null, 'players.black.name': '',
-        fen: 'startpos', turn: 'w', status: 'waiting', lastActivityAt: new Date(),
+        fen: 'startpos', turn: 'w', gameState: createGameSnapshot(rooms.get(code).game),
+        clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS, status: 'waiting', lastActivityAt: new Date(),
       }},
       { upsert: true, new: true }
     ).catch((err) => console.warn('[DB] No se pudo guardar sala:', err.message));
@@ -678,7 +735,8 @@ io.on('connection', (socket) => {
     await Room.updateOne({ roomCode: cleanCode }, { $set: {
       'players.black.socketId': socket.id, 'players.black.userId': pInfo.userId,
       'players.black.name': pInfo.name,    'players.black.country': pInfo.country, 'players.black.avatar': pInfo.avatar, 'players.black.avatarImage': pInfo.avatarImage || '',
-      match: match?._id || null, turn: room.currentTurn, status: 'playing', lastActivityAt: new Date(),
+      match: match?._id || null, turn: room.currentTurn, gameState: createGameSnapshot(room.game),
+      clockW: room.clockW || DEFAULT_TIME_MS, clockB: room.clockB || DEFAULT_TIME_MS, status: 'playing', lastActivityAt: new Date(),
     }}).catch((err) => console.warn('[DB] No se pudo actualizar sala:', err.message));
 
     socket.join(cleanCode);
@@ -699,20 +757,24 @@ io.on('connection', (socket) => {
 
   // ── Reconexión ────────────────────────────────────────────────
   socket.on('rejoin', async ({ roomCode, color, playerName }) => {
-    const room = rooms.get(roomCode);
+    const room = await getOrRestoreRoom(roomCode);
     if (!room) { socket.emit('rejoin-failed', 'La sala ya no existe.'); return; }
+    const cleanRoomCode = roomCode.toUpperCase().trim();
 
     cancelTimer(room);
-    socket.join(roomCode);
-    socket.data.roomCode   = roomCode;
+    socket.join(cleanRoomCode);
+    socket.data.roomCode   = cleanRoomCode;
     socket.data.color      = color;
     socket.data.playerName = playerName || '';
 
     if (color === 'w') room.white = socket.id;
     else               room.black = socket.id;
 
-    await Room.updateOne({ roomCode }, { $set: {
+    await Room.updateOne({ roomCode: cleanRoomCode }, { $set: {
       [`players.${color === 'w' ? 'white' : 'black'}.socketId`]: socket.id,
+      gameState: createGameSnapshot(room.game),
+      clockW: room.clockW || DEFAULT_TIME_MS,
+      clockB: room.clockB || DEFAULT_TIME_MS,
       lastActivityAt: new Date(),
     }}).catch(() => {});
 
@@ -723,12 +785,12 @@ io.on('connection', (socket) => {
       clockB: room.clockB || DEFAULT_TIME_MS,
       game: createGameSnapshot(room.game),
     });
-    socket.to(roomCode).emit('opponent-reconnected', { playerName: socket.data.playerName });
+    socket.to(cleanRoomCode).emit('opponent-reconnected', { playerName: socket.data.playerName });
     // Si ambos jugadores están en sala, reanudar reloj
 if (room.white && room.black && !room.clockInterval) {
-  startClock(roomCode);
+  startClock(cleanRoomCode);
 }
-    console.log(`[R] ${color.toUpperCase()} reconectado a sala ${roomCode}`);
+    console.log(`[R] ${color.toUpperCase()} reconectado a sala ${cleanRoomCode}`);
   });
 
   // ── Movida ────────────────────────────────────────────────────
@@ -780,7 +842,13 @@ if (room.white && room.black && !room.clockInterval) {
         moves: { from: validation.from, to: validation.to, promotion: validation.promotion, playedBy: playerColor, playedAt: new Date() },
       }}).catch(() => {});
     }
-    Room.updateOne({ roomCode: code }, { $set: { turn: room.currentTurn, lastActivityAt: new Date() } }).catch(() => {});
+    Room.updateOne({ roomCode: code }, { $set: {
+      turn: room.currentTurn,
+      gameState: createGameSnapshot(room.game),
+      clockW: room.clockW || DEFAULT_TIME_MS,
+      clockB: room.clockB || DEFAULT_TIME_MS,
+      lastActivityAt: new Date(),
+    } }).catch(() => {});
   });
 
   // ── Chat ──────────────────────────────────────────────────────
@@ -859,7 +927,13 @@ if (room.white && room.black && !room.clockInterval) {
       }).catch(() => null);
       if (match) room.matchId = match._id;
       await Room.updateOne({ roomCode: code }, { $set: {
-        match: match?._id || room.matchId || null, turn: 'w', status: 'playing', lastActivityAt: new Date(),
+        match: match?._id || room.matchId || null,
+        turn: 'w',
+        gameState: createGameSnapshot(room.game),
+        clockW: DEFAULT_TIME_MS,
+        clockB: DEFAULT_TIME_MS,
+        status: 'playing',
+        lastActivityAt: new Date(),
       }}).catch(() => {});
       io.to(code).emit('rematch-start', { clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
       startClock(code);

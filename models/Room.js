@@ -24,6 +24,9 @@ const RoomSchema = new mongoose.Schema(
     match:  { type: mongoose.Schema.Types.ObjectId, ref: 'Match', default: null },
     fen:    { type: String, default: 'startpos' },
     turn:   { type: String, enum: ['w', 'b'], default: 'w' },
+    gameState: { type: mongoose.Schema.Types.Mixed, default: null },
+    clockW: { type: Number, default: 600000 },
+    clockB: { type: Number, default: 600000 },
     status: {
       type: String,
       enum: ['waiting', 'playing', 'finished', 'closed'],
