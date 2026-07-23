@@ -679,7 +679,7 @@ function handleSquareClick(r, c) {
     }
   }
 
-  if (clickedPiece && clickedPiece.color === state.turn) {
+  if (clickedPiece && clickedPiece.color === state.turn && (!IS_ONLINE || clickedPiece.color === PLAYER_COLOR)) {
     state.selected = { row: r, col: c };
     state.legalMoves = getLegalMovesForSquare(state.board, r, c, state);
     renderBoard();
@@ -946,8 +946,12 @@ function setupOnlineSocket() {
     }
   });
 
-  socket.on('move-rejected', (message) => {
-    console.warn('[OZAMA] Movimiento rechazado:', message);
+  socket.on('move-rejected', (payload) => {
+    const data = typeof payload === 'string' ? { message: payload } : (payload || {});
+    console.warn('[OZAMA] Movimiento rechazado:', data.message || 'Movimiento rechazado');
+    if (data.game) {
+      restoreGameSnapshot(data.game, { clockW: data.clockW, clockB: data.clockB });
+    }
   });
 
   socket.on('rematch-requested', ({ playerName } = {}) => {

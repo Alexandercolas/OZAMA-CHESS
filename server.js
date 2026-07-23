@@ -236,6 +236,25 @@ function roomPlayerInfo(player) {
   };
 }
 
+function sameId(a, b) {
+  return !!a && !!b && String(a) === String(b);
+}
+
+function canUseRoomColor(room, color, userId) {
+  if (color !== COLOR.WHITE && color !== COLOR.BLACK) return false;
+  const info = room?.playerInfo?.[color];
+  return !!info?.userId && sameId(info.userId, userId);
+}
+
+function emitMoveRejected(socket, room, message) {
+  socket.emit('move-rejected', {
+    message,
+    game: room?.game ? createGameSnapshot(room.game) : null,
+    clockW: room?.clockW || DEFAULT_TIME_MS,
+    clockB: room?.clockB || DEFAULT_TIME_MS,
+  });
+}
+
 async function getOrRestoreRoom(roomCode) {
   const code = (roomCode || '').toUpperCase().trim();
   if (!code) return null;
@@ -730,6 +749,10 @@ io.on('connection', (socket) => {
     if (room.black)               { socket.emit('room-error', 'La sala ya está llena.'); return; }
 
     const pInfo = await getPlayerInfo(playerName, country);
+    if (sameId(room.playerInfo?.w?.userId, pInfo.userId)) {
+      socket.emit('room-error', 'No puedes unirte a tu propia sala.');
+      return;
+    }
     cancelTimer(room);
     room.black        = socket.id;
     room.playerInfo.b = pInfo;
@@ -772,6 +795,10 @@ io.on('connection', (socket) => {
     const room = await getOrRestoreRoom(roomCode);
     if (!room) { socket.emit('rejoin-failed', 'La sala ya no existe.'); return; }
     const cleanRoomCode = roomCode.toUpperCase().trim();
+    if (!canUseRoomColor(room, color, socket.data.userId)) {
+      socket.emit('rejoin-failed', 'Esta cuenta no corresponde a ese color en la sala.');
+      return;
+    }
 
     cancelTimer(room);
     socket.join(cleanRoomCode);
@@ -810,7 +837,7 @@ if (room.white && room.black && !room.clockInterval) {
     if (!requireSocketAuth()) return;
     if (!code || !from || !to) return;
     const room = rooms.get(code);
-    if (!room) { socket.emit('move-rejected', 'La sala ya no existe.'); return; }
+    if (!room) { socket.emit('move-rejected', { message: 'La sala ya no existe.' }); return; }
 
     const playerColor = socket.data.color;
     const roomSockets = [...(io.sockets.adapter.rooms.get(code) || [])];
@@ -822,20 +849,27 @@ if (room.white && room.black && !room.clockInterval) {
     });
 
     if (!room.game) {
-      socket.emit('move-rejected', 'Estado de sala inválido.'); return;
+      emitMoveRejected(socket, room, 'Estado de sala inválido.'); return;
     }
     if (!socket.rooms.has(code)) {
-      socket.emit('move-rejected', 'Socket fuera de la sala.'); return;
+      emitMoveRejected(socket, room, 'Socket fuera de la sala.'); return;
+    }
+    if (!canUseRoomColor(room, playerColor, socket.data.userId)) {
+      emitMoveRejected(socket, room, 'No puedes mover piezas de ese color.'); return;
+    }
+    const assignedSocket = playerColor === COLOR.WHITE ? room.white : room.black;
+    if (assignedSocket !== socket.id) {
+      emitMoveRejected(socket, room, 'Este dispositivo no controla ese color.'); return;
     }
 
     let validation;
     try {
       validation = validateAndApplyMove(room.game, playerColor, from, to, promotion);
     } catch (err) {
-      socket.emit('move-rejected', 'Error validando movimiento.'); return;
+      emitMoveRejected(socket, room, 'Error validando movimiento.'); return;
     }
     if (!validation.ok) {
-      socket.emit('move-rejected', validation.message); return;
+      emitMoveRejected(socket, room, validation.message); return;
     }
 
     room.currentTurn = room.game.turn;
