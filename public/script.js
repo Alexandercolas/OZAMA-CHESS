@@ -187,8 +187,9 @@ const CLOCK = (() => {
 
   function switchTo(color) { start(color); }
   function set(w, b) { _times.w = w; _times.b = b; _render(); }
+  function get() { return { w: _times.w, b: _times.b }; }
 
-  return { start, stop, switchTo, set };
+  return { start, stop, switchTo, set, get };
 })();
 
 // ================================================================
@@ -203,6 +204,7 @@ function createInitialBoard() {
 }
 
 function startNewGame() {
+  clearLocalGameSnapshot();
   state.board=createInitialBoard(); state.turn=COLOR.WHITE; state.selected=null; state.legalMoves=[];
   state.castlingRights={w:{kingside:true,queenside:true},b:{kingside:true,queenside:true}};
   state.enPassantTarget=null; state.status=STATUS.PLAYING; state.winner=null;
@@ -214,6 +216,7 @@ function startNewGame() {
   renderBoard(); updateStatusDisplay();
   CLOCK.set(600000, 600000);
   if (!IS_ONLINE) CLOCK.start(COLOR.WHITE);
+  saveLocalGameSnapshot();
   setTimeout(()=>maybeScheduleBotMove(),120);
 }
 
@@ -272,6 +275,71 @@ function restoreGameSnapshot(snapshot,{clockW,clockB}={}){
   CLOCK.stop();
   if(Number.isFinite(clockW)&&Number.isFinite(clockB)) CLOCK.set(clockW,clockB);
   renderBoard(); updateStatusDisplay();
+  return true;
+}
+
+const LOCAL_GAME_KEY='ozama-bot-game-state';
+
+function clearLocalGameSnapshot(){
+  sessionStorage.removeItem(LOCAL_GAME_KEY);
+}
+
+function saveLocalGameSnapshot(){
+  if(!IS_BOT_MODE||state.promotionPending) return;
+  const clocks=typeof CLOCK?.get==='function'?CLOCK.get():{w:600000,b:600000};
+  sessionStorage.setItem(LOCAL_GAME_KEY,JSON.stringify({
+    mode:'bot',
+    botColor:BOT_COLOR,
+    botLevel:BOT_LEVEL,
+    board:cloneBoard(state.board),
+    turn:state.turn,
+    castlingRights:state.castlingRights,
+    enPassantTarget:state.enPassantTarget,
+    status:state.status,
+    winner:state.winner,
+    moveCount:state.moveCount,
+    halfMoveClock:state.halfMoveClock,
+    lastMove:state.lastMove,
+    capturedByW:state.capturedByW,
+    capturedByB:state.capturedByB,
+    clockW:clocks.w,
+    clockB:clocks.b,
+    savedAt:Date.now(),
+  }));
+}
+
+function restoreLocalGameSnapshot(){
+  if(!IS_BOT_MODE) return false;
+  let snapshot=null;
+  try{snapshot=JSON.parse(sessionStorage.getItem(LOCAL_GAME_KEY)||'null');}
+  catch{return false;}
+  if(!snapshot||snapshot.mode!=='bot'||snapshot.botColor!==BOT_COLOR||snapshot.botLevel!==BOT_LEVEL) return false;
+  if(![STATUS.PLAYING,STATUS.CHECK].includes(snapshot.status)) {
+    clearLocalGameSnapshot();
+    return false;
+  }
+  const board=normalizeBoardSnapshot(snapshot.board);
+  if(!board) return false;
+  state.board=board;
+  state.turn=snapshot.turn===COLOR.BLACK?COLOR.BLACK:COLOR.WHITE;
+  state.selected=null; state.legalMoves=[];
+  state.castlingRights=snapshot.castlingRights||{w:{kingside:true,queenside:true},b:{kingside:true,queenside:true}};
+  state.enPassantTarget=snapshot.enPassantTarget||null;
+  state.status=snapshot.status||STATUS.PLAYING;
+  state.winner=snapshot.winner||null;
+  state.moveCount=Number(snapshot.moveCount)||0;
+  state.halfMoveClock=Number(snapshot.halfMoveClock)||0;
+  state.moveHistory=[];
+  state.promotionPending=null; state._pendingHistoryEntry=null;
+  state.lastMove=snapshot.lastMove||null;
+  state._autoPromotionPiece=null; state._finishReported=false; state._pendingOnlineMove=null;
+  state.capturedByW=Array.isArray(snapshot.capturedByW)?snapshot.capturedByW:[];
+  state.capturedByB=Array.isArray(snapshot.capturedByB)?snapshot.capturedByB:[];
+  CLOCK.stop();
+  CLOCK.set(Number(snapshot.clockW)||600000,Number(snapshot.clockB)||600000);
+  CLOCK.start(state.turn);
+  renderBoard(); updateStatusDisplay();
+  setTimeout(()=>maybeScheduleBotMove(),120);
   return true;
 }
 
@@ -477,6 +545,7 @@ function finishMoveExecution() {
   renderBoard();
   updateStatusDisplay();
   reportOnlineGameFinished();
+  saveLocalGameSnapshot();
   setTimeout(() => maybeScheduleBotMove(), 120);
 }
 
@@ -750,6 +819,7 @@ function completeMoveTarget(from, to) {
 }
 
 function clearOnlineSession() {
+  clearLocalGameSnapshot();
   [
     'ozama-room',
     'ozama-color',
@@ -806,6 +876,7 @@ function resignGame() {
   const loser = state.turn;
   state.status = STATUS.CHECKMATE;
   state.winner = enemy(loser);
+  clearLocalGameSnapshot();
   renderBoard();
   updateStatusDisplay();
   showGameEnd('RENDICION', `Ganan las ${state.winner === COLOR.WHITE ? 'Blancas' : 'Negras'}.`, {
@@ -933,5 +1004,6 @@ function setupOnlineSocket() {
 window.addEventListener('DOMContentLoaded', () => {
   setupOnlineSocket();
   setupControls();
+  if (IS_BOT_MODE && restoreLocalGameSnapshot()) return;
   startNewGame();
 });
