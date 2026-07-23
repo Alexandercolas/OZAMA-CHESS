@@ -4,15 +4,60 @@
 // SECTION 0: SOUND SYSTEM — Web Audio API
 // ================================================================
 let _audioCtx = null;
+let _audioMaster = null;
+let _audioCompressor = null;
+let _soundMuted = localStorage.getItem('ozama-sound-muted') === 'true';
+let _soundVolume = Math.max(0, Math.min(1, Number(localStorage.getItem('ozama-sound-volume') || 0.82)));
+
 function getAudioCtx() {
-  if (!_audioCtx) { const AC = window.AudioContext || window.webkitAudioContext; _audioCtx = new AC(); }
+  if (!_audioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    _audioCtx = new AC();
+    _audioCompressor = _audioCtx.createDynamicsCompressor();
+    _audioCompressor.threshold.setValueAtTime(-18, _audioCtx.currentTime);
+    _audioCompressor.knee.setValueAtTime(18, _audioCtx.currentTime);
+    _audioCompressor.ratio.setValueAtTime(5, _audioCtx.currentTime);
+    _audioCompressor.attack.setValueAtTime(0.003, _audioCtx.currentTime);
+    _audioCompressor.release.setValueAtTime(0.18, _audioCtx.currentTime);
+    _audioMaster = _audioCtx.createGain();
+    _audioMaster.gain.setValueAtTime(_soundMuted ? 0 : _soundVolume, _audioCtx.currentTime);
+    _audioMaster.connect(_audioCompressor);
+    _audioCompressor.connect(_audioCtx.destination);
+  }
   if (_audioCtx.state === 'suspended') _audioCtx.resume();
   return _audioCtx;
 }
-document.addEventListener('click', () => getAudioCtx(), { once: true });
+
+function updateSoundButton() {
+  const btn = document.getElementById('sound-toggle-btn');
+  if (!btn) return;
+  btn.textContent = _soundMuted ? 'Sonido off' : 'Sonido on';
+  btn.classList.toggle('muted', _soundMuted);
+}
+
+function setSoundMuted(muted) {
+  _soundMuted = !!muted;
+  localStorage.setItem('ozama-sound-muted', String(_soundMuted));
+  if (_audioMaster && _audioCtx) {
+    _audioMaster.gain.cancelScheduledValues(_audioCtx.currentTime);
+    _audioMaster.gain.setTargetAtTime(_soundMuted ? 0 : _soundVolume, _audioCtx.currentTime, 0.015);
+  }
+  updateSoundButton();
+}
+
+function toggleSound() {
+  getAudioCtx();
+  setSoundMuted(!_soundMuted);
+  if (!_soundMuted) playSound('move');
+}
+
+['pointerdown','touchstart','keydown'].forEach((eventName) => {
+  document.addEventListener(eventName, () => getAudioCtx(), { once: true, passive: true });
+});
 
 function playSound(name) {
   try {
+    if (_soundMuted) return;
     const ctx = getAudioCtx();
     switch (name) {
       case 'move':     _soundMove(ctx);     break;
@@ -59,7 +104,7 @@ function _soundGameover(ctx) {
 }
 function _tone(ctx,{type,freq,endFreq,vol,duration,delay=0}){
   const t=ctx.currentTime+delay, osc=ctx.createOscillator(), env=ctx.createGain();
-  osc.connect(env); env.connect(ctx.destination);
+  osc.connect(env); env.connect(_audioMaster || ctx.destination);
   osc.type=type; osc.frequency.setValueAtTime(freq,t);
   if(endFreq!==freq) osc.frequency.exponentialRampToValueAtTime(endFreq,t+duration);
   env.gain.setValueAtTime(vol,t); env.gain.exponentialRampToValueAtTime(.0001,t+duration);
@@ -72,7 +117,7 @@ function _noise(ctx,{duration,vol,filter,type='bandpass',delay=0}){
   for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*(1-i/data.length);
   const src=ctx.createBufferSource(), biquad=ctx.createBiquadFilter(), env=ctx.createGain();
   src.buffer=buffer; biquad.type=type; biquad.frequency.setValueAtTime(filter,t);
-  src.connect(biquad); biquad.connect(env); env.connect(ctx.destination);
+  src.connect(biquad); biquad.connect(env); env.connect(_audioMaster || ctx.destination);
   env.gain.setValueAtTime(vol,t); env.gain.exponentialRampToValueAtTime(.0001,t+duration);
   src.start(t); src.stop(t+duration+.01);
 }
@@ -1077,6 +1122,7 @@ function setupOnlineSocket() {
 
 // Iniciar juego al cargar la página
 window.addEventListener('DOMContentLoaded', () => {
+  updateSoundButton();
   setupOnlineSocket();
   setupControls();
   if (IS_BOT_MODE && restoreLocalGameSnapshot()) return;

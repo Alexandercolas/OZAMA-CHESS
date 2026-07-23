@@ -540,6 +540,8 @@
     .bc-btn:hover { background: rgba(200,152,60,0.08); color: var(--gold); }
     .bc-btn:last-child { border-right: none; }
     .bc-btn.danger:hover { color: #7A3A2A; }
+    .bc-btn.sound-btn { color: rgba(233,228,218,0.62); }
+    .bc-btn.sound-btn.muted { color: rgba(122,58,42,0.9); }
 
     /* ── CHAT PANEL (right of board column) ── */
     .chat-col {
@@ -773,6 +775,7 @@
       }
       .bc-bottom { flex-wrap: wrap; }
       .bc-btn { flex: 1 1 50%; min-height: 38px; }
+      .bc-btn.sound-btn { flex-basis: 100%; }
       .chat-input { min-width: 0; }
     }
 
@@ -913,6 +916,9 @@
           </button>
           <button class="bc-btn danger" onclick="document.getElementById('resign-btn').click()">
             Rendirse
+          </button>
+          <button class="bc-btn sound-btn" id="sound-toggle-btn" onclick="toggleSound()">
+            Sonido on
           </button>
         </div>
       </div>
