@@ -666,6 +666,7 @@
 
     .rank-wrap {
       position: relative;
+      max-width: 100%;
       background:
         linear-gradient(180deg, rgba(255,255,255,0.035), transparent 14%),
         linear-gradient(145deg, #16120D, #090806);
@@ -978,10 +979,18 @@
     }
 
     @media (max-width: 760px) {
-      .nav { height: 64px; }
+      .nav { height: 64px; padding: 0 14px; gap: 10px; }
+      .brand { min-width: 0; gap: 8px; }
+      .brand-mark { width: 26px; height: 34px; flex: 0 0 auto; }
       .brand-sub { display: none; }
       .nav-links a:not(.nav-cta) { display: none; }
-      .nav-cta { min-height: 38px; padding: 0 16px; letter-spacing: 1.6px; }
+      .nav-links { gap: 0; }
+      .nav-cta {
+        min-height: 38px;
+        padding: 0 14px;
+        letter-spacing: 1.4px;
+        white-space: nowrap;
+      }
       .hero { padding-top: 96px; }
       .hero h1 { font-size: clamp(48px, 17vw, 76px); }
       .hero-stage { min-height: 430px; }
@@ -992,7 +1001,10 @@
       .feature-story,
       .rank-layout { gap: 28px; }
       .story-visual { min-height: 300px; }
-      .rank-wrap { overflow-x: auto; }
+      .rank-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
       .rank-titlebar,
       .lb-row {
         min-width: 680px;
@@ -1004,8 +1016,15 @@
     }
 
     @media (max-width: 520px) {
-      .brand-title { font-size: 14px; }
-      .brand { min-width: 150px; }
+      .nav { padding: 0 10px; }
+      .brand-title { font-size: 12px; letter-spacing: 1.2px; }
+      .brand { min-width: 0; }
+      .nav-cta {
+        min-height: 36px;
+        padding: 0 10px;
+        font-size: 10px;
+        letter-spacing: 1px;
+      }
       .hero-actions { flex-direction: column; align-items: stretch; }
       .btn-primary, .btn-secondary { width: 100%; }
       .hero-meta { gap: 12px; }

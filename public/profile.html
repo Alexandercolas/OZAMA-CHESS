@@ -23,6 +23,7 @@
       font-family: 'Rajdhani', sans-serif;
       min-height: 100vh;
       padding: 0 0 60px;
+      overflow-x: hidden;
     }
 
     /* Topbar */
@@ -32,6 +33,8 @@
       padding: 10px 24px;
       background: rgba(7,7,14,0.97);
       border-bottom: 1px solid rgba(212,175,55,0.15);
+      gap: 12px;
+      min-width: 0;
     }
 
     .topbar-logo {
@@ -40,6 +43,7 @@
       color: var(--gold); letter-spacing: 4px;
       text-decoration: none;
       display: inline-flex; align-items: center; gap: 10px;
+      min-width: 0;
     }
     .topbar-logo::before {
       content: '';
@@ -49,7 +53,7 @@
       box-shadow: 0 0 14px rgba(212,175,55,0.18);
     }
 
-    .topbar-nav { display: flex; align-items: center; gap: 16px; }
+    .topbar-nav { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 16px; }
     .topbar-nav a {
       color: var(--dim); text-decoration: none;
       font-size: 11px; font-weight: 600; letter-spacing: 2px;
@@ -452,6 +456,10 @@
     .btn-login:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212,175,55,0.3); }
 
     @media (max-width: 600px) {
+      .topbar { padding: 10px 14px; flex-wrap: wrap; }
+      .topbar-logo { font-size: 13px; letter-spacing: 2px; }
+      .topbar-nav { width: 100%; justify-content: center; gap: 14px; }
+      .topbar-nav a { font-size: 10px; letter-spacing: 1.3px; }
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
       .friends-form { flex-direction: column; }
       .match-date { display: none; }

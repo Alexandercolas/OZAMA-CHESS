@@ -63,6 +63,7 @@
       background: linear-gradient(90deg, #0A0805, #17120A, #0A0805);
       border-bottom: 1px solid rgba(200,152,60,0.18);
       position: sticky; top: 0; z-index: 50;
+      min-width: 0;
     }
 
     .hd::after {
@@ -77,6 +78,7 @@
       letter-spacing: 6px; text-transform: uppercase;
       text-shadow: 0 0 24px rgba(200,152,60,0.2);
       display: flex; align-items: baseline; gap: 8px;
+      min-width: 0;
     }
 
     .heritage-stripes {
@@ -101,6 +103,7 @@
 
     .hd-user {
       display: flex; align-items: center; gap: 12px;
+      min-width: 0;
     }
 
     .hd-user-av {
@@ -769,9 +772,15 @@
     }
 
     @media (max-width: 460px) {
-      .hd-logo { letter-spacing: 2px; }
+      .hd {
+        flex-wrap: wrap;
+        justify-content: center;
+        padding: 10px;
+      }
+      .hd-logo { width: 100%; justify-content: center; letter-spacing: 2px; }
+      .hd-user { width: 100%; justify-content: center; }
       .hd-user-name { max-width: 86px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .hd-logout { font-size: 8px; }
+      .hd-logout { font-size: 8px; padding: 7px 9px; }
       .sb-name { font-size: 8px; letter-spacing: 1px; }
       .sb-item { gap: 7px; padding: 8px 10px; }
       .card-title, .challenge-title { letter-spacing: 2px; }

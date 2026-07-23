@@ -66,6 +66,7 @@
       background: linear-gradient(90deg, #0A0805, #17120A, #0A0805);
       border-bottom: 1px solid rgba(200,152,60,0.18);
       position: relative; z-index: 50;
+      min-width: 0;
     }
 
     .hd::after {
@@ -80,6 +81,7 @@
       letter-spacing: 6px; text-transform: uppercase;
       text-shadow: 0 0 24px rgba(200,152,60,0.2);
       display: flex; align-items: baseline; gap: 8px;
+      min-width: 0;
     }
 
     .heritage-stripes {
@@ -697,6 +699,8 @@
 
     @media (max-width: 420px) {
       :root { --sq: clamp(34px, calc((100vw - 20px) / 8), 40px); }
+      .hd { justify-content: center; }
+      .hd-logo { letter-spacing: 2px; font-size: 14px; }
       .main { padding-left: 8px; padding-right: 8px; }
       .chat-col { height: 220px; }
       .bc-btn { font-size: 8px; letter-spacing: 1px; padding: 9px 5px; }
