@@ -461,7 +461,30 @@ function finishMoveExecution() {
 
   renderBoard();
   updateStatusDisplay();
+  reportOnlineGameFinished();
   setTimeout(() => maybeScheduleBotMove(), 120);
+}
+
+function reportOnlineGameFinished() {
+  if (!IS_ONLINE || !socket || state._finishReported) return;
+  let result = null;
+  let winner = null;
+
+  if (state.status === STATUS.CHECKMATE && state.winner) {
+    winner = state.winner;
+    result = winner === COLOR.WHITE ? 'white_win' : 'black_win';
+  } else if (state.status === STATUS.STALEMATE || state.status === STATUS.DRAW) {
+    result = 'draw';
+  }
+
+  if (!result) return;
+  state._finishReported = true;
+  socket.emit('game-finished', {
+    room: ROOM_CODE,
+    result,
+    winner,
+    pgn: exportMoveList(),
+  });
 }
 
 function recordCapturedPiece(capturedPiece, captorColor) {
