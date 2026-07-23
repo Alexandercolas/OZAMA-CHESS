@@ -478,7 +478,7 @@ function renderBoard() {
       if (p) {
         const key = `${p.color}${p.type}`;
         if (CONFIG.USE_INLINE_SVG && PIECE_SVGS[key]) {
-          sq.innerHTML = PIECE_SVGS[key];
+          sq.innerHTML = `<span class="piece piece-${p.color === COLOR.WHITE ? 'white' : 'black'} piece-${p.type}">${PIECE_SVGS[key]}</span>`;
         }
       }
 
