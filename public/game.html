@@ -395,8 +395,12 @@
     .dark  { background: var(--bd); background-image: radial-gradient(ellipse 70% 70% at 72% 72%, rgba(0,0,0,0.2) 0%, transparent 60%); }
 
     .square.selected       { background: rgba(200,152,60,0.52) !important; box-shadow: inset 0 0 0 2.5px var(--gold); }
-    .square.last-move-from { background: rgba(200,152,60,0.18) !important; }
-    .square.last-move-to   { background: rgba(200,152,60,0.33) !important; }
+    .square.last-move-from,
+    .square.last-move-to {
+      box-shadow: inset 0 0 0 2px rgba(200,152,60,0.42), inset 0 0 18px rgba(200,152,60,0.18);
+    }
+    .square.last-move-from { background: radial-gradient(circle at 50% 50%, rgba(200,152,60,0.20), rgba(91,58,30,0.10) 64%) !important; }
+    .square.last-move-to   { background: radial-gradient(circle at 50% 50%, rgba(232,188,86,0.32), rgba(200,152,60,0.16) 58%, rgba(13,11,8,0.05) 100%) !important; }
     .square.in-check       { background: radial-gradient(circle, rgba(210,38,38,0.88) 0%, rgba(140,18,18,0.62) 55%, transparent 100%) !important; animation: chk 0.72s ease-in-out infinite alternate; }
 
     @keyframes chk {

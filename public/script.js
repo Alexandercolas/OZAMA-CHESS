@@ -520,6 +520,13 @@ function renderBoard() {
         sq.classList.add('selected');
       }
 
+      if (state.lastMove?.from?.row === r && state.lastMove.from.col === c) {
+        sq.classList.add('last-move-from');
+      }
+      if (state.lastMove?.to?.row === r && state.lastMove.to.col === c) {
+        sq.classList.add('last-move-to');
+      }
+
       const legalMove = state.legalMoves.find(m => m.row === r && m.col === c);
       if (legalMove) {
         sq.classList.add('highlight');
@@ -624,6 +631,10 @@ function executeMove(from, to) {
 
   state.selected = null;
   state.legalMoves = [];
+  state.lastMove = {
+    from: { row: from.row, col: from.col },
+    to: { row: to.row, col: to.col },
+  };
 
   const shouldEmitOnline = IS_ONLINE && !_applyingRemoteMove && piece.color === PLAYER_COLOR;
   if (shouldEmitOnline) {
