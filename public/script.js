@@ -733,12 +733,14 @@ function showGameEnd(title, subtitle, { online = false, canPlayAgain = true } = 
   const subEl = document.getElementById('game-over-subtitle');
   const playAgain = document.getElementById('play-again-btn');
   const onlineButtons = document.getElementById('online-end-buttons');
+  const rematchBtn = document.getElementById('rematch-btn');
 
   if (icon) icon.textContent = 'OC';
   if (titleEl) titleEl.textContent = title;
   if (subEl) subEl.textContent = subtitle;
   if (playAgain) playAgain.classList.toggle('hidden', !canPlayAgain);
-  if (onlineButtons) onlineButtons.classList.toggle('hidden', !online);
+  if (onlineButtons) onlineButtons.classList.remove('hidden');
+  if (rematchBtn) rematchBtn.classList.toggle('hidden', !online);
   overlay?.classList.remove('hidden');
 }
 
