@@ -100,10 +100,16 @@
     }
 
     .brand-mark {
-      width: 32px;
-      height: 42px;
-      color: var(--gold-2);
-      filter: drop-shadow(0 0 14px rgba(200,152,60,0.22));
+      width: 44px;
+      height: 44px;
+      flex: 0 0 auto;
+      display: block;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 1px solid rgba(226,185,96,0.46);
+      box-shadow:
+        0 0 0 1px rgba(0,0,0,0.70),
+        0 0 18px rgba(200,152,60,0.24);
     }
 
     .brand-title {
@@ -1001,7 +1007,7 @@
     @media (max-width: 760px) {
       .nav { height: 64px; padding: 0 14px; gap: 10px; }
       .brand { min-width: 0; gap: 8px; }
-      .brand-mark { width: 26px; height: 34px; flex: 0 0 auto; }
+      .brand-mark { width: 38px; height: 38px; flex: 0 0 auto; }
       .brand-sub { display: none; }
       .nav-links a:not(.nav-cta) { display: none; }
       .nav-links { gap: 0; }
@@ -1056,10 +1062,7 @@
   <div class="shell">
     <nav class="nav" aria-label="Principal">
       <a class="brand" href="/" aria-label="OZAMA CHESS inicio">
-        <svg class="brand-mark" viewBox="0 0 48 64" aria-hidden="true">
-          <path fill="currentColor" d="M24 2 36 10v11l-5 4 8 9v20L24 62 9 54V34l8-9-5-4V10L24 2Zm0 7-7 5v5l7 6 7-6v-5l-7-5Zm0 21-9 9v11l9 5 9-5V39l-9-9Z"/>
-          <path fill="#0D0B08" d="M22 13h4v9h-4zM18 40h12v5H18z"/>
-        </svg>
+        <img class="brand-mark" src="/favicon.png?v=6" alt="">
         <span>
           <span class="brand-title">OZAMA<br>CHESS</span>
           <span class="brand-sub">Dominican Heritage Edition</span>
