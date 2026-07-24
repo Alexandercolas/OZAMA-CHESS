@@ -22,6 +22,12 @@ public/assets/       SVGs y sonidos del juego
 server.js            Servidor Express + Socket.IO + motor multiplayer
 ```
 
+Mapa detallado para trabajar en VS Code:
+
+```text
+docs/PROJECT_STRUCTURE.md
+```
+
 ## Variables De Entorno
 
 Crea `.env` local usando `.env.example` como base:

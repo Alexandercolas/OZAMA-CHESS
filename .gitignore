@@ -3,7 +3,6 @@ node_modules/
 npm-debug.log*
 
 # Legacy/temporary local copies not used by Express deploy
-on package-lock.json
 public/Untitled-1.css
 public/css/
 public/js/
