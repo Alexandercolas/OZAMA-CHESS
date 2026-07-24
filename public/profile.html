@@ -49,12 +49,15 @@
       display: inline-flex; align-items: center; gap: 10px;
       min-width: 0;
     }
-    .topbar-logo::before {
-      content: '';
-      width: 8px; height: 18px;
-      border: 1px solid rgba(212,175,55,0.55);
-      background: linear-gradient(180deg, rgba(212,175,55,0.38), rgba(139,105,20,0.12));
-      box-shadow: 0 0 14px rgba(212,175,55,0.18);
+    .topbar-logo-mark {
+      width: 32px;
+      height: 32px;
+      flex: 0 0 auto;
+      display: block;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 1px solid rgba(212,175,55,0.48);
+      box-shadow: 0 0 14px rgba(212,175,55,0.22);
     }
 
     .topbar-nav { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 16px; }
@@ -485,6 +488,7 @@
     @media (max-width: 600px) {
       .topbar { padding: 10px 14px; flex-wrap: wrap; }
       .topbar-logo { font-size: 13px; letter-spacing: 2px; }
+      .topbar-logo-mark { width: 28px; height: 28px; }
       .topbar-nav { width: 100%; justify-content: center; gap: 14px; }
       .topbar-nav a { font-size: 10px; letter-spacing: 1.3px; }
       .edit-section { align-items: stretch; flex-direction: column; }
@@ -505,7 +509,7 @@
 
   <!-- Topbar -->
   <nav class="topbar">
-    <a href="/lobby.html" class="topbar-logo">OZAMA CHESS</a>
+    <a href="/lobby.html" class="topbar-logo"><img class="topbar-logo-mark" src="/favicon.png?v=6" alt="">OZAMA CHESS</a>
     <div class="topbar-nav">
       <a href="/lobby.html">Lobby</a>
       <a href="/login.html" id="nav-logout" onclick="logout(); return false;">Cerrar sesion</a>

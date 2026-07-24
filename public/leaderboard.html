@@ -82,10 +82,14 @@
     }
 
     .brand-mark {
-      width: 24px;
+      width: 34px;
       height: 34px;
-      border: 2px solid var(--gold-2);
-      box-shadow: inset 0 0 0 4px rgba(0,0,0,0.52), 0 0 18px rgba(200,152,60,0.16);
+      flex: 0 0 auto;
+      display: block;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 1px solid rgba(226,185,96,0.48);
+      box-shadow: 0 0 18px rgba(200,152,60,0.20);
     }
 
     .nav {
@@ -394,7 +398,7 @@
 <body>
   <header class="topbar">
     <a href="/" class="brand">
-      <span class="brand-mark" aria-hidden="true"></span>
+      <img class="brand-mark" src="/favicon.png?v=6" alt="">
       <span>OZAMA CHESS</span>
     </a>
     <nav class="nav">
