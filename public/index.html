@@ -568,16 +568,31 @@
         repeating-linear-gradient(0deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 34px);
     }
 
-    .visual-piece {
+    .story-emblem {
       position: absolute;
       z-index: 1;
-      width: 150px;
-      filter: drop-shadow(0 26px 32px rgba(0,0,0,0.66));
+      left: 50%;
+      top: 48%;
+      width: min(78%, 420px);
+      max-height: 86%;
+      object-fit: contain;
+      transform: translate(-50%, -50%);
+      filter:
+        drop-shadow(0 28px 34px rgba(0,0,0,0.72))
+        drop-shadow(0 0 22px rgba(200,152,60,0.14));
+      transition: transform 260ms ease, filter 260ms ease;
     }
 
-    .visual-piece.one { left: 9%; bottom: 10%; width: 190px; }
-    .visual-piece.two { right: 8%; bottom: 18%; width: 132px; opacity: 0.72; }
-    .visual-piece.three { left: 42%; bottom: 6%; width: 96px; opacity: 0.64; }
+    .story-visual:hover .story-emblem {
+      transform: translate(-50%, -50%) translateY(-5px) scale(1.015);
+      filter:
+        drop-shadow(0 32px 38px rgba(0,0,0,0.78))
+        drop-shadow(0 0 30px rgba(200,152,60,0.20));
+    }
+
+    .story-emblem.knight {
+      width: min(74%, 390px);
+    }
 
     .visual-caption {
       position: absolute;
@@ -1116,9 +1131,7 @@
           </article>
 
           <div class="story-visual" aria-hidden="true">
-            <img class="visual-piece one" src="/assets/bk.svg" alt="">
-            <img class="visual-piece two" src="/assets/wq.svg" alt="">
-            <img class="visual-piece three" src="/assets/wp.svg" alt="">
+            <img class="story-emblem" src="/assets/brand/ozama-king-seal.jpg" alt="">
             <div class="visual-caption"><span>Juego rápido</span><span>10:00</span></div>
           </div>
         </div>
@@ -1141,9 +1154,7 @@
           </article>
 
           <div class="story-visual" aria-hidden="true">
-            <img class="visual-piece one" src="/assets/wq.svg" alt="">
-            <img class="visual-piece two" src="/assets/bq.svg" alt="">
-            <img class="visual-piece three" src="/assets/bp.svg" alt="">
+            <img class="story-emblem knight" src="/assets/brand/ozama-knight-icon.jpg" alt="">
             <div class="visual-caption"><span>Sistema ELO</span><span>Hall of Fame</span></div>
           </div>
         </div>
