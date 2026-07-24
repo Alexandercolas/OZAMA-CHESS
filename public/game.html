@@ -1119,6 +1119,19 @@
     }
   }
 
+  function playerColorLabel(color){
+    return color==='w' ? 'Doradas' : color==='b' ? 'Hierro' : 'Sin color';
+  }
+
+  function updateGameBanner(roomCode,color){
+    const rc=String(roomCode||sessionStorage.getItem('ozama-room')||'').trim().toUpperCase();
+    const label=playerColorLabel(color||sessionStorage.getItem('ozama-color'));
+    const top=document.getElementById('game-banner');
+    const board=document.getElementById('bc-banner');
+    if(top)top.textContent=rc?`SALA: ${rc}  ·  TÚ: ${label}`:`OZAMA CHESS  ·  TÚ: ${label}`;
+    if(board)board.textContent=rc?`SALA: ${rc} · TÚ: ${label}`:`TÚ: ${label}`;
+  }
+
   function updateEloBars(eu){
     if(!eu) return;
     if(eu.w){ document.getElementById('elo-white').textContent=fmtElo(eu.w.newElo,eu.w.change); document.getElementById('pp-elo-white').textContent=fmtElo(eu.w.newElo,eu.w.change); }
@@ -1220,10 +1233,7 @@
     const rc=sessionStorage.getItem('ozama-room');
     const col=sessionStorage.getItem('ozama-color');
     if(rc){
-      const b=document.getElementById('game-banner');
-      if(b)b.textContent=`SALA: ${rc}  ·  ${col==='w'?'BLANCAS':'NEGRAS'}`;
-      const b2=document.getElementById('bc-banner');
-      if(b2)b2.textContent=`SALA: ${rc}`;
+      updateGameBanner(rc,col);
     }
 
     const wi=setInterval(()=>{
@@ -1232,12 +1242,12 @@
         socket.on('game-start',({playerInfo,color:c,clockW,clockB})=>{
           updatePlayerBars(playerInfo,c||(typeof PLAYER_COLOR!=='undefined'?PLAYER_COLOR:'w'));
           if(typeof CLOCK!=='undefined')CLOCK.set(clockW||600000,clockB||600000);
-          const b=document.getElementById('game-banner'),r=sessionStorage.getItem('ozama-room');
-          if(b&&r)b.textContent=`SALA: ${r}  ·  ${c==='w'?'BLANCAS':'NEGRAS'}`;
+          updateGameBanner(sessionStorage.getItem('ozama-room'),c);
         });
         socket.on('rejoin-ok',({playerInfo,clockW,clockB})=>{
           updatePlayerBars(playerInfo,typeof PLAYER_COLOR!=='undefined'?PLAYER_COLOR:'w');
           if(typeof CLOCK!=='undefined')CLOCK.set(clockW||600000,clockB||600000);
+          updateGameBanner(sessionStorage.getItem('ozama-room'),typeof PLAYER_COLOR!=='undefined'?PLAYER_COLOR:sessionStorage.getItem('ozama-color'));
         });
         socket.on('elo-update',updateEloBars);
         socket.on('chat-message',appendChatMessage);

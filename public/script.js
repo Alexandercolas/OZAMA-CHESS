@@ -190,6 +190,14 @@ let state = {
   capturedByW:[], capturedByB:[],
 };
 
+function boardViewColor() {
+  return IS_ONLINE && PLAYER_COLOR === COLOR.BLACK ? COLOR.BLACK : COLOR.WHITE;
+}
+
+function isBoardFlipped() {
+  return boardViewColor() === COLOR.BLACK;
+}
+
 // ================================================================
 // SECTION 3.5: CLOCK SYSTEM
 // ================================================================
@@ -664,13 +672,18 @@ function renderBoard() {
   const container = document.getElementById('board');
   if (!container) return;
   container.innerHTML = '';
+  container.classList.toggle('flipped', isBoardFlipped());
 
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
+  for (let vr = 0; vr < 8; vr++) {
+    for (let vc = 0; vc < 8; vc++) {
+      const r = isBoardFlipped() ? 7 - vr : vr;
+      const c = isBoardFlipped() ? 7 - vc : vc;
       const sq = document.createElement('div');
       sq.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
       sq.dataset.row = r;
       sq.dataset.col = c;
+      sq.dataset.viewRow = vr;
+      sq.dataset.viewCol = vc;
 
       if (state.selected && state.selected.row === r && state.selected.col === c) {
         sq.classList.add('selected');
@@ -701,6 +714,19 @@ function renderBoard() {
         const isCapture = !!state.board[r][c] || !!legalMove.enPassant;
         marker.className = isCapture ? 'legal-capture' : 'legal-dot';
         sq.appendChild(marker);
+      }
+
+      if (vc === 0) {
+        const rank = document.createElement('span');
+        rank.className = 'rank-label';
+        rank.textContent = String(8 - r);
+        sq.appendChild(rank);
+      }
+      if (vr === 7) {
+        const file = document.createElement('span');
+        file.className = 'file-label';
+        file.textContent = 'abcdefgh'[c];
+        sq.appendChild(file);
       }
 
       sq.addEventListener('click', () => handleSquareClick(r, c));

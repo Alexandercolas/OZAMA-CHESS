@@ -1098,8 +1098,16 @@
   }
 
   function goToGame(roomCode, color, playerInfo, names) {
-    sessionStorage.setItem('ozama-room',   roomCode);
-    sessionStorage.setItem('ozama-color',  color);
+    const cleanRoom = String(roomCode || '').trim().toUpperCase();
+    const cleanColor = color === 'black' ? 'b' : color === 'white' ? 'w' : color;
+    sessionStorage.removeItem('ozama-bot-mode');
+    sessionStorage.removeItem('ozama-bot-color');
+    sessionStorage.removeItem('ozama-bot-difficulty');
+    sessionStorage.removeItem('ozama-local-game');
+    sessionStorage.removeItem('ozama-player-info');
+    sessionStorage.removeItem('ozama-names');
+    sessionStorage.setItem('ozama-room',   cleanRoom);
+    sessionStorage.setItem('ozama-color',  cleanColor);
     sessionStorage.setItem('ozama-myname', user?.username || '');
     if (playerInfo) sessionStorage.setItem('ozama-player-info', JSON.stringify(playerInfo));
     if (names)      sessionStorage.setItem('ozama-names', JSON.stringify(names));
