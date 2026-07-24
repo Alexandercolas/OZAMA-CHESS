@@ -373,13 +373,13 @@
         0 28px 50px rgba(0,0,0,0.58);
     }
 
-    .hero-knight {
+    .hero-emblem {
       position: absolute;
       z-index: 3;
       left: 50%;
-      bottom: 8%;
-      width: min(78%, 560px);
-      max-height: 82%;
+      bottom: 5%;
+      width: min(84%, 620px);
+      max-height: 88%;
       object-fit: contain;
       transform: translateX(-50%);
       filter:
@@ -388,7 +388,7 @@
       transition: transform 260ms ease, filter 260ms ease;
     }
 
-    .hero-stage:hover .hero-knight {
+    .hero-stage:hover .hero-emblem {
       transform: translateX(-50%) translateY(-7px) scale(1.015);
       filter:
         drop-shadow(0 38px 38px rgba(0,0,0,0.86))
@@ -1000,7 +1000,7 @@
       .hero h1 { font-size: clamp(48px, 17vw, 76px); }
       .hero-stage { min-height: 430px; }
       .fortress { inset: 4% 0 0; }
-      .hero-knight { width: min(86%, 520px); bottom: 8%; }
+      .hero-emblem { width: min(90%, 560px); bottom: 7%; }
       .feature-story,
       .rank-layout { gap: 28px; }
       .story-visual { min-height: 300px; }
@@ -1033,7 +1033,7 @@
       .hero-meta { gap: 12px; }
       .hero-stage { min-height: 360px; }
       .stage-board { bottom: 10%; }
-      .hero-knight { width: min(92%, 420px); bottom: 11%; }
+      .hero-emblem { width: min(96%, 430px); bottom: 11%; }
     }
   </style>
 </head>
@@ -1084,7 +1084,7 @@
         <div class="hero-stage" aria-hidden="true">
           <div class="fortress"></div>
           <div class="stage-board"></div>
-          <img class="hero-knight" src="/assets/brand/ozama-knight-icon.png" alt="">
+          <img class="hero-emblem" src="/assets/brand/ozama-king-seal.jpg" alt="">
         </div>
       </section>
 
