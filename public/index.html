@@ -373,26 +373,27 @@
         0 28px 50px rgba(0,0,0,0.58);
     }
 
-    .piece {
+    .hero-knight {
       position: absolute;
       z-index: 3;
-      width: clamp(96px, 12vw, 164px);
-      filter: drop-shadow(0 24px 26px rgba(0,0,0,0.70)) drop-shadow(0 0 18px rgba(200,152,60,0.10));
+      left: 50%;
+      bottom: 8%;
+      width: min(78%, 560px);
+      max-height: 82%;
+      object-fit: contain;
+      transform: translateX(-50%);
+      filter:
+        drop-shadow(0 34px 34px rgba(0,0,0,0.82))
+        drop-shadow(0 0 24px rgba(200,152,60,0.18));
       transition: transform 260ms ease, filter 260ms ease;
     }
 
-    .hero-stage:hover .piece {
-      filter: drop-shadow(0 28px 34px rgba(0,0,0,0.76)) drop-shadow(0 0 24px rgba(200,152,60,0.16));
+    .hero-stage:hover .hero-knight {
+      transform: translateX(-50%) translateY(-7px) scale(1.015);
+      filter:
+        drop-shadow(0 38px 38px rgba(0,0,0,0.86))
+        drop-shadow(0 0 34px rgba(200,152,60,0.24));
     }
-
-    .piece.king { right: 11%; bottom: 25%; width: clamp(126px, 14vw, 190px); }
-    .piece.queen { left: 13%; bottom: 22%; width: clamp(118px, 13vw, 178px); }
-    .piece.knight { right: 31%; bottom: 16%; width: clamp(106px, 12vw, 166px); }
-    .piece.pawn { left: 35%; bottom: 11%; width: clamp(72px, 8vw, 108px); opacity: 0.88; }
-
-    .hero-stage:hover .piece.king { transform: translateY(-6px); }
-    .hero-stage:hover .piece.queen { transform: translateY(-4px); }
-    .hero-stage:hover .piece.knight { transform: translateY(-5px); }
 
     .section {
       position: relative;
@@ -999,9 +1000,7 @@
       .hero h1 { font-size: clamp(48px, 17vw, 76px); }
       .hero-stage { min-height: 430px; }
       .fortress { inset: 4% 0 0; }
-      .piece.king { right: 9%; bottom: 28%; }
-      .piece.queen { left: 7%; bottom: 22%; }
-      .piece.knight { right: 35%; bottom: 15%; }
+      .hero-knight { width: min(86%, 520px); bottom: 8%; }
       .feature-story,
       .rank-layout { gap: 28px; }
       .story-visual { min-height: 300px; }
@@ -1034,7 +1033,7 @@
       .hero-meta { gap: 12px; }
       .hero-stage { min-height: 360px; }
       .stage-board { bottom: 10%; }
-      .piece.pawn { display: none; }
+      .hero-knight { width: min(92%, 420px); bottom: 11%; }
     }
   </style>
 </head>
@@ -1085,10 +1084,7 @@
         <div class="hero-stage" aria-hidden="true">
           <div class="fortress"></div>
           <div class="stage-board"></div>
-          <img class="piece queen" src="/assets/wq.svg" alt="">
-          <img class="piece king" src="/assets/bk.svg" alt="">
-          <img class="piece knight" src="/assets/bq.svg" alt="">
-          <img class="piece pawn" src="/assets/wp.svg" alt="">
+          <img class="hero-knight" src="/assets/brand/ozama-knight-icon.png" alt="">
         </div>
       </section>
 
