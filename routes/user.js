@@ -132,17 +132,18 @@ router.put('/password', requireAuth, async (req, res) => {
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ error: 'Contrasena actual y nueva contrasena son obligatorias.' });
     }
-    if (String(newPassword).length < 6 || String(newPassword).length > 128) {
-      return res.status(400).json({ error: 'La nueva contrasena debe tener entre 6 y 128 caracteres.' });
+    if (String(newPassword).length < 8 || String(newPassword).length > 128) {
+      return res.status(400).json({ error: 'La nueva contrasena debe tener entre 8 y 128 caracteres.' });
     }
 
-    const user = await User.findById(req.user._id).select('+password');
+    const user = await User.findById(req.user._id).select('+password +tokenVersion');
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
 
     const valid = await user.comparePassword(currentPassword);
     if (!valid) return res.status(401).json({ error: 'Contrasena actual incorrecta.' });
 
     user.password = newPassword;
+    user.tokenVersion = Number(user.tokenVersion || 0) + 1;
     await user.save();
 
     res.json({ message: 'Contrasena actualizada correctamente.' });

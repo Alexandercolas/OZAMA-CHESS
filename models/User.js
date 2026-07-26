@@ -25,11 +25,16 @@ const UserSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, 'La contrasena es obligatoria'],
-      minlength: [6, 'Minimo 6 caracteres'],
+      minlength: [8, 'Minimo 8 caracteres'],
       select: false,
     },
     recoveryCodeHash: {
       type: String,
+      select: false,
+    },
+    tokenVersion: {
+      type: Number,
+      default: 0,
       select: false,
     },
 
@@ -101,6 +106,7 @@ UserSchema.set('toJSON', {
   transform: (_doc, ret) => {
     delete ret.password;
     delete ret.recoveryCodeHash;
+    delete ret.tokenVersion;
     delete ret.__v;
     return ret;
   },

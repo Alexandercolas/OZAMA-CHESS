@@ -42,7 +42,10 @@ checkRuntimeConfig();
 
 const app    = express();
 const server = http.createServer(app);
-const io     = new Server(server);
+const io     = new Server(server, {
+  maxHttpBufferSize: 100_000,
+  perMessageDeflate: false,
+});
 
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
@@ -50,9 +53,24 @@ app.use(express.json({ limit: '600kb' }));
 app.use((req, res, next) => {
   res.set('X-Content-Type-Options', 'nosniff');
   res.set('X-Frame-Options', 'DENY');
+  res.set('X-DNS-Prefetch-Control', 'off');
   res.set('Referrer-Policy', 'no-referrer');
   res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   res.set('Cross-Origin-Opener-Policy', 'same-origin');
+  res.set('Cross-Origin-Resource-Policy', 'same-origin');
+  res.set('Content-Security-Policy', [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    "object-src 'none'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: https://flagcdn.com",
+    "media-src 'self'",
+    "connect-src 'self' ws: wss:",
+  ].join('; '));
   if (process.env.NODE_ENV === 'production') {
     res.set('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
   }
@@ -75,7 +93,6 @@ app.use('/api/events', eventRoutes);
 app.get('/api/health/db', (_req, res) => {
   res.json({
     database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-    name:     mongoose.connection.name || null,
   });
 });
 
@@ -83,7 +100,7 @@ app.get('/api/matches/recent', async (_req, res) => {
   try {
     const matches = await Match.find({ result: { $ne: 'in_progress' } })
       .sort({ createdAt: -1 }).limit(10)
-      .select('roomCode whitePlayer blackPlayer result winner moves pgn startedAt endedAt createdAt')
+      .select('whitePlayer.name blackPlayer.name result winner startedAt endedAt createdAt')
       .lean();
     res.json(matches);
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -92,6 +109,7 @@ app.get('/api/matches/recent', async (_req, res) => {
 // ── Salas en memoria ─────────────────────────────────────────────
 const rooms = new Map();
 const onlinePlayers = new Map();
+const pendingChallenges = new Map();
 
 // ── Cola de matchmaking ──────────────────────────────────────────
 // { socketId, playerInfo, joinedAt }
@@ -268,6 +286,13 @@ function canUseRoomColor(room, color, userId) {
   if (color !== COLOR.WHITE && color !== COLOR.BLACK) return false;
   const info = room?.playerInfo?.[color];
   return !!info?.userId && sameId(info.userId, userId);
+}
+
+function isAuthorizedRoomSocket(room, socket, code) {
+  if (!room || !socket?.data?.userId || !socket.rooms.has(code)) return false;
+  if (!canUseRoomColor(room, socket.data.color, socket.data.userId)) return false;
+  const assignedSocket = socket.data.color === COLOR.WHITE ? room.white : room.black;
+  return assignedSocket === socket.id;
 }
 
 function emitMoveRejected(socket, room, message) {
@@ -618,13 +643,18 @@ async function applyEloForRoom(room, result, code) {
 }
 
 // ── Socket JWT middleware ──────────────────────────────────────────
-io.use((socket, next) => {
+io.use(async (socket, next) => {
   const token = socket.handshake.auth.token;
-  if (token) {
-    try {
-      const decoded      = jwt.verify(token, process.env.JWT_SECRET);
-      socket.data.userId = decoded.id;
-    } catch (_) {}
+  if (!token) return next(new Error('Debes iniciar sesion.'));
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
+    const user = await User.findById(decoded.id).select('+tokenVersion isActive').lean();
+    if (!user?.isActive || Number(decoded.v || 0) !== Number(user.tokenVersion || 0)) {
+      return next(new Error('Sesion invalida.'));
+    }
+    socket.data.userId = decoded.id;
+  } catch (_) {
+    return next(new Error('Sesion invalida.'));
   }
   next();
 });
@@ -632,6 +662,25 @@ io.use((socket, next) => {
 // ================================================================
 io.on('connection', (socket) => {
   console.log(`[+] Conectado: ${socket.id} ${socket.data.userId ? '(auth)' : '(anon)'}`);
+  let eventWindowStartedAt = Date.now();
+  let eventCount = 0;
+
+  socket.use((packet, next) => {
+    const now = Date.now();
+    if (now - eventWindowStartedAt >= 10_000) {
+      eventWindowStartedAt = now;
+      eventCount = 0;
+    }
+    eventCount += 1;
+    if (eventCount > 100) {
+      socket.disconnect(true);
+      return;
+    }
+    if (packet.length < 2 || packet[1] === null || typeof packet[1] !== 'object' || Array.isArray(packet[1])) {
+      packet[1] = {};
+    }
+    next();
+  });
 
   function requireSocketAuth(message = 'Debes iniciar sesión para jugar.') {
     if (socket.data.userId) return true;
@@ -956,8 +1005,10 @@ if (room.white && room.black && !room.clockInterval) {
   // ── Chat ──────────────────────────────────────────────────────
   socket.on('chat-message', ({ room: code, message }) => {
     if (!code || !message) return;
+    const room = rooms.get(code);
+    if (!isAuthorizedRoomSocket(room, socket, code)) return;
     const clean = String(message).trim().slice(0, 200);
-    if (!clean || !rooms.get(code)) return;
+    if (!clean) return;
     io.to(code).emit('chat-message', {
       from: socket.data.playerName || 'Anónimo',
       color: socket.data.color,
@@ -969,8 +1020,7 @@ if (room.white && room.black && !room.clockInterval) {
   // ── Abandonar ─────────────────────────────────────────────────
   socket.on('player-resign', async ({ room: code, pgn = '' } = {}) => {
     const room   = rooms.get(code);
-    if (!room) return;
-    if (!canUseRoomColor(room, socket.data.color, socket.data.userId)) return;
+    if (!isAuthorizedRoomSocket(room, socket, code) || room.status !== 'playing') return;
     stopClock(room);
     room.status = 'finished';
     const loser  = socket.data.color;
@@ -989,7 +1039,7 @@ if (room.white && room.black && !room.clockInterval) {
   socket.on('game-finished', async ({ room: code, result, winner = null, pgn = '' } = {}) => {
     const room = rooms.get(code);
     if (!room || !room.matchId) return;
-    if (!canUseRoomColor(room, socket.data.color, socket.data.userId)) return;
+    if (!isAuthorizedRoomSocket(room, socket, code) || room.status !== 'playing') return;
 
     const validResults = new Set(['white_win', 'black_win', 'draw', 'abandoned']);
     const validWinners = new Set(['w', 'b', null]);
@@ -1013,14 +1063,14 @@ if (room.white && room.black && !room.clockInterval) {
   // ── Revancha ──────────────────────────────────────────────────
   socket.on('rematch-request', ({ room: code }) => {
     const room = rooms.get(code);
-    if (!room) return;
+    if (!isAuthorizedRoomSocket(room, socket, code) || room.status !== 'finished') return;
     room.rematchReady.add(socket.id);
     socket.to(code).emit('rematch-requested', { playerName: socket.data.playerName });
   });
 
   socket.on('rematch-accept', async ({ room: code }) => {
     const room = rooms.get(code);
-    if (!room) return;
+    if (!isAuthorizedRoomSocket(room, socket, code) || room.status !== 'finished') return;
     room.rematchReady.add(socket.id);
     if (room.rematchReady.size >= 2) {
       stopClock(room);
@@ -1056,21 +1106,23 @@ if (room.white && room.black && !room.clockInterval) {
 
   socket.on('rematch-decline', ({ room: code }) => {
     const room = rooms.get(code);
-    if (room) room.rematchReady = new Set();
+    if (!isAuthorizedRoomSocket(room, socket, code)) return;
+    room.rematchReady = new Set();
     socket.to(code).emit('rematch-declined');
   });
 
   socket.on('draw-offer', ({ room: code }) => {
     const room = rooms.get(code);
     if (!room || room.status !== 'playing') return;
-    if (!canUseRoomColor(room, socket.data.color, socket.data.userId)) return;
+    if (!isAuthorizedRoomSocket(room, socket, code)) return;
     room.drawOfferBy = socket.id;
     socket.to(code).emit('draw-offered', { playerName: socket.data.playerName });
   });
 
   socket.on('draw-decline', ({ room: code }) => {
     const room = rooms.get(code);
-    if (!room) return;
+    if (!isAuthorizedRoomSocket(room, socket, code)) return;
+    if (!room.drawOfferBy || room.drawOfferBy === socket.id) return;
     room.drawOfferBy = null;
     socket.to(code).emit('draw-declined', { playerName: socket.data.playerName });
   });
@@ -1078,7 +1130,7 @@ if (room.white && room.black && !room.clockInterval) {
   socket.on('draw-accept', async ({ room: code }) => {
     const room = rooms.get(code);
     if (!room || room.status !== 'playing' || !room.drawOfferBy) return;
-    if (!canUseRoomColor(room, socket.data.color, socket.data.userId)) return;
+    if (!isAuthorizedRoomSocket(room, socket, code)) return;
     if (room.drawOfferBy === socket.id) return;
     stopClock(room);
     room.status = 'finished';
@@ -1137,11 +1189,16 @@ if (room.white && room.black && !room.clockInterval) {
   // ── Enviar desafío ────────────────────────────────────────────
   socket.on('challenge-send', async ({ targetUsername }) => {
     if (!requireSocketAuth('Debes iniciar sesión para desafiar.')) return;
+    const cleanTarget = String(targetUsername || '').trim().toLowerCase();
+    if (!/^[a-z0-9_]{3,20}$/.test(cleanTarget)) {
+      socket.emit('challenge-error', 'Jugador invalido.');
+      return;
+    }
 
     let targetSocket = null;
     for (const [, s] of io.sockets.sockets) {
       const tUser = await User.findById(s.data.userId).select('username').lean().catch(() => null);
-      if (tUser && tUser.username.toLowerCase() === targetUsername.toLowerCase()) {
+      if (tUser && tUser.username.toLowerCase() === cleanTarget) {
         targetSocket = s; break;
       }
     }
@@ -1162,6 +1219,12 @@ if (room.white && room.black && !room.clockInterval) {
     }
 
     const challenger = await User.findById(socket.data.userId).select('username country avatar avatarImage elo').lean();
+    if (!challenger) {
+      socket.emit('challenge-error', 'Tu sesion ya no es valida.');
+      return;
+    }
+    if (!pendingChallenges.has(targetSocket.id)) pendingChallenges.set(targetSocket.id, new Set());
+    pendingChallenges.get(targetSocket.id).add(socket.id);
 
     targetSocket.emit('challenge-received', {
       from: { username: challenger.username, country: challenger.country, avatar: challenger.avatar, avatarImage: challenger.avatarImage, elo: challenger.elo },
@@ -1175,6 +1238,13 @@ if (room.white && room.black && !room.clockInterval) {
   // ── Aceptar desafío ───────────────────────────────────────────
   socket.on('challenge-accept', async ({ challengerSocketId }) => {
     if (!requireSocketAuth()) return;
+    const pending = pendingChallenges.get(socket.id);
+    if (!pending?.has(challengerSocketId)) {
+      socket.emit('challenge-error', 'Este desafio ya no es valido.');
+      return;
+    }
+    pending.delete(challengerSocketId);
+    if (!pending.size) pendingChallenges.delete(socket.id);
     const challengerSocket = io.sockets.sockets.get(challengerSocketId);
     if (!challengerSocket || !challengerSocket.connected) {
       socket.emit('challenge-error', 'El rival ya no está disponible.');
@@ -1208,6 +1278,10 @@ if (room.white && room.black && !room.clockInterval) {
 
   // ── Rechazar desafío ──────────────────────────────────────────
   socket.on('challenge-decline', ({ challengerSocketId }) => {
+    const pending = pendingChallenges.get(socket.id);
+    if (!pending?.has(challengerSocketId)) return;
+    pending.delete(challengerSocketId);
+    if (!pending.size) pendingChallenges.delete(socket.id);
     const challengerSocket = io.sockets.sockets.get(challengerSocketId);
     if (challengerSocket) {
       challengerSocket.emit('challenge-declined', { by: socket.data.playerName || 'El jugador' });
@@ -1217,6 +1291,11 @@ if (room.white && room.black && !room.clockInterval) {
   // ── Desconexión ───────────────────────────────────────────────
   socket.on('disconnect', () => {
     onlinePlayers.delete(socket.id);
+    pendingChallenges.delete(socket.id);
+    for (const [targetId, challengers] of pendingChallenges) {
+      challengers.delete(socket.id);
+      if (!challengers.size) pendingChallenges.delete(targetId);
+    }
     broadcastOnlinePlayers();
 
     const qIdx = matchQueue.findIndex(e => e.socketId === socket.id);

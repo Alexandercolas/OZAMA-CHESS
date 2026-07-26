@@ -13,8 +13,12 @@ Este documento resume las reglas minimas de seguridad para operar OZAMA CHESS co
 ## Autenticacion
 
 - Las rutas privadas usan JWT.
+- Los JWT aceptan unicamente `HS256` y se validan contra un usuario activo.
+- Cambiar o recuperar la contrasena revoca los JWT emitidos anteriormente.
 - Las contrasenas se guardan con bcrypt.
+- Las nuevas contrasenas requieren al menos 8 caracteres.
 - Login, registro y recuperacion tienen rate limit.
+- Cada codigo de recuperacion se invalida despues de usarlo y se reemplaza por uno nuevo.
 - Los mensajes de error de login/reset no deben revelar si el usuario existe.
 
 ## Datos De Usuario
@@ -35,6 +39,14 @@ Este documento resume las reglas minimas de seguridad para operar OZAMA CHESS co
 - Evitar insertar texto de usuarios con `innerHTML`.
 - Preferir `textContent` para nombres, chats, eventos y mensajes.
 - Si se usa `innerHTML`, escapar siempre los valores dinamicos.
+- Las cabeceras HTTP bloquean iframes, MIME sniffing y fuentes de contenido no autorizadas.
+
+## Partidas Online
+
+- Socket.IO exige un JWT valido antes de aceptar la conexion.
+- El servidor decide color, turno, movimientos legales, reloj, resultado y ELO.
+- Chat, tablas, rendicion, revancha y desafios verifican que el socket corresponde al jugador.
+- Los paquetes demasiado grandes o el trafico excesivo por conexion se rechazan.
 
 ## Deploy
 

@@ -57,8 +57,12 @@ const limitReset = rateLimit({
   message: 'Demasiados intentos de recuperacion. Intenta mas tarde.',
 });
 
-function signToken(userId) {
-  return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
+function signToken(user) {
+  return jwt.sign(
+    { id: user._id, v: Number(user.tokenVersion || 0) },
+    process.env.JWT_SECRET,
+    { expiresIn: '7d', algorithm: 'HS256' }
+  );
 }
 
 function generateRecoveryCode() {
@@ -114,8 +118,8 @@ router.post('/register', limitRegister, async (req, res) => {
     if (!validUsername(username)) {
       return res.status(400).json({ error: 'Usuario invalido. Usa 3-20 caracteres, letras, numeros o guion bajo.' });
     }
-    if (password.length < 6 || password.length > 128) {
-      return res.status(400).json({ error: 'La contrasena debe tener entre 6 y 128 caracteres.' });
+    if (password.length < 8 || password.length > 128) {
+      return res.status(400).json({ error: 'La contrasena debe tener entre 8 y 128 caracteres.' });
     }
     if (!validCountry(country)) {
       return res.status(400).json({ error: 'Pais invalido.' });
@@ -142,7 +146,7 @@ router.post('/register', limitRegister, async (req, res) => {
       country,
       recoveryCodeHash,
     });
-    const token = signToken(user._id);
+    const token = signToken(user);
 
     return res.status(201).json({
       token,
@@ -176,7 +180,7 @@ router.post('/login', limitLogin, async (req, res) => {
         { email: normalizeEmail(identifier) },
         { username: identifier },
       ],
-    }).select('+password');
+    }).select('+password +tokenVersion');
 
     if (!user) {
       return res.status(401).json({ error: 'Credenciales incorrectas.' });
@@ -190,7 +194,7 @@ router.post('/login', limitLogin, async (req, res) => {
     user.lastSeenAt = new Date();
     await user.save({ validateModifiedOnly: true });
 
-    const token = signToken(user._id);
+    const token = signToken(user);
 
     return res.json({
       token,
@@ -211,8 +215,8 @@ router.post('/reset-password', limitReset, async (req, res) => {
     if (!identifier || !recoveryCode || !newPassword) {
       return res.status(400).json({ error: 'Usuario/email, codigo y nueva contrasena son obligatorios.' });
     }
-    if (newPassword.length < 6 || newPassword.length > 128) {
-      return res.status(400).json({ error: 'La nueva contrasena debe tener entre 6 y 128 caracteres.' });
+    if (newPassword.length < 8 || newPassword.length > 128) {
+      return res.status(400).json({ error: 'La nueva contrasena debe tener entre 8 y 128 caracteres.' });
     }
     if (!/^[A-F0-9]{8}$/.test(recoveryCode)) {
       return res.status(401).json({ error: 'Datos de recuperacion incorrectos.' });
@@ -223,7 +227,7 @@ router.post('/reset-password', limitReset, async (req, res) => {
         { email: normalizeEmail(identifier) },
         { username: identifier },
       ],
-    }).select('+password +recoveryCodeHash');
+    }).select('+password +recoveryCodeHash +tokenVersion');
 
     if (!user) {
       return res.status(401).json({ error: 'Datos de recuperacion incorrectos.' });
@@ -234,10 +238,16 @@ router.post('/reset-password', limitReset, async (req, res) => {
       return res.status(401).json({ error: 'Datos de recuperacion incorrectos.' });
     }
 
+    const nextRecoveryCode = generateRecoveryCode();
     user.password = newPassword;
+    user.recoveryCodeHash = await bcrypt.hash(nextRecoveryCode, 12);
+    user.tokenVersion = Number(user.tokenVersion || 0) + 1;
     await user.save();
 
-    return res.json({ message: 'Contrasena actualizada. Ya puedes iniciar sesion.' });
+    return res.json({
+      message: 'Contrasena actualizada. Guarda tu nuevo codigo de recuperacion.',
+      recoveryCode: nextRecoveryCode,
+    });
   } catch (err) {
     console.error('[Auth] Reset password error:', err.message);
     return res.status(500).json({ error: 'Error interno del servidor.' });

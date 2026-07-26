@@ -26,10 +26,10 @@ async function requireAuth(req, res, next) {
       return res.status(401).json({ error: 'Token requerido.' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user    = await User.findById(decoded.id).select('-password');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
+    const user    = await User.findById(decoded.id).select('+tokenVersion');
 
-    if (!user || !user.isActive) {
+    if (!user || !user.isActive || Number(decoded.v || 0) !== Number(user.tokenVersion || 0)) {
       return res.status(401).json({ error: 'Usuario no valido.' });
     }
 
@@ -49,8 +49,11 @@ async function optionalAuth(req, res, next) {
     const header = req.headers.authorization || '';
     const token  = header.startsWith('Bearer ') ? header.slice(7) : null;
     if (token) {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.user      = await User.findById(decoded.id).select('-password');
+      const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
+      const user = await User.findById(decoded.id).select('+tokenVersion');
+      if (user?.isActive && Number(decoded.v || 0) === Number(user.tokenVersion || 0)) {
+        req.user = user;
+      }
     }
   } catch (_) { /* silencioso */ }
   next();
