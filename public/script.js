@@ -182,7 +182,7 @@ let _applyingRemoteMove = false;
 let state = {
   board:[], turn:COLOR.WHITE, selected:null, legalMoves:[],
   castlingRights:{ w:{kingside:true,queenside:true}, b:{kingside:true,queenside:true} },
-  enPassantTarget:null, status:STATUS.PLAYING, winner:null,
+  enPassantTarget:null, status:STATUS.PLAYING, winner:null, endReason:null,
   moveCount:0, halfMoveClock:0, moveHistory:[],
   promotionPending:null, _pendingHistoryEntry:null,
   lastMove:null, _autoPromotionPiece:null, _finishReported:false,
@@ -237,7 +237,10 @@ const CLOCK = (() => {
           _tone(ctx, { type:'sine', freq: remaining <= 3 ? 880 : 660, endFreq: remaining <= 3 ? 880 : 660, vol: 0.15, duration: 0.08 });
         } catch(e) {}
       }
-      if (_times[color] === 0) stop();
+      if (_times[color] === 0) {
+        stop();
+        handleClockTimeout(color);
+      }
     }, 1000);
   }
 
@@ -263,7 +266,7 @@ function startNewGame() {
   clearLocalGameSnapshot();
   state.board=createInitialBoard(); state.turn=COLOR.WHITE; state.selected=null; state.legalMoves=[];
   state.castlingRights={w:{kingside:true,queenside:true},b:{kingside:true,queenside:true}};
-  state.enPassantTarget=null; state.status=STATUS.PLAYING; state.winner=null;
+  state.enPassantTarget=null; state.status=STATUS.PLAYING; state.winner=null; state.endReason=null;
   state.moveCount=0; state.halfMoveClock=0; state.moveHistory=[];
   state.promotionPending=null; state._pendingHistoryEntry=null;
   state.lastMove=null; state._autoPromotionPiece=null; state._finishReported=false;
@@ -318,7 +321,7 @@ function restoreGameSnapshot(snapshot,{clockW,clockB}={}){
   state.selected=null; state.legalMoves=[];
   state.castlingRights=snapshot.castlingRights||{w:{kingside:true,queenside:true},b:{kingside:true,queenside:true}};
   state.enPassantTarget=snapshot.enPassantTarget||null;
-  state.status=STATUS.PLAYING; state.winner=null;
+  state.status=STATUS.PLAYING; state.winner=null; state.endReason=null;
   state.moveCount=Number(snapshot.moveCount)||0;
   state.halfMoveClock=Number(snapshot.halfMoveClock)||0;
   state.moveHistory=[];
@@ -342,6 +345,7 @@ function clearLocalGameSnapshot(){
 
 function saveLocalGameSnapshot(){
   if(!IS_BOT_MODE||state.promotionPending) return;
+  if(state.status===STATUS.CHECKMATE||state.status===STATUS.STALEMATE||state.status===STATUS.DRAW) return;
   const clocks=typeof CLOCK?.get==='function'?CLOCK.get():{w:600000,b:600000};
   sessionStorage.setItem(LOCAL_GAME_KEY,JSON.stringify({
     mode:'bot',
@@ -353,6 +357,7 @@ function saveLocalGameSnapshot(){
     enPassantTarget:state.enPassantTarget,
     status:state.status,
     winner:state.winner,
+    endReason:state.endReason,
     moveCount:state.moveCount,
     halfMoveClock:state.halfMoveClock,
     lastMove:state.lastMove,
@@ -383,6 +388,7 @@ function restoreLocalGameSnapshot(){
   state.enPassantTarget=snapshot.enPassantTarget||null;
   state.status=snapshot.status||STATUS.PLAYING;
   state.winner=snapshot.winner||null;
+  state.endReason=snapshot.endReason||null;
   state.moveCount=Number(snapshot.moveCount)||0;
   state.halfMoveClock=Number(snapshot.halfMoveClock)||0;
   state.moveHistory=[];
@@ -583,6 +589,7 @@ function finishMoveExecution() {
   state.turn = enemy(state.turn);
   const status = evaluateGameStatus(state.board, state.turn, state);
   state.status = status;
+  state.endReason = null;
 
   if (status === STATUS.CHECKMATE) {
     state.winner = enemy(state.turn);
@@ -601,8 +608,52 @@ function finishMoveExecution() {
   renderBoard();
   updateStatusDisplay();
   reportOnlineGameFinished();
+  showLocalGameFinished();
   saveLocalGameSnapshot();
   setTimeout(() => maybeScheduleBotMove(), 120);
+}
+
+function showLocalGameFinished() {
+  if (IS_ONLINE) return;
+  if (!(state.status === STATUS.CHECKMATE || state.status === STATUS.STALEMATE || state.status === STATUS.DRAW)) return;
+
+  clearLocalGameSnapshot();
+
+  if (state.status === STATUS.CHECKMATE) {
+    showGameEnd('JAQUE MATE', `Ganan las ${state.winner === COLOR.WHITE ? 'Blancas' : 'Negras'}.`, {
+      online: false,
+      canPlayAgain: true,
+    });
+    return;
+  }
+
+  showGameEnd('TABLAS', state.status === STATUS.STALEMATE ? 'Partida empatada por ahogado.' : 'Partida empatada.', {
+    online: false,
+    canPlayAgain: true,
+  });
+}
+
+function handleClockTimeout(loserColor) {
+  if (IS_ONLINE) return;
+  if (state.status === STATUS.CHECKMATE || state.status === STATUS.STALEMATE || state.status === STATUS.DRAW) return;
+
+  const winner = enemy(loserColor);
+  state.status = STATUS.CHECKMATE;
+  state.winner = winner;
+  state.endReason = 'timeout';
+  state.selected = null;
+  state.legalMoves = [];
+  _botThinking = false;
+
+  clearLocalGameSnapshot();
+  playSound('gameover');
+  renderBoard();
+  updateStatusDisplay();
+  showGameEnd(
+    'TIEMPO AGOTADO',
+    `Se acabo el tiempo de las ${loserColor === COLOR.WHITE ? 'Blancas' : 'Negras'}. Ganan las ${winner === COLOR.WHITE ? 'Blancas' : 'Negras'}.`,
+    { online: false, canPlayAgain: true }
+  );
 }
 
 function reportOnlineGameFinished() {
@@ -841,7 +892,9 @@ function updateStatusDisplay() {
   let message = '';
 
   if (state.status === STATUS.CHECKMATE) {
-    message = `¡Jaque Mate! Ganan las ${state.winner === COLOR.WHITE ? 'Blancas' : 'Negras'}.`;
+    message = state.endReason === 'timeout'
+      ? `Tiempo agotado. Ganan las ${state.winner === COLOR.WHITE ? 'Blancas' : 'Negras'}.`
+      : `¡Jaque Mate! Ganan las ${state.winner === COLOR.WHITE ? 'Blancas' : 'Negras'}.`;
   } else if (state.status === STATUS.STALEMATE) {
     message = 'Tablas por ahogado.';
   } else if (state.status === STATUS.CHECK) {
@@ -956,6 +1009,7 @@ function completeResignation() {
     socket?.emit('player-resign', { room: ROOM_CODE, pgn: exportMoveList() });
     state.status = STATUS.CHECKMATE;
     state.winner = enemy(PLAYER_COLOR);
+    state.endReason = 'resign';
     updateStatusDisplay();
     showGameEnd('TE RENDISTE', 'La partida fue entregada.', { online: true, canPlayAgain: false });
     return;
@@ -964,6 +1018,7 @@ function completeResignation() {
   const loser = state.turn;
   state.status = STATUS.CHECKMATE;
   state.winner = enemy(loser);
+  state.endReason = 'resign';
   clearLocalGameSnapshot();
   renderBoard();
   updateStatusDisplay();
