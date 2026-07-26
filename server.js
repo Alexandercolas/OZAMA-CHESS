@@ -846,7 +846,12 @@ io.on('connection', (socket) => {
     const room = await getOrRestoreRoom(roomCode);
     if (!room) { socket.emit('rejoin-failed', 'La sala ya no existe.'); return; }
     const cleanRoomCode = roomCode.toUpperCase().trim();
-    if (!canUseRoomColor(room, color, socket.data.userId)) {
+    const requestedColor = color === 'white' ? COLOR.WHITE : color === 'black' ? COLOR.BLACK : color;
+    let assignedColor = requestedColor;
+    if (!canUseRoomColor(room, assignedColor, socket.data.userId)) {
+      assignedColor = [COLOR.WHITE, COLOR.BLACK].find((candidate) => canUseRoomColor(room, candidate, socket.data.userId));
+    }
+    if (!assignedColor) {
       socket.emit('rejoin-failed', 'Esta cuenta no corresponde a ese color en la sala.');
       return;
     }
@@ -854,14 +859,14 @@ io.on('connection', (socket) => {
     cancelTimer(room);
     socket.join(cleanRoomCode);
     socket.data.roomCode   = cleanRoomCode;
-    socket.data.color      = color;
+    socket.data.color      = assignedColor;
     socket.data.playerName = playerName || '';
 
-    if (color === 'w') room.white = socket.id;
-    else               room.black = socket.id;
+    if (assignedColor === 'w') room.white = socket.id;
+    else                       room.black = socket.id;
 
     await Room.updateOne({ roomCode: cleanRoomCode }, { $set: {
-      [`players.${color === 'w' ? 'white' : 'black'}.socketId`]: socket.id,
+      [`players.${assignedColor === 'w' ? 'white' : 'black'}.socketId`]: socket.id,
       gameState: createGameSnapshot(room.game),
       clockW: room.clockW || DEFAULT_TIME_MS,
       clockB: room.clockB || DEFAULT_TIME_MS,
@@ -869,6 +874,7 @@ io.on('connection', (socket) => {
     }}).catch(() => {});
 
     socket.emit('rejoin-ok', {
+      color: assignedColor,
       playerInfo: room.playerInfo,
       currentTurn: room.game?.turn || room.currentTurn,
       clockW: room.clockW || DEFAULT_TIME_MS,
@@ -880,7 +886,7 @@ io.on('connection', (socket) => {
 if (room.white && room.black && !room.clockInterval) {
   startClock(cleanRoomCode);
 }
-    console.log(`[R] ${color.toUpperCase()} reconectado a sala ${cleanRoomCode}`);
+    console.log(`[R] ${assignedColor.toUpperCase()} reconectado a sala ${cleanRoomCode}`);
   });
 
   // ── Movida ────────────────────────────────────────────────────
