@@ -409,19 +409,20 @@ body::after {
 
 .piece-white {
   filter:
-    drop-shadow(0 7px 5px rgba(31,21,9,0.72))
-    drop-shadow(0 0 8px rgba(255,211,46,0.24))
-    contrast(1.14)
-    saturate(1.42)
-    brightness(1.09);
+    drop-shadow(0 8px 6px rgba(24,14,3,0.82))
+    drop-shadow(0 0 7px rgba(255,207,31,0.22))
+    contrast(1.22)
+    saturate(1.50)
+    brightness(1.04);
 }
 
 .piece-white svg {
   filter:
-    drop-shadow(0 1px 0 rgba(255,249,194,0.42))
-    drop-shadow(0 -1px 0 rgba(105,65,8,0.20))
-    saturate(1.28)
-    brightness(1.04);
+    drop-shadow(0 1px 0 rgba(255,239,118,0.40))
+    drop-shadow(0 -1px 0 rgba(88,48,3,0.36))
+    contrast(1.08)
+    saturate(1.30)
+    brightness(1.01);
 }
 
 .piece-black {
