@@ -152,11 +152,12 @@ const PIECE_SVGS = {
 // ================================================================
 const ROOM_CODE = sessionStorage.getItem('ozama-room') || '';
 const RAW_PLAYER_COLOR = sessionStorage.getItem('ozama-color') || '';
+const BOT_SESSION_REQUESTED = sessionStorage.getItem('ozama-bot-mode') === 'true';
 let PLAYER_COLOR = RAW_PLAYER_COLOR === 'white' ? COLOR.WHITE
   : RAW_PLAYER_COLOR === 'black' ? COLOR.BLACK
   : RAW_PLAYER_COLOR;
-let IS_ONLINE = !!(ROOM_CODE && (PLAYER_COLOR === COLOR.WHITE || PLAYER_COLOR === COLOR.BLACK));
-const IS_BOT_MODE = !IS_ONLINE && sessionStorage.getItem('ozama-bot-mode') === 'true';
+let IS_ONLINE = !BOT_SESSION_REQUESTED && !!(ROOM_CODE && (PLAYER_COLOR === COLOR.WHITE || PLAYER_COLOR === COLOR.BLACK));
+const IS_BOT_MODE = BOT_SESSION_REQUESTED;
 function readStoredUser() {
   try { return JSON.parse(localStorage.getItem('ozama-user') || 'null'); }
   catch { return null; }
@@ -927,6 +928,16 @@ function updateStatusDisplay() {
 
   document.getElementById('white-turn')?.classList.toggle('on', state.turn === COLOR.WHITE);
   document.getElementById('black-turn')?.classList.toggle('on', state.turn === COLOR.BLACK);
+
+  if (
+    IS_BOT_MODE &&
+    (state.status === STATUS.CHECKMATE || state.status === STATUS.STALEMATE || state.status === STATUS.DRAW)
+  ) {
+    setTimeout(() => {
+      const overlay = document.getElementById('game-over-overlay');
+      if (overlay?.classList.contains('hidden')) showLocalGameFinished();
+    }, 0);
+  }
 }
 
 function exportMoveList() {
