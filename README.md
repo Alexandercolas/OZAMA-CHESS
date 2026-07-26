@@ -28,6 +28,12 @@ Mapa detallado para trabajar en VS Code:
 docs/PROJECT_STRUCTURE.md
 ```
 
+Roadmap recomendado de desarrollo:
+
+```text
+docs/ROADMAP.md
+```
+
 ## Variables De Entorno
 
 Crea `.env` local usando `.env.example` como base:

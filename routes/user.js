@@ -24,7 +24,7 @@ function premiumCapabilities(user) {
   };
 }
 
-// ── GET /api/user/me — perfil propio ────────────────────────────
+// GET /api/user/me - own profile
 router.get('/me', requireAuth, async (req, res) => {
   res.json({ user: req.user });
 });
@@ -33,7 +33,7 @@ router.get('/plan', requireAuth, async (req, res) => {
   res.json(premiumCapabilities(req.user));
 });
 
-// ── PATCH /api/user/me — actualizar perfil ──────────────────────
+// PATCH /api/user/me - update profile
 router.patch('/me', requireAuth, async (req, res) => {
   try {
     const allowed = ['country', 'avatar', 'avatarImage'];
@@ -64,7 +64,7 @@ router.patch('/me', requireAuth, async (req, res) => {
   }
 });
 
-// ── GET /api/user/history — historial de partidas ───────────────
+// GET /api/user/history - match history
 router.get('/history', requireAuth, async (req, res) => {
   try {
     const userId = req.user._id;
@@ -94,7 +94,7 @@ router.get('/history', requireAuth, async (req, res) => {
   }
 });
 
-// ── GET /api/user/leaderboard — top 20 por ELO ─────────────────
+// GET /api/user/leaderboard - top 20 by ELO
 router.get('/leaderboard', async (req, res) => {
   try {
     const players = await User.find({ isActive: true })
@@ -108,29 +108,28 @@ router.get('/leaderboard', async (req, res) => {
   }
 });
 
-// ── GET /api/user/:username — perfil público ────────────────────
-// PUT /api/user/password - cambiar contraseña con sesión activa
+// PUT /api/user/password - change password with active session
 router.put('/password', requireAuth, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
     if (!currentPassword || !newPassword) {
-      return res.status(400).json({ error: 'Contraseña actual y nueva contraseña son obligatorias.' });
+      return res.status(400).json({ error: 'Contrasena actual y nueva contrasena son obligatorias.' });
     }
     if (String(newPassword).length < 6) {
-      return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 6 caracteres.' });
+      return res.status(400).json({ error: 'La nueva contrasena debe tener al menos 6 caracteres.' });
     }
 
     const user = await User.findById(req.user._id).select('+password');
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
 
     const valid = await user.comparePassword(currentPassword);
-    if (!valid) return res.status(401).json({ error: 'Contraseña actual incorrecta.' });
+    if (!valid) return res.status(401).json({ error: 'Contrasena actual incorrecta.' });
 
     user.password = newPassword;
     await user.save();
 
-    res.json({ message: 'Contraseña actualizada correctamente.' });
+    res.json({ message: 'Contrasena actualizada correctamente.' });
   } catch (err) {
     res.status(500).json({ error: 'Error interno del servidor.' });
   }

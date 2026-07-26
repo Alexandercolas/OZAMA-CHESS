@@ -16,7 +16,7 @@ function userIsAdmin(user) {
   return adminEmails().includes(String(user.email || '').toLowerCase());
 }
 
-// ── Middleware obligatorio ──────────────────────────────────────
+// Required auth middleware
 async function requireAuth(req, res, next) {
   try {
     const header = req.headers.authorization || '';
@@ -30,20 +30,20 @@ async function requireAuth(req, res, next) {
     const user    = await User.findById(decoded.id).select('-password');
 
     if (!user || !user.isActive) {
-      return res.status(401).json({ error: 'Usuario no válido.' });
+      return res.status(401).json({ error: 'Usuario no valido.' });
     }
 
     req.user = user;
     next();
   } catch (err) {
-    const msg = err.name === 'TokenExpiredError' ?
-       'Sesión expirada. Vuelve a iniciar sesión.'
-      : 'Token inválido.';
+    const msg = err.name === 'TokenExpiredError'
+      ? 'Sesion expirada. Vuelve a iniciar sesion.'
+      : 'Token invalido.';
     return res.status(401).json({ error: msg });
   }
 }
 
-// ── Middleware opcional (no bloquea si no hay token) ───────────
+// Optional auth middleware. It does not block anonymous requests.
 async function optionalAuth(req, res, next) {
   try {
     const header = req.headers.authorization || '';

@@ -28,12 +28,17 @@ const server = http.createServer(app);
 const io     = new Server(server);
 
 app.disable('x-powered-by');
+app.set('trust proxy', 1);
 app.use(express.json({ limit: '600kb' }));
 app.use((req, res, next) => {
   res.set('X-Content-Type-Options', 'nosniff');
   res.set('X-Frame-Options', 'DENY');
   res.set('Referrer-Policy', 'no-referrer');
   res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.set('Cross-Origin-Opener-Policy', 'same-origin');
+  if (process.env.NODE_ENV === 'production') {
+    res.set('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
+  }
   next();
 });
 app.use((req, res, next) => {
