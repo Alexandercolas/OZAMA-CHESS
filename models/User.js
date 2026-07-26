@@ -10,9 +10,9 @@ const UserSchema = new mongoose.Schema(
       required: [true, 'El nombre de usuario es obligatorio'],
       unique: true,
       trim: true,
-      minlength: [3, 'Mínimo 3 caracteres'],
-      maxlength: [20, 'Máximo 20 caracteres'],
-      match: [/^[a-zA-Z0-9_]+$/, 'Solo letras, números y guión bajo'],
+      minlength: [3, 'Minimo 3 caracteres'],
+      maxlength: [20, 'Maximo 20 caracteres'],
+      match: [/^[a-zA-Z0-9_]+$/, 'Solo letras, numeros y guion bajo'],
     },
     email: {
       type: String,
@@ -20,26 +20,35 @@ const UserSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
-      match: [/^\S+@\S+\.\S+$/, 'Email inválido'],
+      match: [/^\S+@\S+\.\S+$/, 'Email invalido'],
     },
     password: {
       type: String,
-      required: [true, 'La contraseña es obligatoria'],
-      minlength: [6, 'Mínimo 6 caracteres'],
-      select: false, // no se devuelve en queries por defecto
+      required: [true, 'La contrasena es obligatoria'],
+      minlength: [6, 'Minimo 6 caracteres'],
+      select: false,
     },
     recoveryCodeHash: {
       type: String,
       select: false,
     },
 
-    // ── Perfil ─────────────────────────────────────────────────────
-    country: { type: String, default: 'DO' },   // ISO 3166-1 alpha-2
-    avatar:  { type: Number, default: 0 },       // índice de avatar predefinido
+    country: {
+      type: String,
+      default: 'DO',
+      uppercase: true,
+      trim: true,
+      match: [/^[A-Z]{2}$/, 'Pais invalido'],
+    },
+    avatar: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 12,
+    },
     avatarImage: { type: String, default: '' },
     friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 
-    // ── ELO + estadísticas ──────────────────────────────────────────
     elo: { type: Number, default: 1200 },
     stats: {
       wins:   { type: Number, default: 0 },
@@ -47,7 +56,7 @@ const UserSchema = new mongoose.Schema(
       draws:  { type: Number, default: 0 },
     },
 
-    // Plan comercial: no da ventajas deportivas, solo confort/experiencia.
+    // The paid plan must never provide competitive advantages.
     plan: {
       type: String,
       enum: ['free', 'premium'],
@@ -60,7 +69,6 @@ const UserSchema = new mongoose.Schema(
       default: 'none',
     },
 
-    // ── Metadatos ───────────────────────────────────────────────────
     lastSeenAt: { type: Date, default: Date.now },
     isActive:   { type: Boolean, default: true },
     isAdmin:    { type: Boolean, default: false },
@@ -68,14 +76,12 @@ const UserSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// ── Hash de contraseña antes de guardar ─────────────────────────
 UserSchema.pre('save', async function () {
   if (!this.isModified('password')) return;
   if (/^\$2[aby]\$\d{2}\$/.test(this.password)) return;
   this.password = await bcrypt.hash(this.password, 12);
 });
 
-// ── Comparar contraseña ─────────────────────────────────────────
 UserSchema.methods.comparePassword = async function (candidate) {
   return bcrypt.compare(candidate, this.password);
 };
@@ -85,18 +91,16 @@ UserSchema.methods.compareRecoveryCode = async function (candidate) {
   return bcrypt.compare(String(candidate).trim().toUpperCase(), this.recoveryCodeHash);
 };
 
-// ── ELO update helper ───────────────────────────────────────────
 UserSchema.methods.updateElo = function (opponentElo, result) {
-  // result: 1 = win, 0.5 = draw, 0 = loss
   const K  = this.elo < 2100 ? 32 : this.elo < 2400 ? 24 : 16;
   const Ea = 1 / (1 + Math.pow(10, (opponentElo - this.elo) / 400));
   this.elo  = Math.max(100, Math.round(this.elo + K * (result - Ea)));
 };
 
-// ── toJSON limpio (sin password, sin __v) ───────────────────────
 UserSchema.set('toJSON', {
   transform: (_doc, ret) => {
     delete ret.password;
+    delete ret.recoveryCodeHash;
     delete ret.__v;
     return ret;
   },

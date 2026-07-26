@@ -65,31 +65,78 @@ function generateRecoveryCode() {
   return crypto.randomBytes(4).toString('hex').toUpperCase();
 }
 
-// ── POST /api/auth/register ─────────────────────────────────────
+function normalizeEmail(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function normalizeUsername(value) {
+  return String(value || '').trim();
+}
+
+function normalizeCountry(value) {
+  return String(value || 'DO').trim().toUpperCase();
+}
+
+function validUsername(value) {
+  return /^[a-zA-Z0-9_]{3,20}$/.test(value);
+}
+
+function validCountry(value) {
+  return /^[A-Z]{2}$/.test(value);
+}
+
+function publicUser(user) {
+  return {
+    id:       user._id,
+    username: user.username,
+    email:    user.email,
+    country:  user.country,
+    avatar:   user.avatar,
+    avatarImage: user.avatarImage,
+    elo:      user.elo,
+    stats:    user.stats,
+    plan:     user.plan,
+    premiumUntil: user.premiumUntil,
+    subscriptionStatus: user.subscriptionStatus,
+  };
+}
+
 router.post('/register', limitRegister, async (req, res) => {
   try {
-    const { username, email, password, country = 'DO' } = req.body;
+    const username = normalizeUsername(req.body.username);
+    const email = normalizeEmail(req.body.email);
+    const password = String(req.body.password || '');
+    const country = normalizeCountry(req.body.country);
 
     if (!username || !email || !password) {
       return res.status(400).json({ error: 'username, email y password son obligatorios.' });
     }
+    if (!validUsername(username)) {
+      return res.status(400).json({ error: 'Usuario invalido. Usa 3-20 caracteres, letras, numeros o guion bajo.' });
+    }
+    if (password.length < 6 || password.length > 128) {
+      return res.status(400).json({ error: 'La contrasena debe tener entre 6 y 128 caracteres.' });
+    }
+    if (!validCountry(country)) {
+      return res.status(400).json({ error: 'Pais invalido.' });
+    }
 
     const exists = await User.findOne({
       $or: [
-        { email:    email.toLowerCase().trim() },
-        { username: username.trim() },
+        { email },
+        { username },
       ],
     });
 
     if (exists) {
-      const field = exists.email === email.toLowerCase().trim() ? 'Email' : 'Usuario';
+      const field = exists.email === email ? 'Email' : 'Usuario';
       return res.status(409).json({ error: `${field} ya registrado.` });
     }
 
     const recoveryCode = generateRecoveryCode();
     const recoveryCodeHash = await bcrypt.hash(recoveryCode, 12);
     const user  = await User.create({
-      username: username.trim(),
+      username,
       email,
       password,
       country,
@@ -99,19 +146,7 @@ router.post('/register', limitRegister, async (req, res) => {
 
     return res.status(201).json({
       token,
-      user: {
-        id:       user._id,
-        username: user.username,
-        email:    user.email,
-        country:  user.country,
-        avatar:   user.avatar,
-        avatarImage: user.avatarImage,
-        elo:      user.elo,
-        stats:    user.stats,
-        plan:     user.plan,
-        premiumUntil: user.premiumUntil,
-        subscriptionStatus: user.subscriptionStatus,
-      },
+      user: publicUser(user),
       recoveryCode,
     });
   } catch (err) {
@@ -127,10 +162,10 @@ router.post('/register', limitRegister, async (req, res) => {
   }
 });
 
-// ── POST /api/auth/login ────────────────────────────────────────
 router.post('/login', limitLogin, async (req, res) => {
   try {
-    const { identifier, password } = req.body; // identifier = username o email
+    const identifier = String(req.body.identifier || '').trim();
+    const password = String(req.body.password || '');
 
     if (!identifier || !password) {
       return res.status(400).json({ error: 'Credenciales incompletas.' });
@@ -138,8 +173,8 @@ router.post('/login', limitLogin, async (req, res) => {
 
     const user = await User.findOne({
       $or: [
-        { email:    identifier.toLowerCase().trim() },
-        { username: identifier.trim() },
+        { email: normalizeEmail(identifier) },
+        { username: identifier },
       ],
     }).select('+password');
 
@@ -159,19 +194,7 @@ router.post('/login', limitLogin, async (req, res) => {
 
     return res.json({
       token,
-      user: {
-        id:       user._id,
-        username: user.username,
-        email:    user.email,
-        country:  user.country,
-        avatar:   user.avatar,
-        avatarImage: user.avatarImage,
-        elo:      user.elo,
-        stats:    user.stats,
-        plan:     user.plan,
-        premiumUntil: user.premiumUntil,
-        subscriptionStatus: user.subscriptionStatus,
-      },
+      user: publicUser(user),
     });
   } catch (err) {
     console.error('[Auth] Login error:', err.message);
@@ -179,39 +202,42 @@ router.post('/login', limitLogin, async (req, res) => {
   }
 });
 
-// POST /api/auth/reset-password
 router.post('/reset-password', limitReset, async (req, res) => {
   try {
-    const { identifier, recoveryCode, newPassword } = req.body;
+    const identifier = String(req.body.identifier || '').trim();
+    const recoveryCode = String(req.body.recoveryCode || '').trim().toUpperCase();
+    const newPassword = String(req.body.newPassword || '');
 
     if (!identifier || !recoveryCode || !newPassword) {
-      return res.status(400).json({ error: 'Usuario/email, código y nueva contraseña son obligatorios.' });
+      return res.status(400).json({ error: 'Usuario/email, codigo y nueva contrasena son obligatorios.' });
     }
-    if (String(newPassword).length < 6) {
-      return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 6 caracteres.' });
+    if (newPassword.length < 6 || newPassword.length > 128) {
+      return res.status(400).json({ error: 'La nueva contrasena debe tener entre 6 y 128 caracteres.' });
+    }
+    if (!/^[A-F0-9]{8}$/.test(recoveryCode)) {
+      return res.status(401).json({ error: 'Datos de recuperacion incorrectos.' });
     }
 
-    const cleanIdentifier = String(identifier).trim();
     const user = await User.findOne({
       $or: [
-        { email: cleanIdentifier.toLowerCase() },
-        { username: cleanIdentifier },
+        { email: normalizeEmail(identifier) },
+        { username: identifier },
       ],
     }).select('+password +recoveryCodeHash');
 
     if (!user) {
-      return res.status(401).json({ error: 'Datos de recuperación incorrectos.' });
+      return res.status(401).json({ error: 'Datos de recuperacion incorrectos.' });
     }
 
     const validCode = await user.compareRecoveryCode(recoveryCode);
     if (!validCode) {
-      return res.status(401).json({ error: 'Datos de recuperación incorrectos.' });
+      return res.status(401).json({ error: 'Datos de recuperacion incorrectos.' });
     }
 
     user.password = newPassword;
     await user.save();
 
-    return res.json({ message: 'Contraseña actualizada. Ya puedes iniciar sesión.' });
+    return res.json({ message: 'Contrasena actualizada. Ya puedes iniciar sesion.' });
   } catch (err) {
     console.error('[Auth] Reset password error:', err.message);
     return res.status(500).json({ error: 'Error interno del servidor.' });

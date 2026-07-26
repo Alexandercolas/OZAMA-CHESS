@@ -7,6 +7,10 @@ const { requireAuth }      = require('../middleware/auth');
 
 const router = express.Router();
 
+function validUsername(value) {
+  return /^[a-zA-Z0-9_]{3,20}$/.test(String(value || ''));
+}
+
 function premiumCapabilities(user) {
   const premiumUntil = user?.premiumUntil ? new Date(user.premiumUntil) : null;
   const premiumActive = user?.plan === 'premium' && (!premiumUntil || premiumUntil > new Date());
@@ -51,6 +55,18 @@ router.patch('/me', requireAuth, async (req, res) => {
         return res.status(413).json({ error: 'La foto es demasiado grande.' });
       }
       updates.avatarImage = image;
+    }
+    if (updates.country !== undefined) {
+      const country = String(updates.country || '').trim().toUpperCase();
+      if (!/^[A-Z]{2}$/.test(country)) return res.status(400).json({ error: 'Pais invalido.' });
+      updates.country = country;
+    }
+    if (updates.avatar !== undefined) {
+      const avatar = Number(updates.avatar);
+      if (!Number.isInteger(avatar) || avatar < 0 || avatar > 12) {
+        return res.status(400).json({ error: 'Avatar invalido.' });
+      }
+      updates.avatar = avatar;
     }
 
     const user = await User.findByIdAndUpdate(req.user._id, updates, {
@@ -116,8 +132,8 @@ router.put('/password', requireAuth, async (req, res) => {
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ error: 'Contrasena actual y nueva contrasena son obligatorias.' });
     }
-    if (String(newPassword).length < 6) {
-      return res.status(400).json({ error: 'La nueva contrasena debe tener al menos 6 caracteres.' });
+    if (String(newPassword).length < 6 || String(newPassword).length > 128) {
+      return res.status(400).json({ error: 'La nueva contrasena debe tener entre 6 y 128 caracteres.' });
     }
 
     const user = await User.findById(req.user._id).select('+password');
@@ -152,6 +168,7 @@ router.post('/friends/:username', requireAuth, async (req, res) => {
   try {
     const username = String(req.params.username || '').trim();
     if (!username) return res.status(400).json({ error: 'Usuario requerido.' });
+    if (!validUsername(username)) return res.status(400).json({ error: 'Usuario invalido.' });
 
     const friend = await User.findOne({ username: { $regex: `^${username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } })
       .select('username country avatar avatarImage elo stats');
@@ -175,6 +192,7 @@ router.post('/friends/:username', requireAuth, async (req, res) => {
 router.delete('/friends/:username', requireAuth, async (req, res) => {
   try {
     const username = String(req.params.username || '').trim();
+    if (!validUsername(username)) return res.status(400).json({ error: 'Usuario invalido.' });
     const friend = await User.findOne({ username: { $regex: `^${username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } }).select('_id');
     if (!friend) return res.status(404).json({ error: 'Usuario no encontrado.' });
 
@@ -191,7 +209,10 @@ router.delete('/friends/:username', requireAuth, async (req, res) => {
 
 router.get('/:username', async (req, res) => {
   try {
-    const user = await User.findOne({ username: req.params.username })
+    const username = String(req.params.username || '').trim();
+    if (!validUsername(username)) return res.status(400).json({ error: 'Usuario invalido.' });
+
+    const user = await User.findOne({ username })
       .select('username country avatar avatarImage elo stats plan createdAt');
 
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });

@@ -1,6 +1,7 @@
 'use strict';
 
 const express = require('express');
+const mongoose = require('mongoose');
 const Event = require('../models/Event');
 const Match = require('../models/Match');
 const User = require('../models/User');
@@ -8,16 +9,64 @@ const { requireAdmin, userIsAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
-function eventPayload(body) {
-  return {
-    title: String(body.title || '').trim(),
-    type: body.type || 'event',
-    status: body.status || 'draft',
-    description: String(body.description || '').trim(),
-    startsAt: body.startsAt ? new Date(body.startsAt) : null,
-    endsAt: body.endsAt ? new Date(body.endsAt) : null,
-    maxPlayers: Number(body.maxPlayers || 16),
-  };
+const allowedEventTypes = new Set(['event', 'tournament', 'announcement', 'maintenance']);
+const allowedEventStatuses = new Set(['draft', 'published', 'closed']);
+
+function validObjectId(id) {
+  return mongoose.Types.ObjectId.isValid(String(id || ''));
+}
+
+function cleanString(value, maxLength) {
+  return String(value || '').trim().slice(0, maxLength);
+}
+
+function parseDateField(value, field) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    const err = new Error(`${field} invalida.`);
+    err.statusCode = 400;
+    throw err;
+  }
+  return date;
+}
+
+function eventPayload(body, { partial = false } = {}) {
+  const payload = {};
+
+  if (!partial || body.title !== undefined) payload.title = cleanString(body.title, 90);
+  if (!partial || body.type !== undefined) {
+    const type = String(body.type || 'event');
+    if (!allowedEventTypes.has(type)) {
+      const err = new Error('Tipo de evento invalido.');
+      err.statusCode = 400;
+      throw err;
+    }
+    payload.type = type;
+  }
+  if (!partial || body.status !== undefined) {
+    const status = String(body.status || 'draft');
+    if (!allowedEventStatuses.has(status)) {
+      const err = new Error('Estado de evento invalido.');
+      err.statusCode = 400;
+      throw err;
+    }
+    payload.status = status;
+  }
+  if (!partial || body.description !== undefined) payload.description = cleanString(body.description, 1200);
+  if (!partial || body.startsAt !== undefined) payload.startsAt = parseDateField(body.startsAt, 'Fecha inicial');
+  if (!partial || body.endsAt !== undefined) payload.endsAt = parseDateField(body.endsAt, 'Fecha final');
+  if (!partial || body.maxPlayers !== undefined) {
+    const maxPlayers = Number(body.maxPlayers || 16);
+    if (!Number.isInteger(maxPlayers) || maxPlayers < 2 || maxPlayers > 512) {
+      const err = new Error('Maximo de jugadores invalido.');
+      err.statusCode = 400;
+      throw err;
+    }
+    payload.maxPlayers = maxPlayers;
+  }
+
+  return payload;
 }
 
 router.get('/me', requireAdmin, (req, res) => {
@@ -77,6 +126,8 @@ router.get('/users', requireAdmin, async (_req, res) => {
 
 router.patch('/users/:id/plan', requireAdmin, async (req, res) => {
   try {
+    if (!validObjectId(req.params.id)) return res.status(400).json({ error: 'Usuario invalido.' });
+
     const updates = {};
     const allowedPlans = new Set(['free', 'premium']);
     const allowedStatuses = new Set(['none', 'trial', 'active', 'past_due', 'cancelled']);
@@ -90,7 +141,7 @@ router.patch('/users/:id/plan', requireAdmin, async (req, res) => {
       updates.subscriptionStatus = req.body.subscriptionStatus;
     }
     if (req.body.premiumUntil !== undefined) {
-      updates.premiumUntil = req.body.premiumUntil ? new Date(req.body.premiumUntil) : null;
+      updates.premiumUntil = parseDateField(req.body.premiumUntil, 'Fecha premium');
     }
     if (req.body.isAdmin !== undefined) {
       updates.isAdmin = !!req.body.isAdmin;
@@ -130,7 +181,9 @@ router.post('/events', requireAdmin, async (req, res) => {
 
 router.patch('/events/:id', requireAdmin, async (req, res) => {
   try {
-    const payload = eventPayload(req.body);
+    if (!validObjectId(req.params.id)) return res.status(400).json({ error: 'Evento invalido.' });
+
+    const payload = eventPayload(req.body, { partial: true });
     if (!payload.title) delete payload.title;
     if (payload.endsAt && payload.startsAt && payload.endsAt < payload.startsAt) {
       return res.status(400).json({ error: 'La fecha final no puede ser anterior al inicio.' });
@@ -150,6 +203,8 @@ router.patch('/events/:id', requireAdmin, async (req, res) => {
 
 router.delete('/events/:id', requireAdmin, async (req, res) => {
   try {
+    if (!validObjectId(req.params.id)) return res.status(400).json({ error: 'Evento invalido.' });
+
     const event = await Event.findByIdAndDelete(req.params.id);
     if (!event) return res.status(404).json({ error: 'Evento no encontrado.' });
     res.json({ ok: true });

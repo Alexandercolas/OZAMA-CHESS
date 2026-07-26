@@ -34,6 +34,12 @@ Roadmap recomendado de desarrollo:
 docs/ROADMAP.md
 ```
 
+Notas de seguridad:
+
+```text
+SECURITY.md
+```
+
 ## Variables De Entorno
 
 Crea `.env` local usando `.env.example` como base:
