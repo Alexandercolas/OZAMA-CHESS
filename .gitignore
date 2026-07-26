@@ -16,4 +16,7 @@ Thumbs.db
 *.err.log
 *.out.log
 
+# Blender automatic backups
+*.blend1
+
 .DS_Store

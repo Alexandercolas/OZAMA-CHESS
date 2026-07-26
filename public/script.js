@@ -124,10 +124,17 @@ function _noise(ctx,{duration,vol,filter,type='bandpass',delay=0}){
 // ================================================================
 // SECTION 1: CONFIG & CONSTANTS
 // ================================================================
-const CONFIG = { BOARD_SIZE:8, PIECE_PATH:'./assets/pieces/', USE_INLINE_SVG:true, BOARD_FLIPPED:false };
+const CONFIG = {
+  BOARD_SIZE: 8,
+  PIECE_PATH: './assets/pieces/',
+  USE_INLINE_SVG: true,
+  USE_BLENDER_PIECES: new URLSearchParams(window.location.search).get('pieces') === '3d',
+  BOARD_FLIPPED: false
+};
 const PIECE  = { PAWN:'p', KNIGHT:'n', BISHOP:'b', ROOK:'r', QUEEN:'q', KING:'k' };
 const COLOR  = { WHITE:'w', BLACK:'b' };
 const STATUS = { PLAYING:'playing', CHECK:'check', CHECKMATE:'checkmate', STALEMATE:'stalemate', DRAW:'draw' };
+const BLENDER_PIECE_NAMES = { p:'pawn', n:'knight', b:'bishop', r:'rook', q:'queen', k:'king' };
 
 // ================================================================
 // SECTION 2: SVG PIECE ASSETS
@@ -765,7 +772,11 @@ function renderBoard() {
       const p = state.board[r][c];
       if (p) {
         const key = `${p.color}${p.type}`;
-        if (CONFIG.USE_INLINE_SVG && PIECE_SVGS[key]) {
+        if (CONFIG.USE_BLENDER_PIECES && BLENDER_PIECE_NAMES[p.type]) {
+          const style = p.color === COLOR.WHITE ? 'gold' : 'black';
+          const pieceName = BLENDER_PIECE_NAMES[p.type];
+          sq.innerHTML = `<span class="piece piece-3d piece-${style} piece-${p.type}"><img src="./assets/pieces/blender/${style}/${pieceName}.png" alt=""></span>`;
+        } else if (CONFIG.USE_INLINE_SVG && PIECE_SVGS[key]) {
           sq.innerHTML = `<span class="piece piece-${p.color === COLOR.WHITE ? 'white' : 'black'} piece-${p.type}">${PIECE_SVGS[key]}</span>`;
         }
       }

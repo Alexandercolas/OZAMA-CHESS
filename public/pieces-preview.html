@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OZAMA CHESS - Prueba de piezas</title>
+  <style>
+    :root {
+      --carbon: #0d0b08;
+      --gold: #c8983c;
+      --board-light: #d4b896;
+      --board-dark: #5c3a1e;
+      --square: clamp(38px, 10vw, 84px);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      color: #e9e0d1;
+      background:
+        linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.72)),
+        repeating-linear-gradient(90deg, #0d0b08 0, #0d0b08 48px, #100d09 49px);
+      font-family: Inter, Arial, sans-serif;
+    }
+
+    main {
+      width: min(96vw, 980px);
+      padding: 28px 16px;
+    }
+
+    header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #5d431c;
+      padding-bottom: 14px;
+    }
+
+    h1 {
+      margin: 0;
+      color: #e4b651;
+      font: 700 clamp(22px, 4vw, 38px) Cinzel, Georgia, serif;
+    }
+
+    p {
+      margin: 0;
+      color: #9f968a;
+      font-size: 13px;
+      text-transform: uppercase;
+    }
+
+    .board {
+      width: calc(var(--square) * 8);
+      max-width: 100%;
+      display: grid;
+      grid-template-columns: repeat(8, var(--square));
+      grid-template-rows: repeat(8, var(--square));
+      margin-inline: auto;
+      border: 6px solid #24180d;
+      outline: 2px solid #b27b22;
+      box-shadow: 0 20px 55px #000;
+    }
+
+    .square {
+      position: relative;
+      width: var(--square);
+      height: var(--square);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+
+    .square:nth-child(16n + 1),
+    .square:nth-child(16n + 3),
+    .square:nth-child(16n + 5),
+    .square:nth-child(16n + 7),
+    .square:nth-child(16n + 10),
+    .square:nth-child(16n + 12),
+    .square:nth-child(16n + 14),
+    .square:nth-child(16n + 16) { background: var(--board-light); }
+
+    .square:nth-child(16n + 2),
+    .square:nth-child(16n + 4),
+    .square:nth-child(16n + 6),
+    .square:nth-child(16n + 8),
+    .square:nth-child(16n + 9),
+    .square:nth-child(16n + 11),
+    .square:nth-child(16n + 13),
+    .square:nth-child(16n + 15) { background: var(--board-dark); }
+
+    .piece {
+      position: absolute;
+      width: 104%;
+      height: 104%;
+      object-fit: contain;
+      filter: drop-shadow(0 5px 4px rgba(0, 0, 0, 0.58));
+      user-select: none;
+      pointer-events: none;
+    }
+
+    @media (max-width: 680px) {
+      main { padding-inline: 8px; }
+      header { align-items: start; flex-direction: column; }
+      .board { border-width: 4px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>OZAMA CHESS</h1>
+      <p>Prueba interna del set 3D</p>
+    </header>
+    <div class="board" id="board" aria-label="Vista previa de las piezas"></div>
+  </main>
+  <script>
+    const board = document.getElementById('board');
+    const order = ['rook', 'knight', 'bishop', 'queen', 'king', 'bishop', 'knight', 'rook'];
+    const rows = [
+      { style: 'black', pieces: order },
+      { style: 'black', pieces: Array(8).fill('pawn') },
+      ...Array.from({ length: 4 }, () => ({ style: '', pieces: Array(8).fill('') })),
+      { style: 'gold', pieces: Array(8).fill('pawn') },
+      { style: 'gold', pieces: order }
+    ];
+
+    rows.forEach((row) => {
+      row.pieces.forEach((piece) => {
+        const square = document.createElement('div');
+        square.className = 'square';
+        if (piece) {
+          const image = document.createElement('img');
+          image.className = 'piece';
+          image.src = `assets/pieces/blender/${row.style}/${piece}.png`;
+          image.alt = '';
+          square.appendChild(image);
+        }
+        board.appendChild(square);
+      });
+    });
+  </script>
+</body>
+</html>
