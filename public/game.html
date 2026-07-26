@@ -457,6 +457,19 @@
       width: 100%; height: 100%; display: block;
       filter: drop-shadow(0 1px 0 rgba(255,232,170,0.16));
     }
+    .piece.piece-3d {
+      width: 112%;
+      height: 112%;
+      isolation: isolate;
+      filter: drop-shadow(0 7px 5px rgba(0,0,0,0.68));
+    }
+    .piece.piece-3d::before,
+    .piece.piece-3d::after {
+      display: none;
+    }
+    .piece.piece-3d img {
+      object-fit: contain;
+    }
     .piece::after {
       content: '';
       position: absolute;
@@ -1041,8 +1054,8 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="bot.js"></script>
-<script src="script.js"></script>
+<script src="bot.js?v=20260726-1"></script>
+<script src="script.js?v=20260726-3d"></script>
 
 <script>
   // Sync visible clocks with hidden ones (CLOCK module updates #clock-white/black)
