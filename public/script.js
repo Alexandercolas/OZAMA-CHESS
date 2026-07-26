@@ -128,7 +128,7 @@ const CONFIG = {
   BOARD_SIZE: 8,
   PIECE_PATH: './assets/pieces/',
   USE_INLINE_SVG: true,
-  USE_BLENDER_PIECES: new URLSearchParams(window.location.search).get('pieces') !== 'svg',
+  USE_BLENDER_PIECES: true,
   BOARD_FLIPPED: false
 };
 const PIECE  = { PAWN:'p', KNIGHT:'n', BISHOP:'b', ROOK:'r', QUEEN:'q', KING:'k' };
