@@ -6,6 +6,7 @@ Este documento resume las reglas minimas de seguridad para operar OZAMA CHESS co
 
 - Nunca subir `.env` a GitHub.
 - `JWT_SECRET` debe ser largo, privado y diferente entre desarrollo y produccion.
+- En produccion, el servidor no debe arrancar si `JWT_SECRET` falta o tiene menos de 32 caracteres.
 - `MONGODB_URI` debe vivir solo en variables de entorno locales o en Render.
 - `ADMIN_EMAILS` define quienes pueden entrar a `/admin.html`.
 
@@ -38,6 +39,7 @@ Este documento resume las reglas minimas de seguridad para operar OZAMA CHESS co
 ## Deploy
 
 - Render debe tener `MONGODB_URI`, `JWT_SECRET`, `ADMIN_EMAILS` y `NODE_ENV=production`.
+- Al cambiar `JWT_SECRET`, todos los usuarios tendran que iniciar sesion de nuevo.
 - Revisar logs despues de cada deploy.
 - Probar login, lobby, partida online, rejoin, perfil y admin despues de cada push importante.
 

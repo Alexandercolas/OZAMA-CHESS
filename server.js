@@ -23,17 +23,22 @@ const userRoutes      = require('./routes/user');
 const adminRoutes     = require('./routes/admin');
 const eventRoutes     = require('./routes/events');
 
-function warnRuntimeConfig() {
+function checkRuntimeConfig() {
+  const isProduction = process.env.NODE_ENV === 'production';
   const missing = ['MONGODB_URI', 'JWT_SECRET'].filter((key) => !process.env[key]);
   if (missing.length) {
-    console.warn(`[SECURITY] Variables faltantes: ${missing.join(', ')}`);
+    const message = `[SECURITY] Variables faltantes: ${missing.join(', ')}`;
+    if (isProduction) throw new Error(message);
+    console.warn(message);
   }
   if (process.env.JWT_SECRET && process.env.JWT_SECRET.length < 32) {
-    console.warn('[SECURITY] JWT_SECRET deberia tener al menos 32 caracteres.');
+    const message = '[SECURITY] JWT_SECRET debe tener al menos 32 caracteres.';
+    if (isProduction) throw new Error(message);
+    console.warn(message);
   }
 }
 
-warnRuntimeConfig();
+checkRuntimeConfig();
 
 const app    = express();
 const server = http.createServer(app);
