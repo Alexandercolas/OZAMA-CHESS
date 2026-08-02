@@ -59,6 +59,7 @@ const UserSchema = new mongoose.Schema(
       wins:   { type: Number, default: 0 },
       losses: { type: Number, default: 0 },
       draws:  { type: Number, default: 0 },
+      streak: { type: Number, default: 0 },
     },
 
     // The paid plan must never provide competitive advantages.

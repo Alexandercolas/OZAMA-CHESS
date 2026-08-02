@@ -4,6 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>OZAMA CHESS</title>
+  <meta name="robots" content="noindex, nofollow"/>
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/favicon.png?v=5">
   <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png?v=5">
@@ -16,6 +17,8 @@
 
     :root {
       --sq:    56px;
+      --board-border: 3px;
+      --board-edge: 6px;
       --gold:  #C8983C;
       --gold2: #E8C06A;
       --amber: #8B6520;
@@ -35,10 +38,16 @@
 
     html, body {
       width: 100%; height: 100%;
-      overflow-y: auto;
+      overflow: hidden;
       background: var(--carbon);
       color: var(--text);
       font-family: var(--fb);
+    }
+
+    body.auth-checking .app,
+    body.auth-checking .overlay,
+    body.auth-checking .promotion-overlay {
+      visibility: hidden;
     }
 
     /* warm ambient light */
@@ -60,7 +69,8 @@
       display: grid;
       grid-template-rows: 52px 1fr;
       height: 100vh;
-      overflow-y: auto;
+      height: 100dvh;
+      overflow: hidden;
     }
 
     /* ── HEADER ── */
@@ -126,7 +136,8 @@
     .body {
       display: grid;
       grid-template-columns: 158px 1fr;
-      overflow-y: auto;
+      min-height: 0;
+      overflow: hidden;
     }
 
     /* ================================================================
@@ -196,9 +207,9 @@
 
     .main {
       display: flex; align-items: center; justify-content: center;
-      gap: 0; overflow-y: auto; position: relative;
+      gap: 0; overflow: hidden; position: relative;
       padding: 0 20px;
-      min-width: 0;
+      min-width: 0; min-height: 0;
     }
 
     .main::before {
@@ -373,18 +384,23 @@
     .board {
       width:  calc(var(--sq) * 8);
       height: calc(var(--sq) * 8);
+      box-sizing: content-box;
       display: grid;
       grid-template-columns: repeat(8, var(--sq));
       grid-template-rows:    repeat(8, var(--sq));
-      border: 2.5px solid var(--amber);
+      border: var(--board-border) solid var(--amber);
       outline: 1px solid rgba(200,152,60,0.28); outline-offset: 3px;
       box-shadow:
         0 0 0 5px rgba(13,11,8,0.95),
         0 0 0 6px rgba(200,152,60,0.1),
         0 20px 50px rgba(0,0,0,0.75),
         inset 0 0 20px rgba(0,0,0,0.18);
-      overflow-y: auto; flex-shrink: 0; position: relative; z-index: 1;
+      overflow: hidden; flex-shrink: 0; position: relative; z-index: 1;
       max-width: 100%;
+      touch-action: none;
+      overscroll-behavior: none;
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     .square {
@@ -392,6 +408,10 @@
       position: relative; display: flex;
       justify-content: center; align-items: center;
       cursor: pointer; transition: filter 0.1s;
+      overflow: hidden;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
     }
     .square:hover { filter: brightness(1.1); }
 
@@ -439,6 +459,10 @@
         saturate(1.12);
       transition: transform 0.12s, filter 0.12s;
       transform-origin: 50% 78%;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-user-drag: none;
     }
     .piece::before {
       content: '';
@@ -456,10 +480,14 @@
     .piece svg, .piece img {
       width: 100%; height: 100%; display: block;
       filter: drop-shadow(0 1px 0 rgba(255,232,170,0.16));
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-user-drag: none;
     }
     .piece.piece-3d {
-      width: 112%;
-      height: 112%;
+      width: 100%;
+      height: 100%;
       isolation: isolate;
       filter: drop-shadow(0 7px 5px rgba(0,0,0,0.68));
     }
@@ -532,7 +560,8 @@
 
     .rank-label, .file-label {
       position: absolute; font-family: var(--fm); font-size: 9px; font-weight: 700;
-      opacity: 0.45; pointer-events: none; z-index: 1; line-height: 1;
+      opacity: 0.72; pointer-events: none; z-index: 4; line-height: 1;
+      text-shadow: 0 1px 2px rgba(13,11,8,0.38);
     }
     .rank-label { top: 2px; left: 3px; }
     .file-label { bottom: 2px; right: 3px; }
@@ -542,7 +571,7 @@
     /* ── BOTTOM BAR ── */
     .bc-bottom {
       display: flex; align-items: stretch;
-      width: calc(var(--sq) * 8);
+      width: calc(var(--sq) * 8 + var(--board-edge));
       margin-top: 0;
       border: 1px solid rgba(200,152,60,0.12); border-top: none;
       background: linear-gradient(180deg, var(--s1), var(--carbon));
@@ -715,7 +744,8 @@
 
     @media (max-width: 1080px) {
       :root { --sq: clamp(44px, calc((100vw - 158px - 36px) / 8), 52px); }
-      .app { min-height: 100vh; height: auto; }
+      html, body { height: auto; min-height: 100%; overflow-y: auto; }
+      .app { min-height: 100vh; min-height: 100dvh; height: auto; overflow: visible; }
       .body { min-height: calc(100vh - 52px); }
       .main {
         flex-wrap: wrap;
@@ -809,7 +839,7 @@
     }
   </style>
 </head>
-<body>
+<body class="auth-checking">
 
 <div class="app">
 
@@ -856,6 +886,10 @@
         <a class="sb-item" href="/profile.html#historial">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 4h14v3H5V4Zm0 5h14v3H5V9Zm0 5h9v3H5v-3Zm11 0h3v3h-3v-3Z"/></svg></span>
           <div class="sb-txt"><span class="sb-name">Historial</span><span class="sb-desc">Partidas recientes</span></div>
+        </a>
+        <a class="sb-item" href="/leaderboard.html">
+          <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 4h10v3h3v4c0 3-2 5-5 5h-1v2h3v2H7v-2h3v-2H9c-3 0-5-2-5-5V7h3V4Zm2 2v8h6V6H9Zm8 3v4c1-.4 2-1.2 2-2V9h-2ZM5 9v2c0 .8 1 1.6 2 2V9H5Z"/></svg></span>
+          <div class="sb-txt"><span class="sb-name">Ranking</span><span class="sb-desc">Hall of Fame</span></div>
         </a>
         <a class="sb-item" href="/profile.html#ajustes">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m12 2 2 3 4-.5 1.5 3.5-3 2 1 4-3 2-3-2-3 2-3-2 1-4-3-2L6 4.5 10 5l2-3Zm0 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"/></svg></span>
@@ -1159,7 +1193,7 @@
     const col=sessionStorage.getItem('ozama-color');
     const user=JSON.parse(localStorage.getItem('ozama-user')||'null');
     const mu=col==='w'?eu.w:col==='b'?eu.b:null;
-    if(user&&mu?.newElo)localStorage.setItem('ozama-user',JSON.stringify({...user,elo:mu.newElo}));
+    if(user&&mu?.newElo)localStorage.setItem('ozama-user',JSON.stringify({...user,elo:mu.newElo,stats:mu.stats||user.stats}));
   }
 
   // Captured pieces

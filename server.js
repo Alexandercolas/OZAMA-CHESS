@@ -166,7 +166,9 @@ function startCloseTimer(code) {
     io.to(code).emit('opponent-timeout');
     if (room.matchId) {
       const winner = room.white ? 'w' : room.black ? 'b' : null;
-      await finishMatch(room.matchId, winner ? (winner === 'w' ? 'white_win' : 'black_win') : 'abandoned', winner);
+      const result = winner ? (winner === 'w' ? 'white_win' : 'black_win') : 'abandoned';
+      const closed = await finishMatch(room.matchId, result, winner);
+      if (closed && winner) await applyEloForRoom(room, result, code);
     }
     await Room.updateOne({ roomCode: code }, { $set: { status: 'closed', lastActivityAt: new Date() } }).catch(() => {});
     rooms.delete(code);
@@ -614,9 +616,22 @@ async function applyEloForRoom(room, result, code) {
     wUser.updateElo(bBefore, wResult);
     bUser.updateElo(wBefore, bResult);
 
-    if (result === 'white_win')      { wUser.stats.wins++;  bUser.stats.losses++; }
-    else if (result === 'black_win') { bUser.stats.wins++;  wUser.stats.losses++; }
-    else                             { wUser.stats.draws++; bUser.stats.draws++;  }
+    if (result === 'white_win') {
+      wUser.stats.wins++;
+      bUser.stats.losses++;
+      wUser.stats.streak = Number(wUser.stats.streak || 0) + 1;
+      bUser.stats.streak = 0;
+    } else if (result === 'black_win') {
+      bUser.stats.wins++;
+      wUser.stats.losses++;
+      bUser.stats.streak = Number(bUser.stats.streak || 0) + 1;
+      wUser.stats.streak = 0;
+    } else {
+      wUser.stats.draws++;
+      bUser.stats.draws++;
+      wUser.stats.streak = 0;
+      bUser.stats.streak = 0;
+    }
 
     await Promise.all([
       wUser.save({ validateModifiedOnly: true }),
@@ -632,9 +647,16 @@ async function applyEloForRoom(room, result, code) {
     room.playerInfo.w.elo = wUser.elo;
     room.playerInfo.b.elo = bUser.elo;
 
+    const statsSnapshot = (user) => ({
+      wins: Number(user.stats?.wins || 0),
+      losses: Number(user.stats?.losses || 0),
+      draws: Number(user.stats?.draws || 0),
+      streak: Number(user.stats?.streak || 0),
+    });
+
     io.to(code).emit('elo-update', {
-      w: { newElo: wUser.elo, change: wUser.elo - wBefore },
-      b: { newElo: bUser.elo, change: bUser.elo - bBefore },
+      w: { newElo: wUser.elo, change: wUser.elo - wBefore, stats: statsSnapshot(wUser) },
+      b: { newElo: bUser.elo, change: bUser.elo - bBefore, stats: statsSnapshot(bUser) },
     });
     console.log(`[ELO] ${wUser.username}: ${wBefore}→${wUser.elo} | ${bUser.username}: ${bBefore}→${bUser.elo}`);
   } catch (err) {

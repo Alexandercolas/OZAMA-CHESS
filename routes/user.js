@@ -30,6 +30,7 @@ function premiumCapabilities(user) {
 
 // GET /api/user/me - own profile
 router.get('/me', requireAuth, async (req, res) => {
+  res.set('Cache-Control', 'no-store');
   res.json({ user: req.user });
 });
 
@@ -83,6 +84,7 @@ router.patch('/me', requireAuth, async (req, res) => {
 // GET /api/user/history - match history
 router.get('/history', requireAuth, async (req, res) => {
   try {
+    res.set('Cache-Control', 'no-store');
     const userId = req.user._id;
     const page   = Math.max(1, parseInt(req.query.page)  || 1);
     const limit  = Math.min(20, parseInt(req.query.limit) || 10);
@@ -113,6 +115,7 @@ router.get('/history', requireAuth, async (req, res) => {
 // GET /api/user/leaderboard - top 20 by ELO
 router.get('/leaderboard', async (req, res) => {
   try {
+    res.set('Cache-Control', 'no-store');
     const players = await User.find({ isActive: true })
       .sort({ elo: -1 })
       .limit(20)

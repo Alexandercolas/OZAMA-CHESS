@@ -176,6 +176,27 @@ if (!STORED_USER || !STORED_TOKEN) {
   window.location.replace('/login.html');
   throw new Error('AUTH_REQUIRED');
 }
+
+async function validateStoredSession() {
+  try {
+    const response = await fetch('/api/user/me', {
+      headers: { Authorization: `Bearer ${STORED_TOKEN}` },
+      cache: 'no-store',
+    });
+    if (!response.ok) throw new Error('INVALID_SESSION');
+
+    const data = await response.json();
+    if (!data?.user) throw new Error('INVALID_SESSION');
+    localStorage.setItem('ozama-user', JSON.stringify(data.user));
+    return true;
+  } catch (_) {
+    localStorage.removeItem('ozama-user');
+    localStorage.removeItem('ozama-token');
+    sessionStorage.clear();
+    window.location.replace('/login.html');
+    return false;
+  }
+}
 if (!IS_ONLINE && !IS_BOT_MODE) {
   window.location.replace('/lobby.html');
   throw new Error('GAME_SESSION_REQUIRED');
@@ -775,7 +796,7 @@ function renderBoard() {
         if (CONFIG.USE_BLENDER_PIECES && BLENDER_PIECE_NAMES[p.type]) {
           const style = p.color === COLOR.WHITE ? 'gold' : 'black';
           const pieceName = BLENDER_PIECE_NAMES[p.type];
-          sq.innerHTML = `<span class="piece piece-3d piece-${style} piece-${p.type}"><img src="./assets/pieces/blender/${style}/${pieceName}.png" alt=""></span>`;
+          sq.innerHTML = `<span class="piece piece-3d piece-${style} piece-${p.type}"><img src="./assets/pieces/blender/${style}/${pieceName}.png" alt="" draggable="false"></span>`;
         } else if (CONFIG.USE_INLINE_SVG && PIECE_SVGS[key]) {
           sq.innerHTML = `<span class="piece piece-${p.color === COLOR.WHITE ? 'white' : 'black'} piece-${p.type}">${PIECE_SVGS[key]}</span>`;
         }
@@ -1241,7 +1262,9 @@ function setupOnlineSocket() {
 }
 
 // Iniciar juego al cargar la página
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
+  if (!(await validateStoredSession())) return;
+  document.body.classList.remove('auth-checking');
   updateSoundButton();
   setupOnlineSocket();
   setupControls();

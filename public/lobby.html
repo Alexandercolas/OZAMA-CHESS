@@ -4,6 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>OZAMA CHESS — Lobby</title>
+  <meta name="robots" content="noindex, nofollow"/>
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/favicon.png?v=5">
   <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png?v=5">
@@ -840,7 +841,7 @@
     <!-- SIDEBAR -->
     <aside class="sb">
       <nav class="sb-nav">
-        <a class="sb-item on" href="/lobby.html">
+        <a class="sb-item on" href="/lobby.html#jugar">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 20h10v2H7v-2Zm2-3h6l1 2H8l1-2Zm2-7h2l2 7H9l2-7Zm1-8 5 4-5 4-5-4 5-4Z"/></svg></span>
           <div class="sb-txt"><span class="sb-name">Jugar</span><span class="sb-desc">Partida rápida</span></div>
         </a>
@@ -874,7 +875,7 @@
           <div class="sb-txt"><span class="sb-name">Ajustes</span><span class="sb-desc">Perfil y país</span></div>
         </a>
         <div class="sb-div"></div>
-        <a class="sb-item" id="logout-sb">
+        <a class="sb-item" id="logout-sb" href="/login.html">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 11h10v2H4v-2Zm4-5 1.5 1.5L6 11l3.5 3.5L8 16l-6-5 6-5Zm7-2h5v16h-5v-2h3V6h-3V4Z"/></svg></span>
           <div class="sb-txt"><span class="sb-name">Cerrar sesión</span><span class="sb-desc">Salir de la cuenta</span></div>
         </a>
@@ -1038,7 +1039,31 @@
     window.location.replace('/login.html');
     throw new Error('AUTH_REQUIRED');
   }
-  document.body.classList.remove('auth-checking');
+  let _validatingSession = false;
+  async function validateLobbySession() {
+    if (_validatingSession) return;
+    _validatingSession = true;
+    try {
+      const response = await fetch('/api/user/me', {
+        headers: { Authorization: `Bearer ${_token}` },
+        cache: 'no-store',
+      });
+      if (!response.ok) throw new Error('INVALID_SESSION');
+
+      const data = await response.json();
+      if (!data?.user) throw new Error('INVALID_SESSION');
+      Object.assign(user, data.user);
+      localStorage.setItem('ozama-user', JSON.stringify(data.user));
+      renderLobbyUser();
+      document.body.classList.remove('auth-checking');
+    } catch (_) {
+      doLogout();
+    } finally {
+      _validatingSession = false;
+    }
+  }
+
+  validateLobbySession();
 
   // ── Header user info ──
   const hdUsername = document.getElementById('hd-username');
@@ -1046,7 +1071,8 @@
   const hdAvatar   = document.getElementById('hd-avatar');
   const qBadge     = document.getElementById('quick-elo-badge');
 
-  if (user) {
+  function renderLobbyUser() {
+    if (!user) return;
     const initial = (user.username || '?').charAt(0).toUpperCase();
     hdUsername.textContent = user.username || '—';
     hdElo.textContent      = `ELO ${user.elo || 1200}`;
@@ -1057,6 +1083,7 @@
     document.getElementById('create-username-input').value = user.username || '';
     document.getElementById('join-username-input').value   = user.username || '';
   }
+  renderLobbyUser();
 
   // ── Logout ──
   function doLogout() {
@@ -1301,13 +1328,24 @@
   }
 
   // ── URL hash navigation ──
-  if (window.location.hash === '#salas') {
-    document.getElementById('card-create')?.scrollIntoView({ behavior: 'smooth' });
-  } else if (window.location.hash === '#desafios') {
-    document.getElementById('desafios')?.scrollIntoView({ behavior: 'smooth' });
-  } else if (window.location.hash === '#bot') {
-    document.getElementById('card-bot')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  function navigateLobbyHash() {
+    const targets = {
+      '#jugar': document.getElementById('card-quick'),
+      '#bot': document.getElementById('card-bot'),
+      '#salas': document.getElementById('card-create'),
+      '#desafios': document.getElementById('desafios'),
+    };
+    targets[window.location.hash]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
+
+  window.addEventListener('hashchange', navigateLobbyHash);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') validateLobbySession();
+  });
+  window.setInterval(() => {
+    if (document.visibilityState === 'visible') validateLobbySession();
+  }, 60_000);
+  navigateLobbyHash();
 </script>
 </body>
 </html>

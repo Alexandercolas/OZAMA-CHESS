@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="robots" content="noindex, nofollow"/>
   <title>OZAMA CHESS - Perfil</title>
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/favicon.png?v=5">
@@ -522,6 +523,9 @@
   <script>
     const _user  = JSON.parse(localStorage.getItem('ozama-user') || 'null');
     const _token = localStorage.getItem('ozama-token') || _user?.token || _user?.jwt || _user?.accessToken || '';
+    let currentHistoryPage = 1;
+    let profileRefreshBusy = false;
+    let profileInitialized = false;
 
     function getFlag(country) {
       if (!country || country === 'OTHER') return '<span class="country-code">--</span>';
@@ -803,23 +807,31 @@
     }
 
     async function loadPage(page = 1) {
+      if (profileRefreshBusy) return;
+      profileRefreshBusy = true;
+      currentHistoryPage = Math.max(1, Number(page) || 1);
       try {
-        const res = await fetch(`/api/user/history?page=${page}&limit=10`, {
-          headers: { Authorization: `Bearer ${_token}` }
+        const res = await fetch(`/api/user/history?page=${currentHistoryPage}&limit=10`, {
+          headers: { Authorization: `Bearer ${_token}` },
+          cache: 'no-store',
         });
         if (!res.ok) throw new Error();
         const data = await res.json();
 
         const userRes = await fetch('/api/user/me', {
-          headers: { Authorization: `Bearer ${_token}` }
+          headers: { Authorization: `Bearer ${_token}` },
+          cache: 'no-store',
         });
         const userData = await userRes.json();
 
-        renderProfile(userData.user, data.matches, data.total, page);
+        localStorage.setItem('ozama-user', JSON.stringify(userData.user));
+        renderProfile(userData.user, data.matches, data.total, currentHistoryPage);
         loadFriends();
       } catch (err) {
-        document.getElementById('match-list').innerHTML =
-          '<div class="empty-msg">No se pudo cargar el historial.</div>';
+        const list = document.getElementById('match-list');
+        if (list) list.innerHTML = '<div class="empty-msg">No se pudo cargar el historial.</div>';
+      } finally {
+        profileRefreshBusy = false;
       }
     }
 
@@ -957,8 +969,8 @@
 
       try {
         const [userRes, histRes] = await Promise.all([
-          fetch('/api/user/me',         { headers: { Authorization: `Bearer ${_token}` } }),
-          fetch('/api/user/history?page=1&limit=10', { headers: { Authorization: `Bearer ${_token}` } }),
+          fetch('/api/user/me', { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' }),
+          fetch('/api/user/history?page=1&limit=10', { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' }),
         ]);
 
         if (!userRes.ok) { renderNotLogged(); return; }
@@ -966,7 +978,9 @@
         const userData = await userRes.json();
         const histData = histRes.ok ? await histRes.json() : { matches: [], total: 0 };
 
+        localStorage.setItem('ozama-user', JSON.stringify(userData.user));
         renderProfile(userData.user, histData.matches, histData.total, 1);
+        profileInitialized = true;
         loadFriends();
         if (window.location.hash) {
           setTimeout(() => document.querySelector(window.location.hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
@@ -978,6 +992,15 @@
     }
 
     init();
+    function refreshVisibleProfile() {
+      if (!profileInitialized) return;
+      const active = document.activeElement;
+      const editing = active && ['INPUT', 'SELECT', 'TEXTAREA'].includes(active.tagName);
+      if (document.visibilityState === 'visible' && !editing) loadPage(currentHistoryPage);
+    }
+    document.addEventListener('visibilitychange', refreshVisibleProfile);
+    window.addEventListener('focus', refreshVisibleProfile);
+    window.setInterval(refreshVisibleProfile, 30_000);
   </script>
 </body>
 </html>
