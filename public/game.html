@@ -324,6 +324,20 @@
         contrast(1.16)
         saturate(1.12);
     }
+    .pc-captured-piece.is-white svg {
+      filter:
+        grayscale(1)
+        brightness(1.48)
+        contrast(0.90)
+        drop-shadow(0 2px 2px rgba(0,0,0,0.72));
+    }
+    .pc-captured-piece.is-black svg {
+      filter:
+        grayscale(1)
+        brightness(0.72)
+        contrast(1.30)
+        drop-shadow(0 0 1px rgba(240,234,218,0.58));
+    }
     .pc-empty {
       font-family: var(--fb); font-size: 8px; letter-spacing: 1.2px;
       color: var(--ghost); text-transform: uppercase;
@@ -497,6 +511,39 @@
     }
     .piece.piece-3d img {
       object-fit: contain;
+    }
+    .piece.piece-3d.piece-k img {
+      transform: scale(1.07);
+      transform-origin: 50% 58%;
+    }
+    .piece.piece-3d.piece-b img {
+      transform: scale(0.89) translateY(2%);
+      transform-origin: 50% 62%;
+    }
+    .piece.piece-3d.piece-white {
+      filter:
+        drop-shadow(0 8px 6px rgba(24,14,3,0.82))
+        drop-shadow(0 0 2px rgba(255,250,232,0.48));
+    }
+    .piece.piece-3d.piece-white img {
+      filter:
+        grayscale(1)
+        sepia(0.05)
+        brightness(1.58)
+        contrast(0.88)
+        drop-shadow(0 1px 1px rgba(48,35,22,0.92));
+    }
+    .piece.piece-3d.piece-black {
+      filter:
+        drop-shadow(0 8px 6px rgba(0,0,0,0.94))
+        drop-shadow(0 0 2px rgba(238,232,216,0.42));
+    }
+    .piece.piece-3d.piece-black img {
+      filter:
+        grayscale(1)
+        brightness(0.70)
+        contrast(1.34)
+        drop-shadow(0 0 1px rgba(242,236,220,0.72));
     }
     .piece::after {
       content: '';
@@ -1089,7 +1136,7 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="bot.js?v=20260726-1"></script>
-<script src="script.js?v=20260726-3d2"></script>
+<script src="script.js?v=20260802-mate1"></script>
 
 <script>
   // Sync visible clocks with hidden ones (CLOCK module updates #clock-white/black)
@@ -1218,7 +1265,8 @@
         ? sorted.map(p=>{
             const key=`${p.color}${p.type}`;
             const pieceSvg=(typeof PIECE_SVGS!=='undefined'&&PIECE_SVGS[key]) ? PIECE_SVGS[key] : (PS[key]||'?');
-            return `<span class="pc-captured-piece" title="+${PV[p.type]||0}">${pieceSvg}</span>`;
+            const colorClass=p.color==='w'?'is-white':'is-black';
+            return `<span class="pc-captured-piece ${colorClass}" title="+${PV[p.type]||0}">${pieceSvg}</span>`;
           }).join('')
         : '<span class="pc-empty">Sin capturas</span>';
       el.innerHTML=score+list;
@@ -1312,6 +1360,18 @@
       const names=JSON.parse(sessionStorage.getItem('ozama-names')||'{}');
       const c=sessionStorage.getItem('ozama-color');
       if(sp?.w||sp?.b){ updatePlayerBars(sp,c); }
+      else if(typeof IS_BOT_MODE!=='undefined'&&IS_BOT_MODE&&typeof STORED_USER!=='undefined'){
+        const humanColor=typeof BOT_COLOR!=='undefined'&&BOT_COLOR==='w'?'b':'w';
+        const human={
+          name:STORED_USER?.username||STORED_USER?.name||'Jugador',
+          country:STORED_USER?.country||'DO',
+          avatar:STORED_USER?.avatar||0,
+          avatarImage:STORED_USER?.avatarImage||'',
+          elo:STORED_USER?.elo||1200
+        };
+        const bot={name:'Ozama Bot',country:'DO',avatar:0,avatarImage:'',elo:1200};
+        updatePlayerBars(humanColor==='w'?{w:human,b:bot}:{w:bot,b:human},humanColor);
+      }
       else {
         if(names.w){document.getElementById('pp-name-white').textContent=names.w;document.getElementById('name-white').textContent=names.w;}
         if(names.b){document.getElementById('pp-name-black').textContent=names.b;document.getElementById('name-black').textContent=names.b;}

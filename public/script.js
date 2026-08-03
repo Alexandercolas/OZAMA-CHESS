@@ -652,22 +652,21 @@ function finishMoveExecution() {
 }
 
 function showLocalGameFinished() {
-  if (IS_ONLINE) return;
   if (!(state.status === STATUS.CHECKMATE || state.status === STATUS.STALEMATE || state.status === STATUS.DRAW)) return;
 
-  clearLocalGameSnapshot();
+  if (!IS_ONLINE) clearLocalGameSnapshot();
 
   if (state.status === STATUS.CHECKMATE) {
     showGameEnd('JAQUE MATE', `Ganan las ${state.winner === COLOR.WHITE ? 'Blancas' : 'Negras'}.`, {
-      online: false,
-      canPlayAgain: true,
+      online: IS_ONLINE,
+      canPlayAgain: !IS_ONLINE,
     });
     return;
   }
 
   showGameEnd('TABLAS', state.status === STATUS.STALEMATE ? 'Partida empatada por ahogado.' : 'Partida empatada.', {
-    online: false,
-    canPlayAgain: true,
+    online: IS_ONLINE,
+    canPlayAgain: !IS_ONLINE,
   });
 }
 
@@ -762,6 +761,10 @@ function renderBoard() {
   if (!container) return;
   container.innerHTML = '';
   container.classList.toggle('flipped', isBoardFlipped());
+  const checkedKingColor =
+    (state.status === STATUS.CHECK || state.status === STATUS.CHECKMATE) && isInCheck(state.board, state.turn)
+      ? state.turn
+      : null;
 
   for (let vr = 0; vr < 8; vr++) {
     for (let vc = 0; vc < 8; vc++) {
@@ -791,12 +794,16 @@ function renderBoard() {
       }
 
       const p = state.board[r][c];
+      if (p?.type === PIECE.KING && p.color === checkedKingColor) {
+        sq.classList.add('in-check');
+      }
       if (p) {
         const key = `${p.color}${p.type}`;
         if (CONFIG.USE_BLENDER_PIECES && BLENDER_PIECE_NAMES[p.type]) {
           const style = p.color === COLOR.WHITE ? 'gold' : 'black';
+          const colorClass = p.color === COLOR.WHITE ? 'white' : 'black';
           const pieceName = BLENDER_PIECE_NAMES[p.type];
-          sq.innerHTML = `<span class="piece piece-3d piece-${style} piece-${p.type}"><img src="./assets/pieces/blender/${style}/${pieceName}.png" alt="" draggable="false"></span>`;
+          sq.innerHTML = `<span class="piece piece-3d piece-${colorClass} piece-${p.type}"><img src="./assets/pieces/blender/${style}/${pieceName}.png" alt="" draggable="false"></span>`;
         } else if (CONFIG.USE_INLINE_SVG && PIECE_SVGS[key]) {
           sq.innerHTML = `<span class="piece piece-${p.color === COLOR.WHITE ? 'white' : 'black'} piece-${p.type}">${PIECE_SVGS[key]}</span>`;
         }
