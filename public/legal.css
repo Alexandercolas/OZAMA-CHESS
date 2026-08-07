@@ -1,0 +1,164 @@
+:root {
+  --black: #060504;
+  --carbon: #0d0b08;
+  --surface: #15110c;
+  --line: rgba(200, 152, 60, 0.3);
+  --gold: #c8983c;
+  --gold-light: #e2b960;
+  --warm: #eee5d5;
+  --muted: rgba(238, 229, 213, 0.66);
+  --title: "Cinzel", Georgia, serif;
+  --body: "Inter", Arial, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { color-scheme: dark; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--warm);
+  background:
+    linear-gradient(rgba(200, 152, 60, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200, 152, 60, 0.025) 1px, transparent 1px),
+    radial-gradient(circle at 50% 0%, rgba(200, 152, 60, 0.09), transparent 38%),
+    var(--black);
+  background-size: 64px 64px, 64px 64px, auto, auto;
+  font-family: var(--body);
+  line-height: 1.75;
+}
+
+a { color: var(--gold-light); }
+a:hover { color: #f4cf78; }
+
+.legal-nav {
+  min-height: 82px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 14px clamp(20px, 5vw, 76px);
+  border-bottom: 1px solid var(--line);
+  background: rgba(6, 5, 4, 0.94);
+}
+
+.legal-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 13px;
+  color: var(--gold-light);
+  font-family: var(--title);
+  font-weight: 800;
+  letter-spacing: 3px;
+  line-height: 1.1;
+  text-decoration: none;
+}
+
+.legal-brand img { width: 46px; height: 46px; }
+
+.legal-nav-links { display: flex; align-items: center; gap: 22px; }
+.legal-nav-links a {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+.legal-nav-links a:hover { color: var(--gold-light); }
+
+.legal-hero {
+  padding: clamp(58px, 9vw, 118px) clamp(22px, 7vw, 110px) 54px;
+  border-bottom: 1px solid rgba(200, 152, 60, 0.16);
+}
+
+.legal-kicker {
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+}
+
+.legal-hero h1 {
+  max-width: 980px;
+  margin: 15px 0 18px;
+  color: var(--warm);
+  font-family: var(--title);
+  font-size: clamp(38px, 7vw, 82px);
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.02;
+}
+
+.legal-lead { max-width: 780px; margin: 0; color: var(--muted); font-size: clamp(16px, 2vw, 20px); }
+.legal-updated { margin-top: 22px; color: rgba(238, 229, 213, 0.42); font-size: 12px; letter-spacing: 1px; }
+
+.legal-content {
+  width: min(100% - 40px, 980px);
+  margin: 0 auto;
+  padding: 54px 0 88px;
+}
+
+.legal-content section {
+  padding: 30px 0;
+  border-bottom: 1px solid rgba(200, 152, 60, 0.16);
+}
+
+.legal-content h2 {
+  margin: 0 0 13px;
+  color: var(--gold-light);
+  font-family: var(--title);
+  font-size: clamp(20px, 3vw, 28px);
+  letter-spacing: 0;
+}
+
+.legal-content p { margin: 0 0 14px; color: var(--muted); }
+.legal-content ul { margin: 12px 0 0; padding-left: 22px; color: var(--muted); }
+.legal-content li { margin: 8px 0; }
+.legal-content strong { color: var(--warm); }
+
+.legal-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+.legal-button {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 22px;
+  border: 1px solid rgba(200, 152, 60, 0.62);
+  color: #0b0804;
+  background: linear-gradient(180deg, #e2b960, #a57222);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+.legal-button.secondary { color: var(--gold-light); background: transparent; }
+
+.legal-notice {
+  margin: 26px 0;
+  padding: 20px 22px;
+  border-left: 3px solid var(--gold);
+  background: rgba(200, 152, 60, 0.07);
+  color: var(--muted);
+}
+
+.legal-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px clamp(20px, 5vw, 76px);
+  border-top: 1px solid var(--line);
+  color: rgba(238, 229, 213, 0.48);
+  font-size: 12px;
+}
+
+@media (max-width: 680px) {
+  .legal-nav { align-items: flex-start; flex-direction: column; }
+  .legal-nav-links { width: 100%; gap: 14px; overflow-x: auto; padding-bottom: 4px; }
+  .legal-hero { padding-top: 48px; }
+  .legal-footer { flex-direction: column; }
+  .legal-button { width: 100%; }
+}

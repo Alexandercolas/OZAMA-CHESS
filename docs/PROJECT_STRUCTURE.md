@@ -8,6 +8,7 @@ This document is the working map for the repository. Keep new code in the closes
 server.js            Express app, Socket.IO multiplayer, chess room orchestration
 package.json         Node scripts and dependencies
 package-lock.json    Locked dependency versions
+capacitor.config.json Configuracion compartida de la app movil
 .env.example         Required environment variable template
 README.md            Project overview and local/deploy instructions
 ```
@@ -54,6 +55,9 @@ public/admin.html        Protected admin panel
 public/script.js         Active chess client/game logic
 public/bot.js            Local bot logic
 public/style.css         Active game/lobby shared styling
+public/mobile-runtime.js Puente seguro entre frontend empaquetado y backend HTTPS
+public/legal.css         Estilos compartidos de privacidad, terminos y soporte
+public/vendor/           Librerias cliente fijadas para la app empaquetada
 ```
 
 The active frontend is vanilla HTML/CSS/JS. Do not add a framework unless the project intentionally changes direction.
@@ -65,6 +69,24 @@ public/assets/brand/     OZAMA brand images and hero artwork
 public/assets/sounds/    Sound files used by the game
 public/assets/*.svg      Legacy/static chess piece assets
 public/favicon.*         Browser/app icons
+resources/icon.png       Fuente maestra para iconos y splash nativos
+```
+
+## Mobile
+
+```text
+android/                 Proyecto Android Studio / Gradle versionado
+capacitor.config.json    ID, nombre, webDir y reglas de red
+docs/MOBILE_RELEASE.md   Checklist de publicacion Android/iOS
+```
+
+`android/app/src/main/assets/public/` es una copia generada por `npm run mobile:sync` y se mantiene fuera de Git. No editarla manualmente.
+
+## Quality
+
+```text
+scripts/verify.js        Sintaxis JS, scripts HTML, JSON y activos criticos
+tests/readiness.test.js  PWA, seguridad, privacidad y preparacion movil
 ```
 
 Brand assets currently in use:

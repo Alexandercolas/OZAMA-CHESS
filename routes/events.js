@@ -15,7 +15,8 @@ router.get('/', async (_req, res) => {
 
     res.json({ events });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('[Events] Public feed:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor.' });
   }
 });
 

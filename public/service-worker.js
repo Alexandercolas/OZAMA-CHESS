@@ -1,11 +1,15 @@
 'use strict';
 
-const CACHE_VERSION = 'ozama-pwa-v2';
+const CACHE_VERSION = 'ozama-pwa-v3';
 const PUBLIC_NAVIGATION = new Set([
   '/',
   '/index.html',
   '/login.html',
   '/leaderboard.html',
+  '/privacy.html',
+  '/terms.html',
+  '/support.html',
+  '/account-deletion.html',
   '/offline.html',
 ]);
 const PRECACHE = [
@@ -16,6 +20,9 @@ const PRECACHE = [
   '/offline.html',
   '/manifest.webmanifest',
   '/pwa.js',
+  '/mobile-runtime.js',
+  '/vendor/socket.io.min.js',
+  '/legal.css',
   '/style.css',
   '/favicon.ico',
   '/favicon.png',

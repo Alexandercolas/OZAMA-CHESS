@@ -1,0 +1,13 @@
+{
+  "appId": "com.ozamachess.app",
+  "appName": "OZAMA CHESS",
+  "webDir": "public",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#0D0B08"
+  }
+}

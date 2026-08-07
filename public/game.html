@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://flagcdn.com; media-src 'self'; connect-src 'self' https://ozama-chess.onrender.com wss://ozama-chess.onrender.com ws: wss:">
+  <script src="/mobile-runtime.js"></script>
   <meta name="theme-color" content="#0D0B08"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -1141,7 +1143,7 @@
   </div>
 </div>
 
-<script src="/socket.io/socket.io.js"></script>
+<script src="/vendor/socket.io.min.js"></script>
 <script src="bot.js?v=20260726-1"></script>
 <script src="script.js?v=20260802-mate1"></script>
 

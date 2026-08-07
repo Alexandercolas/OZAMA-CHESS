@@ -69,8 +69,11 @@ Estado actual:
 
 - Base PWA instalable completada: manifiesto, iconos, service worker y pantalla sin conexion.
 - API, JWT y Socket.IO quedan fuera del cache local.
-- Pendiente: validar instalacion desde produccion, configurar Search Console y preparar el contenedor Capacitor.
-- Pendiente para tiendas: cuentas de desarrollador, politicas legales, firma y pruebas cerradas.
+- Politica de privacidad, terminos, soporte y eliminacion de cuenta completados.
+- Base Android Capacitor completada con iconos, splash, HTTPS obligatorio y frontend empaquetado.
+- Pendiente manual: validar instalacion desde produccion y configurar Google Search Console.
+- Pendiente para tiendas: Android Studio/JDK moderno, firma AAB, cuenta de Play Console y pruebas cerradas.
+- Pendiente iOS: macOS, Xcode, Apple Developer y revision de App Store.
 
 ## Prioridad 7 - Operacion
 
@@ -92,4 +95,4 @@ Objetivo: saber que pasa cuando usuarios reales entren.
 5. Pulir landing/lobby/game visualmente.
 6. Fortalecer admin.
 7. Preparar premium.
-8. Preparar PWA/app.
+8. Firmar, probar y publicar Android; preparar iOS desde macOS.

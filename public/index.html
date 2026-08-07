@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://flagcdn.com; media-src 'self'; connect-src 'self' https://ozama-chess.onrender.com wss://ozama-chess.onrender.com ws: wss:">
+  <script src="/mobile-runtime.js"></script>
   <meta name="theme-color" content="#0D0B08"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -1035,6 +1037,9 @@
     }
 
     footer strong { color: var(--gold-2); font-family: var(--title); letter-spacing: 2px; }
+    .footer-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 18px; }
+    .footer-links a { color: rgba(238,229,213,0.46); text-decoration: none; }
+    .footer-links a:hover { color: var(--gold-2); }
 
     .flag-line {
       display: inline-grid;
@@ -1373,6 +1378,7 @@
 
     <footer>
       <div><strong>OZAMA CHESS</strong> Edicion Dominicana</div>
+      <div class="footer-links"><a href="/privacy.html">Privacidad</a><a href="/terms.html">Terminos</a><a href="/support.html">Soporte</a><a href="/account-deletion.html">Eliminar cuenta</a></div>
       <div><span class="flag-line" aria-hidden="true"><span></span></span> Azul, blanco y rojo en clave Ozama</div>
     </footer>
   </div>

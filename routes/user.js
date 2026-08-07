@@ -3,12 +3,19 @@
 const express              = require('express');
 const User                 = require('../models/User');
 const Match                = require('../models/Match');
+const Room                 = require('../models/Room');
+const Event                = require('../models/Event');
 const { requireAuth }      = require('../middleware/auth');
 
 const router = express.Router();
 
 function validUsername(value) {
   return /^[a-zA-Z0-9_]{3,20}$/.test(String(value || ''));
+}
+
+function serverError(res, scope, err) {
+  console.error(`[User] ${scope}:`, err.message);
+  return res.status(500).json({ error: 'Error interno del servidor.' });
 }
 
 function premiumCapabilities(user) {
@@ -77,7 +84,8 @@ router.patch('/me', requireAuth, async (req, res) => {
 
     res.json({ user });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error('[User] Update profile:', err.message);
+    res.status(400).json({ error: 'Datos de perfil invalidos.' });
   }
 });
 
@@ -108,7 +116,7 @@ router.get('/history', requireAuth, async (req, res) => {
 
     res.json({ matches, total, page, pages: Math.ceil(total / limit) });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, 'History', err);
   }
 });
 
@@ -123,7 +131,7 @@ router.get('/leaderboard', async (req, res) => {
 
     res.json({ players });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, 'Leaderboard', err);
   }
 });
 
@@ -164,7 +172,7 @@ router.get('/friends', requireAuth, async (req, res) => {
 
     res.json({ friends: user?.friends || [] });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, 'Friends list', err);
   }
 });
 
@@ -189,7 +197,7 @@ router.post('/friends/:username', requireAuth, async (req, res) => {
 
     res.json({ friend });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, 'Add friend', err);
   }
 });
 
@@ -207,7 +215,91 @@ router.delete('/friends/:username', requireAuth, async (req, res) => {
 
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, 'Remove friend', err);
+  }
+});
+
+// DELETE /api/user/me - permanently remove the account and personal data.
+router.delete('/me', requireAuth, async (req, res) => {
+  try {
+    const currentPassword = String(req.body.currentPassword || '');
+    const confirmation = String(req.body.confirmation || '').trim().toUpperCase();
+
+    if (!currentPassword || confirmation !== 'ELIMINAR') {
+      return res.status(400).json({ error: 'Confirma tu contrasena y escribe ELIMINAR.' });
+    }
+    if (currentPassword.length > 128) {
+      return res.status(400).json({ error: 'Contrasena invalida.' });
+    }
+
+    const userId = req.user._id;
+    const user = await User.findById(userId).select('+password');
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
+
+    const validPassword = await user.comparePassword(currentPassword);
+    if (!validPassword) return res.status(401).json({ error: 'Contrasena incorrecta.' });
+
+    const deletedPlayer = {
+      userId: null,
+      name: 'Jugador eliminado',
+      country: '--',
+      avatar: 0,
+      avatarImage: '',
+    };
+
+    await Promise.all([
+      User.updateMany({ friends: userId }, { $pull: { friends: userId } }),
+      Match.updateMany({ 'whitePlayer.userId': userId }, {
+        $set: {
+          'whitePlayer.userId': deletedPlayer.userId,
+          'whitePlayer.name': deletedPlayer.name,
+          'whitePlayer.country': deletedPlayer.country,
+          'whitePlayer.avatar': deletedPlayer.avatar,
+          'whitePlayer.avatarImage': deletedPlayer.avatarImage,
+        },
+      }),
+      Match.updateMany({ 'blackPlayer.userId': userId }, {
+        $set: {
+          'blackPlayer.userId': deletedPlayer.userId,
+          'blackPlayer.name': deletedPlayer.name,
+          'blackPlayer.country': deletedPlayer.country,
+          'blackPlayer.avatar': deletedPlayer.avatar,
+          'blackPlayer.avatarImage': deletedPlayer.avatarImage,
+        },
+      }),
+      Room.updateMany({ 'players.white.userId': userId }, {
+        $set: {
+          'players.white.userId': null,
+          'players.white.name': deletedPlayer.name,
+          'players.white.country': deletedPlayer.country,
+          'players.white.avatar': 0,
+          'players.white.avatarImage': '',
+        },
+      }),
+      Room.updateMany({ 'players.black.userId': userId }, {
+        $set: {
+          'players.black.userId': null,
+          'players.black.name': deletedPlayer.name,
+          'players.black.country': deletedPlayer.country,
+          'players.black.avatar': 0,
+          'players.black.avatarImage': '',
+        },
+      }),
+      Event.updateMany({ createdBy: userId }, { $set: { createdBy: null } }),
+    ]);
+
+    await User.deleteOne({ _id: userId });
+
+    const io = req.app.get('io');
+    if (io?.sockets?.sockets) {
+      for (const [, socket] of io.sockets.sockets) {
+        if (String(socket.data?.userId || '') === String(userId)) socket.disconnect(true);
+      }
+    }
+
+    return res.json({ ok: true, message: 'Cuenta eliminada correctamente.' });
+  } catch (err) {
+    return serverError(res, 'Delete account', err);
   }
 });
 
@@ -223,7 +315,7 @@ router.get('/:username', async (req, res) => {
 
     res.json({ user });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    serverError(res, 'Public profile', err);
   }
 });
 

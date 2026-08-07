@@ -9,6 +9,7 @@ Este documento resume las reglas minimas de seguridad para operar OZAMA CHESS co
 - En produccion, el servidor no debe arrancar si `JWT_SECRET` falta o tiene menos de 32 caracteres.
 - `MONGODB_URI` debe vivir solo en variables de entorno locales o en Render.
 - `ADMIN_EMAILS` define quienes pueden entrar a `/admin.html`.
+- `APP_ORIGINS` limita los origenes web/nativos autorizados para API y Socket.IO.
 
 ## Autenticacion
 
@@ -26,6 +27,8 @@ Este documento resume las reglas minimas de seguridad para operar OZAMA CHESS co
 - El backend valida username, email, pais, avatar y contrasenas.
 - Las fotos de perfil aceptan solo `png`, `jpeg` o `webp` en data URL y con limite de tamano.
 - El frontend puede mejorar UX, pero la validacion importante debe vivir en backend.
+- El usuario puede eliminar su cuenta desde el perfil confirmando contrasena y la palabra `ELIMINAR`.
+- Al eliminar una cuenta, los datos personales se borran o desvinculan; los resultados competitivos pueden permanecer anonimizados.
 
 ## Admin
 
@@ -54,6 +57,15 @@ Este documento resume las reglas minimas de seguridad para operar OZAMA CHESS co
 - Al cambiar `JWT_SECRET`, todos los usuarios tendran que iniciar sesion de nuevo.
 - Revisar logs despues de cada deploy.
 - Probar login, lobby, partida online, rejoin, perfil y admin despues de cada push importante.
+- Ejecutar `npm run check` y `npm audit --omit=dev` antes de cada lanzamiento importante.
+
+## Aplicacion Movil
+
+- El frontend se empaqueta en la app; no se usa una URL remota como pantalla completa.
+- Solo `/api/` y Socket.IO apuntan al dominio HTTPS de produccion.
+- Android bloquea trafico HTTP y copias de seguridad de datos de la aplicacion.
+- Ningun secreto de Render, MongoDB o firma debe vivir en `public/`, `capacitor.config.json` o el APK.
+- Keystores, contrasenas de firma y `local.properties` nunca se suben a GitHub.
 
 ## Siguiente Nivel
 

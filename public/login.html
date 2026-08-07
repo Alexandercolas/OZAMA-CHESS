@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://flagcdn.com; media-src 'self'; connect-src 'self' https://ozama-chess.onrender.com wss://ozama-chess.onrender.com ws: wss:">
+  <script src="/mobile-runtime.js"></script>
   <meta name="theme-color" content="#0D0B08"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -485,6 +487,25 @@
       letter-spacing: 0.4px;
     }
 
+    .page-legal-links {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(200,152,60,0.12);
+    }
+    .page-legal-links a {
+      color: rgba(238,229,213,0.46);
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1.2px;
+      text-decoration: none;
+      text-transform: uppercase;
+    }
+    .page-legal-links a:hover { color: var(--gold-2); }
+
     .recovery-box.show { display: block; }
 
     .recovery-code {
@@ -718,6 +739,12 @@
             <button class="inline-link" type="button" onclick="switchTab('login')">Volver a iniciar sesion</button>
           </div>
         </div>
+      </div>
+      <div class="page-legal-links" aria-label="Informacion legal">
+        <a href="/privacy.html">Privacidad</a>
+        <a href="/terms.html">Terminos</a>
+        <a href="/support.html">Soporte</a>
+        <a href="/account-deletion.html">Eliminar cuenta</a>
       </div>
     </main>
   </div>

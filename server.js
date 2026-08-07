@@ -40,15 +40,58 @@ function checkRuntimeConfig() {
 
 checkRuntimeConfig();
 
+const ALLOWED_APP_ORIGINS = new Set([
+  'https://ozama-chess.onrender.com',
+  'https://localhost',
+  'capacitor://localhost',
+  ...String(process.env.APP_ORIGINS || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+]);
+
+function appOriginAllowed(origin) {
+  if (!origin) return true;
+  if (ALLOWED_APP_ORIGINS.has(origin)) return true;
+  try {
+    const url = new URL(origin);
+    return url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname);
+  } catch (_) {
+    return false;
+  }
+}
+
 const app    = express();
 const server = http.createServer(app);
 const io     = new Server(server, {
   maxHttpBufferSize: 100_000,
   perMessageDeflate: false,
+  cors: {
+    origin(origin, callback) {
+      if (appOriginAllowed(origin)) return callback(null, true);
+      return callback(new Error('Origen no permitido.'));
+    },
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Authorization', 'Content-Type'],
+  },
 });
 
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
+app.set('io', io);
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && appOriginAllowed(origin)) {
+    res.set('Access-Control-Allow-Origin', origin);
+    res.vary('Origin');
+    res.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+    res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  }
+  if (req.method === 'OPTIONS') {
+    return appOriginAllowed(origin) ? res.sendStatus(204) : res.sendStatus(403);
+  }
+  return next();
+});
 app.use(express.json({ limit: '600kb' }));
 app.use((req, res, next) => {
   res.set('X-Content-Type-Options', 'nosniff');
@@ -103,7 +146,10 @@ app.get('/api/matches/recent', async (_req, res) => {
       .select('whitePlayer.name blackPlayer.name result winner startedAt endedAt createdAt')
       .lean();
     res.json(matches);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) {
+    console.error('[Matches] Recent:', err.message);
+    res.status(500).json({ error: 'Error interno del servidor.' });
+  }
 });
 
 // ── Salas en memoria ─────────────────────────────────────────────

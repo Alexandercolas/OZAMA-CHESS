@@ -19,6 +19,9 @@ models/              User, Match, Room, Event
 routes/              Auth, user, admin, events
 public/              Frontend vanilla servido por Express
 public/assets/       SVGs y sonidos del juego
+android/             Proyecto nativo Android generado con Capacitor
+tests/               Pruebas de seguridad y preparacion de lanzamiento
+scripts/             Verificacion estatica del proyecto
 server.js            Servidor Express + Socket.IO + motor multiplayer
 ```
 
@@ -48,6 +51,7 @@ Crea `.env` local usando `.env.example` como base:
 MONGODB_URI=
 JWT_SECRET=
 ADMIN_EMAILS=
+APP_ORIGINS=https://ozama-chess.onrender.com
 PORT=3000
 ```
 
@@ -55,6 +59,7 @@ Notas:
 
 - `.env` no se sube a GitHub.
 - `ADMIN_EMAILS` acepta uno o varios correos separados por coma.
+- `APP_ORIGINS` permite agregar origenes nativos o dominios propios, separados por coma.
 - En Render, estas variables deben vivir en el panel de Environment.
 
 ## Comandos
@@ -68,6 +73,12 @@ Desarrollo local:
 
 ```bash
 npm run dev
+```
+
+Verificacion completa antes de publicar:
+
+```bash
+npm run check
 ```
 
 URL local principal:
@@ -85,6 +96,10 @@ http://localhost:3000/
 - `/profile.html` perfil, avatar, amigos e historial
 - `/leaderboard.html` ranking
 - `/admin.html` panel admin privado
+- `/privacy.html` politica de privacidad
+- `/terms.html` terminos de uso
+- `/support.html` soporte al jugador
+- `/account-deletion.html` solicitud publica de eliminacion
 
 ## Admin
 
@@ -140,6 +155,17 @@ public/icon-512.png
 ```
 
 El service worker no almacena respuestas de `/api/`, Socket.IO ni solicitudes autenticadas. Las partidas online siguen usando al servidor como fuente de verdad.
+
+## Android
+
+La base Android esta en `android/` y usa Capacitor. El frontend viaja dentro de la aplicacion; solo las solicitudes de API y Socket.IO se conectan por HTTPS a Render. MongoDB, JWT y las variables de entorno nunca se incluyen en el APK.
+
+```bash
+npm run mobile:sync
+npm run mobile:open
+```
+
+El identificador inicial es `com.ozamachess.app`. Debe considerarse definitivo antes de publicar en Google Play. La guia completa de firma, AAB, Play Console e iOS esta en `docs/MOBILE_RELEASE.md`.
 
 ## Limpieza Local
 

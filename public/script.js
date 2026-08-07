@@ -1154,7 +1154,9 @@ function setupControls() {
 
 function setupOnlineSocket() {
   if (!IS_ONLINE || typeof io !== 'function') return;
-  socket = io({ auth: { token: sessionStorage.getItem('ozama-token') || STORED_TOKEN || '' } });
+  socket = io(window.OZAMA_RUNTIME?.socketOrigin, {
+    auth: { token: sessionStorage.getItem('ozama-token') || STORED_TOKEN || '' }
+  });
 
   function rejoin() {
     socket.emit('rejoin', {
