@@ -65,6 +65,13 @@ Objetivo: llevar OZAMA CHESS a celular de forma ordenada.
 - Politica de privacidad, terminos, iconos, splash screen y permisos minimos.
 - Preparar builds para Google Play y App Store cuando el producto este probado.
 
+Estado actual:
+
+- Base PWA instalable completada: manifiesto, iconos, service worker y pantalla sin conexion.
+- API, JWT y Socket.IO quedan fuera del cache local.
+- Pendiente: validar instalacion desde produccion, configurar Search Console y preparar el contenedor Capacitor.
+- Pendiente para tiendas: cuentas de desarrollador, politicas legales, firma y pruebas cerradas.
+
 ## Prioridad 7 - Operacion
 
 Objetivo: saber que pasa cuando usuarios reales entren.

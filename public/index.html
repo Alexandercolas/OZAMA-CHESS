@@ -3,6 +3,11 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="theme-color" content="#0D0B08"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="OZAMA CHESS"/>
   <title>OZAMA CHESS - Ajedrez Online Dominicano</title>
   <meta name="description" content="Juega ajedrez online en tiempo real, reta jugadores, crea salas privadas y compite por ELO en OZAMA CHESS, una experiencia de ajedrez con identidad dominicana."/>
   <meta name="robots" content="index, follow, max-image-preview:large"/>
@@ -23,6 +28,8 @@
   <link rel="icon" type="image/png" href="/favicon.png?v=5">
   <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png?v=5">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=5">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <script src="/pwa.js" defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -42,6 +49,16 @@
       "price": "0",
       "priceCurrency": "USD"
     }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "OZAMA CHESS",
+    "alternateName": "OZAMA",
+    "url": "https://ozama-chess.onrender.com/",
+    "inLanguage": "es-DO"
   }
   </script>
   <style>
@@ -1084,7 +1101,7 @@
         background:
           linear-gradient(90deg, rgba(5,4,3,0.96), rgba(5,4,3,0.74) 56%, rgba(5,4,3,0.56)),
           linear-gradient(180deg, rgba(5,4,3,0.30), rgba(5,4,3,0.82)),
-          url('/assets/brand/ozama-hero-brutal.jpg') 62% top / auto 100% no-repeat;
+          url('/assets/brand/ozama-hero-brutal.jpg') 62% -120px / auto calc(100% + 170px) no-repeat;
       }
       .hero h1 { font-size: clamp(48px, 17vw, 76px); }
       .feature-story,

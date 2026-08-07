@@ -107,6 +107,40 @@ npm start
 
 Si Render esta conectado a GitHub, cada push a `main` dispara un nuevo deploy automaticamente.
 
+## Google Search
+
+La portada y el ranking son las paginas publicas indexables. Login, lobby, partida, perfil y admin usan `noindex` para evitar que informacion operativa aparezca en resultados.
+
+Archivos preparados:
+
+```text
+public/robots.txt
+public/sitemap.xml
+public/index.html (canonical, Open Graph y datos estructurados)
+```
+
+Paso manual del propietario:
+
+1. Agregar `https://ozama-chess.onrender.com/` a Google Search Console.
+2. Verificar la propiedad.
+3. Enviar `https://ozama-chess.onrender.com/sitemap.xml`.
+4. Inspeccionar la portada y solicitar indexacion.
+
+## PWA
+
+OZAMA CHESS incluye una base instalable para navegador y celular:
+
+```text
+public/manifest.webmanifest
+public/service-worker.js
+public/pwa.js
+public/offline.html
+public/icon-192.png
+public/icon-512.png
+```
+
+El service worker no almacena respuestas de `/api/`, Socket.IO ni solicitudes autenticadas. Las partidas online siguen usando al servidor como fuente de verdad.
+
 ## Limpieza Local
 
 Estos elementos se mantienen fuera de Git:

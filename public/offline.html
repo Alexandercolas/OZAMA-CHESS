@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0D0B08">
+  <title>OZAMA CHESS - Sin conexion</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { min-height: 100%; margin: 0; }
+    body {
+      display: grid;
+      place-items: center;
+      padding: 28px;
+      color: #EEE5D5;
+      background:
+        linear-gradient(rgba(6,5,4,.78), rgba(6,5,4,.94)),
+        url('/assets/brand/ozama-hero-brutal.jpg') center/cover fixed;
+      font-family: Inter, Arial, sans-serif;
+    }
+    main { width: min(560px, 100%); text-align: center; }
+    img {
+      width: 112px;
+      height: 112px;
+      object-fit: cover;
+      border: 1px solid rgba(226,185,96,.72);
+      border-radius: 50%;
+      box-shadow: 0 16px 48px rgba(0,0,0,.7);
+    }
+    h1 {
+      margin: 26px 0 12px;
+      color: #E2B960;
+      font: 700 clamp(32px, 8vw, 54px)/1.05 Georgia, serif;
+      letter-spacing: 0;
+    }
+    p { margin: 0 auto 28px; max-width: 460px; color: rgba(238,229,213,.72); line-height: 1.65; }
+    .actions { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+    button, a {
+      min-height: 48px;
+      padding: 0 22px;
+      display: inline-grid;
+      place-items: center;
+      border: 1px solid rgba(200,152,60,.58);
+      border-radius: 2px;
+      color: #EEE5D5;
+      background: rgba(13,11,8,.84);
+      font: 800 12px/1 Inter, Arial, sans-serif;
+      letter-spacing: 1.4px;
+      text-decoration: none;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+    button { color: #0D0B08; background: #C8983C; }
+  </style>
+</head>
+<body>
+  <main>
+    <img src="/assets/brand/ozama-knight-icon.png" alt="OZAMA CHESS">
+    <h1>Sin conexion</h1>
+    <p>El tablero online necesita conexion con el servidor. Tu cuenta y tus partidas permanecen protegidas; vuelve a intentarlo cuando recuperes la red.</p>
+    <div class="actions">
+      <button type="button" onclick="window.location.reload()">Reintentar</button>
+      <a href="/">Volver al inicio</a>
+    </div>
+  </main>
+</body>
+</html>
