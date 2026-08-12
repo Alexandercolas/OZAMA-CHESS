@@ -29,16 +29,44 @@ Cada cambio en `public/` requiere ejecutar `npm run mobile:sync` antes de compil
 
 Requisitos locales:
 
-1. Android Studio estable.
-2. Android SDK 36 y herramientas indicadas por Gradle.
-3. JDK compatible con la version de Android Gradle Plugin. Se recomienda usar el JDK incluido en Android Studio.
-4. Un dispositivo Android o emulador para pruebas.
+1. JDK 21 LTS o superior. Capacitor 8 y Android Gradle Plugin 8.13 compilan las fuentes Android con nivel Java 21.
+2. Android SDK 36, Build Tools 36 y Platform Tools.
+3. Un dispositivo Android autorizado por USB para pruebas reales.
+4. Android Studio estable es opcional para compilar por terminal, pero recomendado para inspeccion, emulador y firma.
+
+En la computadora principal del proyecto, JDK 21 y Android SDK 36 viven bajo `.tools/`. Esa carpeta es local, esta ignorada por Git y no se publica en GitHub.
 
 Abrir el proyecto:
 
 ```bash
 npm run mobile:open
 ```
+
+Compilar e instalar la version de prueba desde Windows:
+
+```bash
+npm run mobile:sync
+npm run android:build:debug
+npm run android:install:debug
+```
+
+El APK queda en `android/app/build/outputs/apk/debug/app-debug.apk`. La instalacion requiere Depuracion USB activa y la huella RSA de esta computadora aceptada en el telefono.
+
+Generar el bundle de release previo a la firma:
+
+```bash
+npm run android:build:release
+```
+
+El AAB se genera en `android/app/build/outputs/bundle/release/app-release.aab`. Esta salida valida la compilacion, pero permanece sin firma hasta crear la clave privada de produccion. La clave y sus contrasenas nunca deben entrar al repositorio.
+
+Estado verificado el 12 de agosto de 2026:
+
+- APK debug compilado y firmado con certificado de desarrollo.
+- AAB release compilado y pendiente de firma de produccion.
+- Paquete `com.ozamachess.app`, minimo Android 7.0 (API 24) y objetivo API 36.
+- Permisos: Internet y un permiso interno no exportado generado por AndroidX.
+- Emulador pendiente porque la virtualizacion del firmware esta desactivada en la computadora principal.
 
 Pruebas minimas en dispositivo:
 

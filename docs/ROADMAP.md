@@ -72,7 +72,9 @@ Estado actual:
 - Politica de privacidad, terminos, soporte y eliminacion de cuenta completados.
 - Base Android Capacitor completada con iconos, splash, HTTPS obligatorio y frontend empaquetado.
 - Pendiente manual: validar instalacion desde produccion y configurar Google Search Console.
-- Pendiente para tiendas: Android Studio/JDK moderno, firma AAB, cuenta de Play Console y pruebas cerradas.
+- Base local instalada: JDK 21 LTS, Android SDK 36 y Build Tools 36.
+- APK debug y AAB release compilados; el AAB aun requiere la firma privada definitiva.
+- Pendiente para tiendas: clave de firma, cuenta de Play Console y pruebas cerradas en dispositivos reales.
 - Pendiente iOS: macOS, Xcode, Apple Developer y revision de App Store.
 
 ## Prioridad 7 - Operacion

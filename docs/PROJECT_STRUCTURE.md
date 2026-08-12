@@ -86,6 +86,8 @@ docs/MOBILE_RELEASE.md   Checklist de publicacion Android/iOS
 
 ```text
 scripts/verify.js        Sintaxis JS, scripts HTML, JSON y activos criticos
+scripts/android-build.js Seleccion segura de JDK 21/SDK 36 y compilacion Gradle
+scripts/android-install.js Instalacion debug en un unico telefono autorizado
 tests/readiness.test.js  PWA, seguridad, privacidad y preparacion movil
 ```
 
@@ -107,6 +109,7 @@ These may exist in the folder but should not be committed:
 ```text
 .env
 node_modules/
+.tools/
 desktop.ini
 public/css/
 public/js/

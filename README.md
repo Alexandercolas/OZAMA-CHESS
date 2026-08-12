@@ -162,8 +162,11 @@ La base Android esta en `android/` y usa Capacitor. El frontend viaja dentro de 
 
 ```bash
 npm run mobile:sync
-npm run mobile:open
+npm run android:build:debug
+npm run android:install:debug
 ```
+
+El APK de prueba se genera en `android/app/build/outputs/apk/debug/app-debug.apk`. El instalador requiere un telefono Android conectado y autorizado por USB. `npm run mobile:open` queda disponible cuando Android Studio este instalado.
 
 El identificador inicial es `com.ozamachess.app`. Debe considerarse definitivo antes de publicar en Google Play. La guia completa de firma, AAB, Play Console e iOS esta en `docs/MOBILE_RELEASE.md`.
 
@@ -173,6 +176,7 @@ Estos elementos se mantienen fuera de Git:
 
 - `.env`
 - `node_modules/`
+- `.tools/` (JDK y Android SDK locales)
 - logs `*.log`, `*.err.log`, `*.out.log`
 - copias legacy locales `public/css/`, `public/js/`, `public/Untitled-1.css`
 
