@@ -60,6 +60,8 @@ npm run android:build:release
 
 El AAB se genera en `android/app/build/outputs/bundle/release/app-release.aab`. Esta salida valida la compilacion, pero permanece sin firma hasta crear la clave privada de produccion. La clave y sus contrasenas nunca deben entrar al repositorio.
 
+Cuando exista la clave de subida privada, el comando `npm run android:build:signed` genera el AAB firmado usando exclusivamente variables de entorno. La ficha, el borrador de seguridad de datos y el procedimiento estan en `docs/GOOGLE_PLAY_RELEASE.md`.
+
 Estado verificado el 12 de agosto de 2026:
 
 - APK debug compilado y firmado con certificado de desarrollo.

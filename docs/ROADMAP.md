@@ -74,6 +74,7 @@ Estado actual:
 - Pendiente manual: validar instalacion desde produccion y configurar Google Search Console.
 - Base local instalada: JDK 21 LTS, Android SDK 36 y Build Tools 36.
 - APK debug y AAB release compilados; el AAB aun requiere la firma privada definitiva.
+- Ficha inicial de Google Play, borrador de seguridad de datos y flujo de firma privada preparados.
 - Pendiente para tiendas: clave de firma, cuenta de Play Console y pruebas cerradas en dispositivos reales.
 - Pendiente iOS: macOS, Xcode, Apple Developer y revision de App Store.
 

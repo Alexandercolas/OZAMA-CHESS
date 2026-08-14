@@ -13,6 +13,7 @@
     "mobile:open": "npx cap open android",
     "android:build:debug": "node scripts/android-build.js debug",
     "android:build:release": "node scripts/android-build.js release",
+    "android:build:signed": "node scripts/android-build.js signed",
     "android:install:debug": "node scripts/android-install.js"
   },
   "dependencies": {

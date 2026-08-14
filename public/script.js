@@ -1196,6 +1196,29 @@ function setupOnlineSocket() {
     }
   });
 
+  socket.on('clock-tick', ({ w, b } = {}) => {
+    if (Number.isFinite(w) && Number.isFinite(b)) CLOCK.set(w, b);
+  });
+
+  socket.on('time-out', ({ loser, winner } = {}) => {
+    CLOCK.stop();
+    playSound('gameover');
+    state.status = STATUS.CHECKMATE;
+    state.winner = winner === COLOR.WHITE || winner === COLOR.BLACK ? winner : enemy(loser);
+    state.endReason = 'timeout';
+    state.selected = null;
+    state.legalMoves = [];
+    updateStatusDisplay();
+    renderBoard();
+    const loserLabel = loser === COLOR.WHITE ? 'Doradas' : 'Hierro';
+    const youWon = state.winner === PLAYER_COLOR;
+    showGameEnd(
+      youWon ? 'VICTORIA POR TIEMPO' : 'TIEMPO AGOTADO',
+      `Se agotó el reloj de las ${loserLabel}.`,
+      { online: true, canPlayAgain: false }
+    );
+  });
+
   socket.on('rematch-requested', ({ playerName } = {}) => {
     const sub = document.getElementById('rematch-sub');
     if (sub) sub.textContent = `${playerName || 'Tu rival'} quiere la revancha`;

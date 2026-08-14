@@ -110,6 +110,7 @@ test('native runtime sends only API and socket traffic to production', () => {
 
 test('Android release base blocks backups and cleartext traffic', () => {
   const manifest = read('android/app/src/main/AndroidManifest.xml');
+  const gradle = read('android/app/build.gradle');
   const buildScript = read('scripts/android-build.js');
   const installScript = read('scripts/android-install.js');
   const gitignore = read('.gitignore');
@@ -118,9 +119,14 @@ test('Android release base blocks backups and cleartext traffic', () => {
   assert.match(buildScript, /\.tools', 'jdk21'/);
   assert.match(buildScript, /majorVersion < 21/);
   assert.match(buildScript, /platforms', 'android-36'/);
+  assert.match(buildScript, /OZAMA_UPLOAD_STORE_FILE/);
+  assert.match(buildScript, /gradlew\.bat --no-daemon/);
+  assert.match(gradle, /System\.getenv\('OZAMA_UPLOAD_STORE_FILE'\)/);
+  assert.match(gradle, /signingConfig signingConfigs\.release/);
   assert.match(installScript, /adb\.exe/);
   assert.match(installScript, /Depuracion USB/);
   assert.match(gitignore, /^\.tools\/$/m);
+  assert.match(gitignore, /^\*\.jks$/m);
   assert.ok(fs.statSync(path.join(root, 'public/vendor/socket.io.min.js')).size > 10_000);
   assert.ok(fs.statSync(path.join(root, 'resources/icon.png')).size > 10_000);
 });

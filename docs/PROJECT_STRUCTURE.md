@@ -78,6 +78,7 @@ resources/icon.png       Fuente maestra para iconos y splash nativos
 android/                 Proyecto Android Studio / Gradle versionado
 capacitor.config.json    ID, nombre, webDir y reglas de red
 docs/MOBILE_RELEASE.md   Checklist de publicacion Android/iOS
+docs/GOOGLE_PLAY_RELEASE.md Ficha, datos y firma para Google Play
 ```
 
 `android/app/src/main/assets/public/` es una copia generada por `npm run mobile:sync` y se mantiene fuera de Git. No editarla manualmente.

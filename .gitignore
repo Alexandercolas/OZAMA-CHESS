@@ -3,9 +3,15 @@ node_modules/
 .env
 npm-debug.log*
 
+# Android signing secrets
+*.jks
+*.keystore
+keystore.properties
+
 # Legacy/temporary local copies not used by Express deploy
 public/Untitled-1.css
 public/css/
+x/
 public/js/
 
 # Windows
