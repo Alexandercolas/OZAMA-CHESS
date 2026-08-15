@@ -1221,6 +1221,30 @@ function setupOnlineSocket() {
     );
   });
 
+  socket.on('game-finished', ({ result, winner } = {}) => {
+    CLOCK.stop();
+    playSound('gameover');
+    state.winner = winner === COLOR.WHITE || winner === COLOR.BLACK ? winner : null;
+    state.endReason = null;
+    state.selected = null;
+    state.legalMoves = [];
+    if (result === 'draw') state.status = STATUS.STALEMATE;
+    else if (result === 'white_win' || result === 'black_win') state.status = STATUS.CHECKMATE;
+    else state.status = STATUS.DRAW;
+    updateStatusDisplay();
+    renderBoard();
+    if (result === 'draw') {
+      showGameEnd('TABLAS', 'Partida empatada por ahogado.', { online: true, canPlayAgain: false });
+      return;
+    }
+    const youWon = state.winner === PLAYER_COLOR;
+    showGameEnd(
+      youWon ? 'JAQUE MATE' : 'DERROTA',
+      `Ganan las ${state.winner === COLOR.WHITE ? 'Blancas' : 'Negras'}.`,
+      { online: true, canPlayAgain: false }
+    );
+  });
+
   socket.on('rematch-requested', ({ playerName } = {}) => {
     const sub = document.getElementById('rematch-sub');
     if (sub) sub.textContent = `${playerName || 'Tu rival'} quiere la revancha`;

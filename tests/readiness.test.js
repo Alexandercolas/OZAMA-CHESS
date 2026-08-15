@@ -100,12 +100,16 @@ test('Socket.IO gameplay events are bound to auth, validation, room tokens, and 
   assert.match(server, /socketSchemas\.playerMove/);
   assert.match(server, /parseSocketPayload/);
   assert.match(server, /rawSocketOn/);
+  assert.match(server, /function getServerGameConclusion\(game\)/);
+  assert.match(server, /async function finishRoomByServerConclusion\(room, code/);
+  assert.match(server, /await finishRoomByServerConclusion\(room, code, 'move'\)/);
 
   assert.match(lobby, /sessionStorage\.setItem\('ozama-room-token', roomToken\)/);
   assert.match(lobby, /const username = escapeHtml\(from\?\.username \|\| 'Jugador'\)/);
   assert.doesNotMatch(lobby, /<strong style="color:#C8983C">\$\{from\.username\}/);
   assert.match(script, /token: sessionStorage\.getItem\('ozama-room-token'\)/);
   assert.match(script, /sessionStorage\.setItem\('ozama-room-token', roomToken\)/);
+  assert.match(script, /socket\.on\('game-finished'/);
 });
 
 test('repository ignores local secrets and documents production variables', () => {

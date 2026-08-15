@@ -251,6 +251,30 @@ async function finishMatch(matchId, result, winner = null, pgn = '') {
   return !!update.modifiedCount;
 }
 
+async function finishRoomByServerConclusion(room, code, source = 'server') {
+  if (!room || room.status !== 'playing' || !room.matchId) return null;
+  const conclusion = getServerGameConclusion(room.game);
+  if (!conclusion) return null;
+
+  stopClock(room);
+  room.status = 'finished';
+  const closed = await finishMatch(room.matchId, conclusion.result, conclusion.winner);
+  if (!closed) return null;
+
+  await Room.updateOne({ roomCode: code }, {
+    $set: { status: 'finished', lastActivityAt: new Date() },
+  }).catch(() => {});
+  await applyEloForRoom(room, conclusion.result, code);
+
+  io.to(code).emit('game-finished', {
+    result: conclusion.result,
+    winner: conclusion.winner,
+    source,
+  });
+  console.log(`[G] Partida ${code} finalizada por servidor: ${conclusion.result}${conclusion.winner ? ` (${conclusion.winner})` : ''}`);
+  return conclusion;
+}
+
 function playerSnapshot(info) {
   return {
     userId: info.userId || null,
@@ -1185,6 +1209,7 @@ if (room.white && room.black && !room.clockInterval) {
       clockB: room.clockB || DEFAULT_TIME_MS,
       lastActivityAt: new Date(),
     } }).catch(() => {});
+    await finishRoomByServerConclusion(room, code, 'move');
   });
 
   // ── Chat ──────────────────────────────────────────────────────
@@ -1242,15 +1267,10 @@ if (room.white && room.black && !room.clockInterval) {
       emitMoveRejected(socket, room, 'El servidor todavía no reconoce el final de la partida.');
       return;
     }
-    stopClock(room);
-    room.status = 'finished';
-
-    const closed = await finishMatch(room.matchId, result, winner, pgn);
-    if (!closed) return;
-    await Room.updateOne({ roomCode: code }, { $set: { status: 'finished', lastActivityAt: new Date() } }).catch(() => {});
-
-    await applyEloForRoom(room, result, code);
-    console.log(`[G] Partida ${code} finalizada: ${result}${winner ? ` (${winner})` : ''}`);
+    const closed = await finishRoomByServerConclusion(room, code, 'client');
+    if (closed && pgn) {
+      await Match.updateOne({ _id: room.matchId }, { $set: { pgn } }).catch(() => {});
+    }
   });
 
   // ── Revancha ──────────────────────────────────────────────────
