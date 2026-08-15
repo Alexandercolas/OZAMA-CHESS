@@ -18,23 +18,23 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=5">
   <link rel="manifest" href="/manifest.webmanifest">
   <script src="/pwa.js" defer></script>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/theme.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --gold:     #D4AF37;
-      --bg:       #07070E;
-      --surface:  #0E0E1A;
-      --surface2: #13131F;
-      --text:     rgba(255,255,255,0.85);
-      --dim:      rgba(255,255,255,0.35);
+      --bg: var(--carbon);
+      --surface: var(--s1);
+      --surface2: var(--s2);
     }
 
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: 'Rajdhani', sans-serif;
+      font-family: var(--fb);
       min-height: 100vh;
       padding: 0 0 60px;
       overflow-x: hidden;
@@ -45,14 +45,14 @@
       position: sticky; top: 0; z-index: 100;
       display: flex; align-items: center; justify-content: space-between;
       padding: 10px 24px;
-      background: rgba(7,7,14,0.97);
-      border-bottom: 1px solid rgba(212,175,55,0.15);
+      background: rgba(13,11,8,0.97);
+      border-bottom: 1px solid rgba(200,152,60,0.18);
       gap: 12px;
       min-width: 0;
     }
 
     .topbar-logo {
-      font-family: 'Cinzel', serif;
+      font-family: var(--ft);
       font-size: 16px; font-weight: 900;
       color: var(--gold); letter-spacing: 4px;
       text-decoration: none;
@@ -66,8 +66,8 @@
       display: block;
       object-fit: cover;
       border-radius: 50%;
-      border: 1px solid rgba(212,175,55,0.48);
-      box-shadow: 0 0 14px rgba(212,175,55,0.22);
+      border: 1px solid rgba(200,152,60,0.48);
+      box-shadow: 0 0 14px rgba(200,152,60,0.22);
     }
 
     .topbar-nav { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 16px; }
@@ -80,8 +80,8 @@
 
     /* Hero del perfil */
     .profile-hero {
-      background: linear-gradient(160deg, #0E0E1A 0%, #0A0A14 100%);
-      border-bottom: 1px solid rgba(212,175,55,0.1);
+      background: linear-gradient(160deg, var(--s2) 0%, var(--s1) 100%);
+      border-bottom: 1px solid rgba(200,152,60,0.16);
       padding: 40px 24px 32px;
       display: flex; flex-direction: column; align-items: center; gap: 16px;
     }
@@ -91,9 +91,9 @@
       border-radius: 50%;
       background: linear-gradient(135deg, var(--gold), #8B6914);
       display: flex; align-items: center; justify-content: center;
-      font-family: 'Cinzel', serif;
-      font-size: 36px; font-weight: 900; color: #0A0A0A;
-      box-shadow: 0 0 30px rgba(212,175,55,0.3);
+      font-family: var(--ft);
+      font-size: 36px; font-weight: 900; color: var(--carbon);
+      box-shadow: 0 0 30px rgba(200,152,60,0.3);
       flex-shrink: 0;
       overflow: hidden;
     }
@@ -105,15 +105,15 @@
       object-fit: cover;
       display: block;
     }
-    .avatar-0 { background: linear-gradient(135deg, #1A3A6B, #D4AF37); }
-    .avatar-1 { background: linear-gradient(135deg, #C0392B, #D4AF37); }
-    .avatar-2 { background: linear-gradient(135deg, #226F54, #D4AF37); }
-    .avatar-3 { background: linear-gradient(135deg, #5B2A86, #D4AF37); }
-    .avatar-4 { background: linear-gradient(135deg, #0F766E, #D4AF37); }
-    .avatar-5 { background: linear-gradient(135deg, #7A3417, #D4AF37); }
+    .avatar-0 { background: linear-gradient(135deg, var(--blue-do), var(--gold)); }
+    .avatar-1 { background: linear-gradient(135deg, var(--red-do), var(--gold)); }
+    .avatar-2 { background: linear-gradient(135deg, #226F54, var(--gold)); }
+    .avatar-3 { background: linear-gradient(135deg, #5B2A86, var(--gold)); }
+    .avatar-4 { background: linear-gradient(135deg, #0F766E, var(--gold)); }
+    .avatar-5 { background: linear-gradient(135deg, var(--teja), var(--gold)); }
 
     .profile-name {
-      font-family: 'Cinzel', serif;
+      font-family: var(--ft);
       font-size: 24px; font-weight: 700; color: var(--gold);
       letter-spacing: 2px;
     }
@@ -127,17 +127,17 @@
     .country-code {
       display: inline-flex; align-items: center; justify-content: center;
       min-width: 28px; height: 20px;
-      border: 1px solid rgba(212,175,55,0.18);
+      border: 1px solid rgba(200,152,60,0.18);
       color: var(--gold);
       font-size: 10px; font-weight: 700; letter-spacing: 1px;
-      background: rgba(212,175,55,0.06);
+      background: rgba(200,152,60,0.06);
     }
 
     .elo-display {
-      background: rgba(212,175,55,0.1);
-      border: 1px solid rgba(212,175,55,0.3);
+      background: rgba(200,152,60,0.1);
+      border: 1px solid rgba(200,152,60,0.3);
       border-radius: 20px; padding: 6px 18px;
-      font-family: 'Cinzel', serif;
+      font-family: var(--ft);
       font-size: 14px; font-weight: 700; color: var(--gold);
       letter-spacing: 2px;
     }
@@ -148,8 +148,8 @@
       align-items: center;
       justify-content: center;
       padding: 5px 14px;
-      border: 1px solid rgba(212,175,55,0.24);
-      background: rgba(212,175,55,0.06);
+      border: 1px solid rgba(200,152,60,0.24);
+      background: rgba(200,152,60,0.06);
       color: var(--dim);
       font-size: 10px;
       font-weight: 800;
@@ -159,8 +159,8 @@
 
     .plan-badge.premium {
       color: var(--gold);
-      border-color: rgba(212,175,55,0.44);
-      box-shadow: 0 0 18px rgba(212,175,55,0.16);
+      border-color: rgba(200,152,60,0.44);
+      box-shadow: 0 0 18px rgba(200,152,60,0.16);
     }
 
     /* Stats grid */
@@ -174,17 +174,12 @@
     }
 
     .stat-card {
-      background: var(--surface);
-      border: 1px solid rgba(212,175,55,0.1);
-      border-radius: 14px;
       padding: 18px 14px;
       text-align: center;
-      transition: border-color 0.2s;
     }
-    .stat-card:hover { border-color: rgba(212,175,55,0.3); }
 
     .stat-value {
-      font-family: 'Cinzel', serif;
+      font-family: var(--ft);
       font-size: 28px; font-weight: 900; color: var(--gold);
       line-height: 1;
     }
@@ -196,18 +191,18 @@
     }
 
     .stat-card.wins   .stat-value { color: #2ecc71; }
-    .stat-card.losses .stat-value { color: #e74c3c; }
-    .stat-card.draws  .stat-value { color: rgba(255,255,255,0.5); }
+    .stat-card.losses .stat-value { color: var(--danger); }
+    .stat-card.draws  .stat-value { color: var(--dim); }
 
     /* Seccion historial */
     .section-title {
-      font-family: 'Cinzel', serif;
+      font-family: var(--ft);
       font-size: 13px; font-weight: 700;
       color: var(--gold); letter-spacing: 4px;
       text-transform: uppercase;
       margin-bottom: 14px;
       padding-bottom: 10px;
-      border-bottom: 1px solid rgba(212,175,55,0.1);
+      border-bottom: 1px solid rgba(200,152,60,0.1);
     }
 
     /* Lista de partidas */
@@ -215,13 +210,13 @@
 
     .match-row {
       background: var(--surface);
-      border: 1px solid rgba(212,175,55,0.08);
+      border: 1px solid rgba(200,152,60,0.08);
       border-radius: 12px;
       padding: 14px 18px;
       display: flex; align-items: center; gap: 14px;
       transition: border-color 0.2s;
     }
-    .match-row:hover { border-color: rgba(212,175,55,0.2); }
+    .match-row:hover { border-color: rgba(200,152,60,0.2); }
 
     .match-result-badge {
       width: 40px; height: 40px; border-radius: 10px;
@@ -268,7 +263,7 @@
 
     .spinner {
       width: 32px; height: 32px;
-      border: 3px solid rgba(212,175,55,0.15);
+      border: 3px solid rgba(200,152,60,0.15);
       border-top-color: var(--gold);
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
@@ -283,9 +278,7 @@
 
     /* Edit pais */
     .edit-section {
-      background: var(--surface);
-      border: 1px solid rgba(212,175,55,0.1);
-      border-radius: 14px; padding: 20px;
+      padding: 20px;
       margin-bottom: 28px;
       display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
     }
@@ -307,7 +300,7 @@
       width: 34px;
       height: 34px;
       border-radius: 50%;
-      border: 1px solid rgba(212,175,55,0.25);
+      border: 1px solid rgba(200,152,60,0.25);
       color: white;
       font-size: 11px;
       font-weight: 900;
@@ -319,34 +312,29 @@
     .avatar-choice.active {
       transform: translateY(-1px);
       border-color: var(--gold);
-      box-shadow: 0 0 12px rgba(212,175,55,0.25);
+      box-shadow: 0 0 12px rgba(200,152,60,0.25);
     }
 
     .edit-select {
       flex: 1; min-width: 160px;
       padding: 8px 12px;
       background: var(--surface2);
-      border: 1px solid rgba(212,175,55,0.2);
+      border: 1px solid rgba(200,152,60,0.2);
       border-radius: 8px; color: var(--text);
-      font-family: 'Rajdhani', sans-serif;
+      font-family: var(--fb);
       font-size: 14px; outline: none; cursor: pointer;
       appearance: none;
     }
     .edit-select:focus { border-color: var(--gold); }
-    .edit-select option { background: #13131F; }
+    .edit-select option { background: var(--s2); }
 
     .btn-save {
-      padding: 9px 20px;
-      background: linear-gradient(135deg, var(--gold), #8B6914);
-      border: none; border-radius: 8px; color: #0A0A0A;
-      font-family: 'Cinzel', serif; font-size: 11px; font-weight: 700;
-      letter-spacing: 2px; cursor: pointer; transition: all 0.2s;
+      padding: 11px 22px;
+      font-size: 11px;
+      letter-spacing: 2px;
     }
-    .btn-save:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(212,175,55,0.3); }
     .btn-save.secondary {
-      background: rgba(212,175,55,0.08);
-      border: 1px solid rgba(212,175,55,0.25);
-      color: var(--gold);
+      color: rgba(233,228,218,0.52);
     }
 
     .photo-upload {
@@ -357,7 +345,7 @@
       justify-content: center;
       min-height: 34px;
       padding: 8px 12px;
-      border: 1px solid rgba(212,175,55,0.25);
+      border: 1px solid rgba(200,152,60,0.25);
       border-radius: 8px;
       color: var(--gold);
       font-size: 10px;
@@ -365,11 +353,11 @@
       letter-spacing: 2px;
       text-transform: uppercase;
       cursor: pointer;
-      background: rgba(212,175,55,0.06);
+      background: rgba(200,152,60,0.06);
     }
     .photo-upload:hover {
       border-color: var(--gold);
-      box-shadow: 0 0 14px rgba(212,175,55,0.18);
+      box-shadow: 0 0 14px rgba(200,152,60,0.18);
     }
     .photo-upload input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
     .photo-tools {
@@ -392,9 +380,6 @@
     }
 
     .friends-panel {
-      background: var(--surface);
-      border: 1px solid rgba(212,175,55,0.1);
-      border-radius: 14px;
       padding: 18px;
       margin-bottom: 28px;
     }
@@ -408,10 +393,10 @@
       min-width: 0;
       padding: 10px 12px;
       background: var(--surface2);
-      border: 1px solid rgba(212,175,55,0.18);
+      border: 1px solid rgba(200,152,60,0.18);
       border-radius: 8px;
       color: var(--text);
-      font-family: 'Rajdhani', sans-serif;
+      font-family: var(--fb);
       outline: none;
     }
     .friends-input:focus { border-color: var(--gold); }
@@ -421,7 +406,7 @@
       align-items: center;
       gap: 10px;
       padding: 10px;
-      border: 1px solid rgba(212,175,55,0.08);
+      border: 1px solid rgba(200,152,60,0.08);
       border-radius: 10px;
       background: rgba(255,255,255,0.02);
     }
@@ -434,7 +419,7 @@
       justify-content: center;
       overflow: hidden;
       flex-shrink: 0;
-      font-family: 'Cinzel', serif;
+      font-family: var(--ft);
       font-weight: 900;
       color: #080808;
       background: linear-gradient(135deg, var(--gold), #8B6914);
@@ -446,14 +431,11 @@
     .account-panel {
       margin-bottom: 28px;
       padding: 20px;
-      border: 1px solid rgba(212,175,55,0.14);
-      border-radius: 8px;
-      background: linear-gradient(145deg, rgba(212,175,55,0.055), rgba(255,255,255,0.018));
     }
     .account-links { display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 16px; }
     .account-links a {
       padding: 8px 11px;
-      border: 1px solid rgba(212,175,55,0.17);
+      border: 1px solid rgba(200,152,60,0.17);
       border-radius: 4px;
       color: var(--dim);
       font-size: 10px;
@@ -507,13 +489,13 @@
     .plan-note {
       width: 100%;
       padding-top: 12px;
-      border-top: 1px solid rgba(212,175,55,0.08);
+      border-top: 1px solid rgba(200,152,60,0.08);
       color: var(--dim);
       font-size: 12px;
       line-height: 1.55;
     }
 
-    .plan-note strong { color: var(--gold); font-family: 'Cinzel', serif; letter-spacing: 1px; }
+    .plan-note strong { color: var(--gold); font-family: var(--ft); letter-spacing: 1px; }
 
     /* Paginacion */
     .pagination {
@@ -523,14 +505,14 @@
     .page-btn {
       padding: 7px 14px;
       background: var(--surface);
-      border: 1px solid rgba(212,175,55,0.15);
+      border: 1px solid rgba(200,152,60,0.15);
       border-radius: 8px; color: var(--dim);
       font-size: 12px; font-weight: 600; cursor: pointer;
       transition: all 0.2s;
     }
     .page-btn:hover, .page-btn.active {
       border-color: var(--gold); color: var(--gold);
-      background: rgba(212,175,55,0.08);
+      background: rgba(200,152,60,0.08);
     }
     .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
@@ -539,17 +521,12 @@
       display: flex; flex-direction: column; align-items: center;
       justify-content: center; min-height: 60vh; gap: 16px; text-align: center;
     }
-    .not-logged h2 { font-family: 'Cinzel', serif; color: var(--gold); letter-spacing: 3px; }
+    .not-logged h2 { font-family: var(--ft); color: var(--gold); letter-spacing: 3px; }
     .not-logged p  { color: var(--dim); font-size: 13px; }
     .btn-login {
-      padding: 12px 28px;
-      background: linear-gradient(135deg, var(--gold), #8B6914);
-      border: none; border-radius: 50px; color: #0A0A0A;
-      font-family: 'Cinzel', serif; font-size: 12px; font-weight: 700;
-      letter-spacing: 3px; cursor: pointer; text-decoration: none;
-      transition: all 0.2s; display: inline-block;
+      display: inline-block;
+      text-decoration: none;
     }
-    .btn-login:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(212,175,55,0.3); }
 
     @media (max-width: 600px) {
       .topbar { padding: 10px 14px; flex-wrap: wrap; }
@@ -705,11 +682,11 @@
 
     function renderNotLogged() {
       document.getElementById('main-content').innerHTML = `
-        <div class="not-logged">
-          <div style="font-family:'Cinzel',serif;font-size:34px;color:var(--gold);letter-spacing:4px;">OC</div>
+        <div class="not-logged oz-card oz-enter" style="--d:1">
+          <div style="font-family:var(--ft);font-size:34px;color:var(--gold);letter-spacing:4px;">OC</div>
           <h2>ACCESO REQUERIDO</h2>
           <p>Necesitas una cuenta para ver tu perfil.</p>
-          <a href="/login.html" class="btn-login">Iniciar sesion</a>
+          <a href="/login.html" class="btn-login btn-primary">Iniciar sesion</a>
         </div>
       `;
     }
@@ -780,7 +757,7 @@
 
       document.getElementById('main-content').innerHTML = `
         <!-- Hero -->
-        <div class="profile-hero" id="perfil">
+        <div class="profile-hero oz-enter" id="perfil" style="--d:0">
           ${heroAvatar}
           <div class="profile-name">${username}</div>
           <div class="profile-meta">
@@ -795,26 +772,26 @@
 
           <!-- Stats -->
           <div class="stats-grid" id="estadisticas">
-            <div class="stat-card wins">
+            <div class="stat-card oz-card oz-enter wins" style="--d:1">
               <div class="stat-value">${user.stats.wins || 0}</div>
               <div class="stat-label">Victorias</div>
             </div>
-            <div class="stat-card losses">
+            <div class="stat-card oz-card oz-enter losses" style="--d:2">
               <div class="stat-value">${user.stats.losses || 0}</div>
               <div class="stat-label">Derrotas</div>
             </div>
-            <div class="stat-card draws">
+            <div class="stat-card oz-card oz-enter draws" style="--d:3">
               <div class="stat-value">${user.stats.draws || 0}</div>
               <div class="stat-label">Tablas</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card oz-card oz-enter" style="--d:4">
               <div class="stat-value">${winRate}%</div>
               <div class="stat-label">% Victorias</div>
             </div>
           </div>
 
           <!-- Editar perfil -->
-          <div class="edit-section" id="ajustes">
+          <div class="edit-section oz-card oz-enter" id="ajustes" style="--d:5">
             <span class="edit-label">Avatar</span>
             <input type="hidden" id="avatar-select" value="${avatar}">
             <input type="hidden" id="avatar-image-value" value="${escapeHtml(avatarImage)}">
@@ -828,7 +805,7 @@
               <label class="photo-upload">Subir foto
                 <input type="file" accept="image/png,image/jpeg,image/webp" onchange="handleAvatarImage(event)">
               </label>
-              <button class="btn-save secondary" onclick="clearAvatarImage()">Quitar foto</button>
+              <button class="btn-save btn-danger secondary" onclick="clearAvatarImage()">Quitar foto</button>
               <span class="photo-status" id="photo-status">${avatarImage ? 'Foto activa' : ''}</span>
               <div class="photo-hint">PNG, JPG o WebP. Se recorta en cuadrado y se guarda al tocar Guardar.</div>
             </div>
@@ -847,23 +824,23 @@
               <option value="AR" ${user.country==='AR' ? 'selected' : ''}>AR - Argentina</option>
               <option value="OTHER" ${user.country==='OTHER' ? 'selected' : ''}>Otro</option>
             </select>
-            <button class="btn-save" onclick="saveProfile()">Guardar</button>
+            <button class="btn-save btn-primary" onclick="saveProfile()">Guardar</button>
             <span class="save-msg" id="save-msg">Guardado</span>
             <div class="plan-note"><strong>Plan ${planLabel}</strong><br>${planNote}</div>
           </div>
 
-          <div class="friends-panel" id="amigos">
+          <div class="friends-panel oz-card oz-enter" id="amigos" style="--d:6">
             <div class="section-title">Amigos</div>
             <div class="friends-form">
               <input class="friends-input" id="friend-username" maxlength="20" placeholder="Nombre de usuario">
-              <button class="btn-save" onclick="addFriend()">Agregar</button>
+              <button class="btn-save btn-primary" onclick="addFriend()">Agregar</button>
             </div>
             <div class="friends-list" id="friends-list">
               <div class="empty-msg">Cargando amigos...</div>
             </div>
           </div>
 
-          <div class="account-panel" id="cuenta">
+          <div class="account-panel oz-card oz-enter" id="cuenta" style="--d:7">
             <div class="section-title">Cuenta y privacidad</div>
             <div class="account-links">
               <a href="/privacy.html">Privacidad</a>
@@ -876,15 +853,15 @@
               <div class="danger-form">
                 <input id="delete-password" type="password" autocomplete="current-password" maxlength="128" placeholder="Contrasena actual">
                 <input id="delete-confirm" type="text" maxlength="8" autocomplete="off" placeholder="Escribe ELIMINAR">
-                <button class="btn-delete" id="delete-account-btn" type="button" onclick="deleteAccount()">Eliminar cuenta</button>
+                <button class="btn-delete btn-danger" id="delete-account-btn" type="button" onclick="deleteAccount()">Eliminar cuenta</button>
               </div>
               <div class="delete-status" id="delete-account-status" role="status"></div>
             </details>
           </div>
 
           <!-- Historial -->
-          <div class="section-title" id="historial">Historial de Partidas</div>
-          <div class="match-list" id="match-list">${matchRows}</div>
+          <div class="section-title oz-enter" id="historial" style="--d:8">Historial de Partidas</div>
+          <div class="match-list oz-enter" id="match-list" style="--d:9">${matchRows}</div>
           ${paginationHtml}
 
         </div>
@@ -1130,5 +1107,3 @@
   </script>
 </body>
 </html>
-
-

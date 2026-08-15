@@ -20,6 +20,7 @@
   <script src="/pwa.js" defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/theme.css">
   <style>
     /* ── Reset & base ── */
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -29,20 +30,12 @@
       --board-border: 3px;
       --board-edge: 6px;
       --gold:  #C8983C;
-      --gold2: #E8C06A;
-      --amber: #8B6520;
-      --carbon:#0D0B08;
-      --s1:    #131008;
-      --s2:    #1C1710;
-      --s3:    #252015;
+      --gold2: var(--gold-2);
       --text:  #E9E4DA;
       --dim:   rgba(233,228,218,0.45);
       --ghost: rgba(233,228,218,0.14);
       --bl:    #D4B896;
       --bd:    #5C3A1E;
-      --ft:    'Cormorant Garamond', Georgia, serif;
-      --fb:    'Inter', sans-serif;
-      --fm:    'IBM Plex Mono', monospace;
     }
 
     html, body {
@@ -900,7 +893,7 @@
 <div class="app">
 
   <!-- HEADER -->
-  <header class="hd">
+  <header class="hd oz-enter" style="--d:0">
     <div class="hd-logo">
       OZAMA CHESS
       <span class="hd-sub">Dominican Heritage Edition</span>
@@ -987,7 +980,7 @@
       </div>
 
       <!-- COLUMNA CENTRAL: banner + tablero + botones -->
-      <div class="bc">
+      <div class="bc oz-enter" style="--d:1">
         <div class="bc-banner" id="bc-banner">PARTIDA EN CURSO</div>
 
         <!-- Barras compat ocultas -->
@@ -1017,7 +1010,7 @@
         </div>
 
         <!-- Botones visibles -->
-        <div class="bc-bottom">
+        <div class="bc-bottom oz-enter" style="--d:2">
           <button class="bc-btn" id="visible-new-game-btn" onclick="document.getElementById('new-game-btn').click()">
             Nueva partida
           </button>

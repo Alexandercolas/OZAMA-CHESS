@@ -20,7 +20,8 @@
   <script src="/pwa.js" defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/theme.css">
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -39,8 +40,8 @@
       --red: #C0392B;
       --blue: #1A3A6B;
       --line: rgba(200,152,60,0.22);
-      --title: 'Cinzel', Georgia, serif;
-      --body: 'Inter', Arial, sans-serif;
+      --title: var(--ft);
+      --body: var(--fb);
     }
 
     body {
@@ -645,7 +646,7 @@
       </div>
     </aside>
 
-    <main class="card">
+    <main class="card oz-enter" style="--d:0">
       <div class="logged-in-panel" id="logged-in-panel">
         <div class="user-avatar" id="user-avatar">?</div>
         <div class="user-name-display" id="user-name-display">-</div>
@@ -655,14 +656,14 @@
       </div>
 
       <div id="auth-panel">
-        <div class="tabs">
+        <div class="tabs oz-enter" style="--d:1">
           <button class="tab active" id="tab-login" type="button" onclick="switchTab('login')">Iniciar sesion</button>
           <button class="tab" id="tab-register" type="button" onclick="switchTab('register')">Registrarse</button>
         </div>
 
         <div class="msg" id="msg"></div>
 
-        <div class="form" id="form-login">
+        <div class="form oz-enter" id="form-login" style="--d:2">
           <div class="form-group">
             <label class="form-label" for="login-identifier">Usuario o email</label>
             <input class="form-input" id="login-identifier" type="text" placeholder="tu_usuario" autocomplete="username" maxlength="80"/>
@@ -671,7 +672,7 @@
             <label class="form-label" for="login-password">Contrasena</label>
             <input class="form-input" id="login-password" type="password" placeholder="Minimo 6 caracteres" autocomplete="current-password" minlength="6" maxlength="128"/>
           </div>
-          <button class="btn-main" id="btn-login" type="button" onclick="doLogin()">Entrar</button>
+          <button class="btn-main oz-enter" id="btn-login" type="button" onclick="doLogin()" style="--d:3">Entrar</button>
           <div class="recovery-entry">
             <span>Si olvidaste tu contrasena, usa el codigo de recuperacion de tu cuenta.</span>
             <button class="inline-link" type="button" onclick="showResetForm()">Recuperar</button>
