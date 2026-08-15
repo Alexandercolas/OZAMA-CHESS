@@ -148,7 +148,8 @@
 
     .sb {
       background: linear-gradient(180deg, #111008, #0C0A05);
-      border-right: 1px solid rgba(200,152,60,0.13);
+      border-right: 1px solid;
+      border-image: linear-gradient(180deg, rgba(200,152,60,0.35), rgba(200,152,60,0.02)) 1;
       display: flex; flex-direction: column;
       position: relative; overflow: hidden;
     }
@@ -171,30 +172,65 @@
       background: linear-gradient(90deg, transparent, rgba(200,152,60,0.1), transparent);
     }
 
+    .sb-account-label {
+      margin: 9px 14px 6px;
+      font-size: 7px;
+      letter-spacing: 3.4px;
+      color: rgba(233,228,218,0.22);
+    }
+
     .sb-item {
       display: flex; align-items: center; gap: 10px;
       padding: 9px 14px; text-decoration: none; cursor: pointer;
-      transition: all 0.2s; border-left: 2px solid transparent;
+      transition:
+        background var(--dur-fast) var(--ease-out),
+        color var(--dur-fast) var(--ease-out),
+        box-shadow var(--dur-fast) var(--ease-out);
       position: relative;
     }
 
     .sb-item::before {
-      content: ''; position: absolute; inset: 0; background: transparent; transition: background 0.2s;
+      content: ''; position: absolute; inset: 0; background: transparent; transition: background var(--dur-fast) var(--ease-out);
     }
 
-    .sb-item:hover { border-left-color: rgba(200,152,60,0.42); }
     .sb-item:hover::before { background: linear-gradient(90deg, rgba(200,152,60,0.07), transparent 80%); }
-    .sb-item.on { border-left-color: var(--gold); }
-    .sb-item.on::before { background: linear-gradient(90deg, rgba(200,152,60,0.1), transparent 80%); }
+    .sb-item.on::before { background: radial-gradient(ellipse 140% 100% at 0% 50%, rgba(200,152,60,0.14), transparent 70%); }
+    .sb-item.on::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 18%;
+      width: 2.5px;
+      height: 64%;
+      background: linear-gradient(180deg, transparent, var(--gold-2), transparent);
+      box-shadow: 0 0 10px 1px rgba(200,152,60,0.55);
+    }
 
-    .sb-icon { width: 16px; height: 16px; display: grid; place-items: center; flex-shrink: 0; color: var(--ghost); position: relative; z-index: 1; transition: color 0.2s; }
+    .sb-icon { width: 16px; height: 16px; display: grid; place-items: center; flex-shrink: 0; color: var(--ghost); position: relative; z-index: 1; transition: color var(--dur-fast) var(--ease-out); }
     .sb-icon svg { width: 16px; height: 16px; display: block; }
-    .sb-item:hover .sb-icon, .sb-item.on .sb-icon { color: var(--gold); }
+    .sb-item:hover .sb-icon { color: var(--gold); }
+    .sb-item.on .sb-icon { color: var(--gold-2); }
 
     .sb-txt { position: relative; z-index: 1; }
-    .sb-name { font-family: var(--fb); font-size: 9px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); display: block; transition: color 0.2s; }
-    .sb-desc { font-family: var(--fb); font-size: 7px; color: var(--ghost); letter-spacing: 1px; display: block; margin-top: 1px; }
-    .sb-item:hover .sb-name, .sb-item.on .sb-name { color: var(--gold2); }
+    .sb-name { font-family: var(--fb); font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); display: block; transition: color var(--dur-fast) var(--ease-out); }
+    .sb-desc { font-family: var(--fb); font-size: 7px; color: var(--dim); opacity: 0.72; letter-spacing: 1px; display: block; margin-top: 1px; transition: color var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out); }
+    .sb-item:hover .sb-name { color: var(--gold); }
+    .sb-item:hover .sb-desc { color: var(--gold-2); opacity: 0.72; }
+    .sb-item.on .sb-name, .sb-item.on .sb-desc { color: var(--gold-2); opacity: 1; }
+
+    .sb-exit {
+      margin-top: 10px;
+    }
+
+    .sb-exit::after {
+      content: '';
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      top: -7px;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(200,152,60,0.28), transparent);
+    }
 
     .sb-foot {
       position: relative; z-index: 1;
@@ -909,7 +945,7 @@
   <div class="body">
 
     <!-- SIDEBAR -->
-    <aside class="sb">
+    <aside class="sb oz-enter" style="--d:0">
       <nav class="sb-nav">
         <a class="sb-item on" href="/lobby.html">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 20h10v2H7v-2Zm2-3h6l1 2H8l1-2Zm2-7h2l2 7H9l2-7Zm1-8 5 4-5 4-5-4 5-4Z"/></svg></span>
@@ -928,6 +964,7 @@
           <div class="sb-txt"><span class="sb-name">Desafíos</span><span class="sb-desc">Retar jugador</span></div>
         </a>
         <div class="sb-div"></div>
+        <div class="sb-account-label eyebrow">Cuenta</div>
         <a class="sb-item" href="/profile.html#perfil">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 12c4 0 8 2.2 8 5v1H4v-1c0-2.8 4-5 8-5Z"/></svg></span>
           <div class="sb-txt"><span class="sb-name">Perfil</span><span class="sb-desc">Estadísticas</span></div>
@@ -945,7 +982,7 @@
           <div class="sb-txt"><span class="sb-name">Ajustes</span><span class="sb-desc">Perfil y país</span></div>
         </a>
         <div class="sb-div"></div>
-        <a class="sb-item" href="/lobby.html" id="sidebar-lobby-btn">
+        <a class="sb-item sb-exit" href="/lobby.html" id="sidebar-lobby-btn">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 11h10v2H4v-2Zm4-5 1.5 1.5L6 11l3.5 3.5L8 16l-6-5 6-5Zm7-2h5v16h-5v-2h3V6h-3V4Z"/></svg></span>
           <div class="sb-txt"><span class="sb-name">Salir</span><span class="sb-desc">Volver al lobby</span></div>
         </a>
@@ -1324,6 +1361,10 @@
 
     document.getElementById('sidebar-lobby-btn')?.addEventListener('click',e=>{
       e.preventDefault();
+      const activeGame = typeof state !== 'undefined'
+        && typeof STATUS !== 'undefined'
+        && (state.status === STATUS.PLAYING || state.status === STATUS.CHECK);
+      if (activeGame && !window.confirm('La partida sigue activa. ¿Quieres volver al lobby?')) return;
       if(typeof clearOnlineSession==='function')clearOnlineSession();
       window.location.href='/lobby.html';
     });
