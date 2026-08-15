@@ -671,7 +671,8 @@
     function logout() {
       localStorage.removeItem('ozama-token');
       localStorage.removeItem('ozama-user');
-      window.location.href = '/login.html';
+      sessionStorage.clear();
+      window.location.replace('/login.html');
     }
 
     function formatDate(d) {
