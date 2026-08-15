@@ -85,6 +85,28 @@ test('JWT and password recovery remain hardened', () => {
   assert.match(auth, /limitReset/);
 });
 
+test('Socket.IO gameplay events are bound to auth, validation, room tokens, and rate limits', () => {
+  const server = read('server.js');
+  const lobby = read('public/lobby.html');
+  const script = read('public/script.js');
+
+  assert.match(server, /io\.use\(async \(socket, next\)/);
+  assert.match(server, /jwt\.verify\(token, process\.env\.JWT_SECRET, \{ algorithms: \['HS256'\] \}\)/);
+  assert.match(server, /socket\.data\.user =/);
+  assert.match(server, /crypto\.randomBytes\(24\)\.toString\('hex'\)/);
+  assert.match(server, /room\.tokens\[requestedColor\] !== token/);
+  assert.match(server, /new RateLimiterMemory/);
+  assert.match(server, /socketSchemas\.playerMove/);
+  assert.match(server, /parseSocketPayload/);
+  assert.match(server, /rawSocketOn/);
+
+  assert.match(lobby, /sessionStorage\.setItem\('ozama-room-token', roomToken\)/);
+  assert.match(lobby, /const username = escapeHtml\(from\?\.username \|\| 'Jugador'\)/);
+  assert.doesNotMatch(lobby, /<strong style="color:#C8983C">\$\{from\.username\}/);
+  assert.match(script, /token: sessionStorage\.getItem\('ozama-room-token'\)/);
+  assert.match(script, /sessionStorage\.setItem\('ozama-room-token', roomToken\)/);
+});
+
 test('repository ignores local secrets and documents production variables', () => {
   assert.match(read('.gitignore'), /^\.env$/m);
   const example = read('.env.example');

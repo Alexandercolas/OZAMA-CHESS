@@ -1013,6 +1013,7 @@ function clearOnlineSession() {
     'ozama-player-info',
     'ozama-myname',
     'ozama-token',
+    'ozama-room-token',
     'ozama-bot-mode',
     'ozama-bot-color',
     'ozama-bot-difficulty',
@@ -1162,6 +1163,7 @@ function setupOnlineSocket() {
     socket.emit('rejoin', {
       roomCode: ROOM_CODE,
       color: PLAYER_COLOR,
+      token: sessionStorage.getItem('ozama-room-token') || '',
       playerName: sessionStorage.getItem('ozama-myname') || '',
     });
   }
@@ -1229,10 +1231,11 @@ function setupOnlineSocket() {
     document.getElementById('rematch-overlay')?.classList.add('hidden');
   });
 
-  socket.on('rematch-start', ({ clockW, clockB } = {}) => {
+  socket.on('rematch-start', ({ clockW, clockB, roomToken } = {}) => {
     hideGameEnd();
     document.getElementById('rematch-overlay')?.classList.add('hidden');
     startNewGame();
+    if (roomToken) sessionStorage.setItem('ozama-room-token', roomToken);
     CLOCK.set(clockW || 600000, clockB || 600000);
   });
 
@@ -1257,8 +1260,9 @@ function setupOnlineSocket() {
     showGameEnd('TABLAS', `${playerName || 'Tu rival'} aceptó el empate.`, { online: true, canPlayAgain: false });
   });
 
-  socket.on('rejoin-ok', ({ color, playerInfo, currentTurn, clockW, clockB, game } = {}) => {
+  socket.on('rejoin-ok', ({ color, playerInfo, currentTurn, clockW, clockB, roomToken, game } = {}) => {
     setConfirmedPlayerColor(color);
+    if (roomToken) sessionStorage.setItem('ozama-room-token', roomToken);
     _onlineSynced = true;
     if (playerInfo && typeof updatePlayerBars === 'function') {
       sessionStorage.setItem('ozama-player-info', JSON.stringify(playerInfo));

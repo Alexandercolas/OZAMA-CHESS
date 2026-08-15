@@ -1133,7 +1133,7 @@
     if (el) { el.textContent = msg; el.style.color = color; }
   }
 
-  function goToGame(roomCode, color, playerInfo, names) {
+  function goToGame(roomCode, color, playerInfo, names, roomToken) {
     const cleanRoom = String(roomCode || '').trim().toUpperCase();
     const cleanColor = color === 'black' ? 'b' : color === 'white' ? 'w' : color;
     sessionStorage.removeItem('ozama-bot-mode');
@@ -1145,6 +1145,7 @@
     sessionStorage.setItem('ozama-room',   cleanRoom);
     sessionStorage.setItem('ozama-color',  cleanColor);
     sessionStorage.setItem('ozama-myname', user?.username || '');
+    if (roomToken) sessionStorage.setItem('ozama-room-token', roomToken);
     if (playerInfo) sessionStorage.setItem('ozama-player-info', JSON.stringify(playerInfo));
     if (names)      sessionStorage.setItem('ozama-names', JSON.stringify(names));
     window.location.href = '/game.html';
@@ -1169,10 +1170,10 @@
     setStatus('quick-status', 'Buscando rival…');
   });
 
-  socket.on('match-found', ({ roomCode, code, color, playerInfo, names }) => {
+  socket.on('match-found', ({ roomCode, code, color, playerInfo, names, roomToken }) => {
     _searching = false;
     setStatus('quick-status', '¡Rival encontrado!');
-    setTimeout(() => goToGame(roomCode || code, color, playerInfo, names), 800);
+    setTimeout(() => goToGame(roomCode || code, color, playerInfo, names, roomToken), 800);
   });
 
   socket.on('matchmaking-cancelled', () => {
@@ -1191,6 +1192,7 @@
     sessionStorage.removeItem('ozama-player-info');
     sessionStorage.removeItem('ozama-myname');
     sessionStorage.removeItem('ozama-token');
+    sessionStorage.removeItem('ozama-room-token');
     sessionStorage.setItem('ozama-bot-mode', 'true');
     sessionStorage.setItem('ozama-bot-color', 'b');
     sessionStorage.setItem('ozama-bot-difficulty', difficulty);
@@ -1207,10 +1209,11 @@
     document.getElementById('create-room-btn').disabled = true;
   });
 
-  socket.on('room-created', ({ roomCode, code }) => {
+  socket.on('room-created', ({ roomCode, code, roomToken }) => {
     const cleanCode = String(roomCode || code || '').trim().toUpperCase();
     if (!cleanCode) { setStatus('create-status', 'No se recibió código', '#ef4444'); return; }
     sessionStorage.setItem('ozama-room', cleanCode);
+    if (roomToken) sessionStorage.setItem('ozama-room-token', roomToken);
     const display = document.getElementById('room-code-display');
     const codeEl  = document.getElementById('room-code-value');
     display.classList.add('show');
@@ -1227,9 +1230,9 @@
     };
   });
 
-  socket.on('game-start', ({ roomCode, code, color, playerInfo, names, clockW, clockB }) => {
+  socket.on('game-start', ({ roomCode, code, color, playerInfo, names, clockW, clockB, roomToken }) => {
     const rc = roomCode || code || sessionStorage.getItem('ozama-room');
-    goToGame(rc, color, playerInfo, names);
+    goToGame(rc, color, playerInfo, names, roomToken);
   });
 
   // ── UNIRSE ──
@@ -1274,10 +1277,12 @@
   // ── CHALLENGE RECEIVED ──
   socket.on('challenge-received', ({ from, socketId }) => {
     _challengerSocketId = socketId;
-    const flag = (from.country||'DO').toLowerCase();
+    const flag = /^[A-Z]{2}$/i.test(from?.country || '') ? String(from.country).toLowerCase() : 'do';
+    const username = escapeHtml(from?.username || 'Jugador');
+    const elo = Number.isFinite(Number(from?.elo)) ? Number(from.elo) : 1200;
     document.getElementById('challenge-modal-sub').innerHTML =
       `<img src="https://flagcdn.com/20x15/${flag}.png" style="width:18px;vertical-align:middle;margin-right:6px;border-radius:1px;" onerror="this.style.display='none'"/>
-       <strong style="color:#C8983C">${from.username}</strong> (ELO ${from.elo}) te desafía`;
+       <strong style="color:#C8983C">${username}</strong> (ELO ${elo}) te desafía`;
 
     document.getElementById('challenge-modal').classList.add('show');
   });

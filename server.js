@@ -12,6 +12,9 @@ const { Server }      = require('socket.io');
 const path            = require('path');
 const mongoose        = require('mongoose');
 const jwt             = require('jsonwebtoken');
+const crypto          = require('crypto');
+const { z }           = require('zod');
+const { RateLimiterMemory } = require('rate-limiter-flexible');
 
 const connectDatabase = require('./config/database');
 const Match           = require('./models/Match');
@@ -156,6 +159,19 @@ app.get('/api/matches/recent', async (_req, res) => {
 const rooms = new Map();
 const onlinePlayers = new Map();
 const pendingChallenges = new Map();
+const ROOM_CODE_PATTERN = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/;
+const roomCodeSchema = z.string().trim().toUpperCase().regex(ROOM_CODE_PATTERN).max(6);
+const squareSchema = z.object({
+  row: z.number().int().min(0).max(7),
+  col: z.number().int().min(0).max(7),
+}).strict();
+const pgnSchema = z.string().max(20_000).optional().default('');
+const socketLimiters = {
+  createRoom: new RateLimiterMemory({ points: 5, duration: 60 }),
+  joinRoom: new RateLimiterMemory({ points: 12, duration: 60 }),
+  challengeSend: new RateLimiterMemory({ points: 10, duration: 60 }),
+  playerMove: new RateLimiterMemory({ points: 80, duration: 60 }),
+};
 
 // ── Cola de matchmaking ──────────────────────────────────────────
 // { socketId, playerInfo, joinedAt }
@@ -166,6 +182,10 @@ function generateCode() {
   let code = '';
   for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
   return code;
+}
+
+function createRoomToken() {
+  return crypto.randomBytes(24).toString('hex');
 }
 
 function cancelTimer(room) {
@@ -249,6 +269,31 @@ function broadcastOnlinePlayers() {
 const PIECE = { PAWN: 'p', KNIGHT: 'n', BISHOP: 'b', ROOK: 'r', QUEEN: 'q', KING: 'k' };
 const COLOR = { WHITE: 'w', BLACK: 'b' };
 const PROMOTION_PIECES = new Set([PIECE.QUEEN, PIECE.ROOK, PIECE.BISHOP, PIECE.KNIGHT]);
+const colorSchema = z.enum([COLOR.WHITE, COLOR.BLACK, 'white', 'black']).transform((value) => {
+  if (value === 'white') return COLOR.WHITE;
+  if (value === 'black') return COLOR.BLACK;
+  return value;
+});
+const socketSchemas = {
+  quickMatch: z.object({ playerName: z.string().max(30).optional(), country: z.string().max(2).optional() }).strict().default({}),
+  createRoom: z.object({ playerName: z.string().max(30).optional(), country: z.string().max(2).optional() }).strict().default({}),
+  joinRoom: z.object({ code: roomCodeSchema, playerName: z.string().max(30).optional(), country: z.string().max(2).optional() }).strict(),
+  rejoin: z.object({ roomCode: roomCodeSchema, color: colorSchema, token: z.string().length(48) }).strict(),
+  roomOnly: z.object({ room: roomCodeSchema }).strict(),
+  playerMove: z.object({ room: roomCodeSchema, from: squareSchema, to: squareSchema, promotion: z.enum(['q', 'r', 'b', 'n']).nullable().optional() }).strict(),
+  chat: z.object({ room: roomCodeSchema, message: z.string().trim().min(1).max(200) }).strict(),
+  resign: z.object({ room: roomCodeSchema, pgn: pgnSchema }).strict(),
+  gameFinished: z.object({
+    room: roomCodeSchema,
+    result: z.enum(['white_win', 'black_win', 'draw', 'abandoned']),
+    winner: z.enum([COLOR.WHITE, COLOR.BLACK]).nullable().optional().default(null),
+    pgn: pgnSchema,
+  }).strict(),
+  playerOnline: z.object({ username: z.string().max(20).optional(), elo: z.number().int().min(100).max(4000).optional(), country: z.string().max(2).optional() }).strict().default({}),
+  searchUser: z.object({ username: z.string().trim().min(2).max(20) }).strict(),
+  challengeSend: z.object({ targetUsername: z.string().trim().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/) }).strict(),
+  challengeSocket: z.object({ challengerSocketId: z.string().min(1).max(120) }).strict(),
+};
 
 function createInitialBoard() {
   const board = Array.from({ length: 8 }, () => Array(8).fill(null));
@@ -368,6 +413,7 @@ async function getOrRestoreRoom(roomCode) {
     status: saved.status || 'playing',
     rematchReady: new Set(),
     timer: null,
+    tokens: { w: null, b: null },
     playerInfo: {
       w: roomPlayerInfo(saved.players?.white),
       b: roomPlayerInfo(saved.players?.black),
@@ -716,11 +762,20 @@ io.use(async (socket, next) => {
   if (!token) return next(new Error('Debes iniciar sesion.'));
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
-    const user = await User.findById(decoded.id).select('+tokenVersion isActive').lean();
+    const user = await User.findById(decoded.id).select('+tokenVersion username country avatar avatarImage elo isActive').lean();
     if (!user?.isActive || Number(decoded.v || 0) !== Number(user.tokenVersion || 0)) {
       return next(new Error('Sesion invalida.'));
     }
-    socket.data.userId = decoded.id;
+    socket.data.userId = user._id;
+    socket.data.user = {
+      id: user._id,
+      username: user.username,
+      country: user.country,
+      avatar: user.avatar,
+      avatarImage: user.avatarImage,
+      elo: user.elo,
+    };
+    socket.data.playerName = user.username;
   } catch (_) {
     return next(new Error('Sesion invalida.'));
   }
@@ -750,6 +805,41 @@ io.on('connection', (socket) => {
     next();
   });
 
+  const rawSocketOn = socket.on.bind(socket);
+  socket.on = (eventName, handler) => rawSocketOn(eventName, async (...args) => {
+    try {
+      await handler(...args);
+    } catch (err) {
+      console.warn(`[Socket] Handler ${eventName} fallo:`, err.message);
+      if (eventName === 'player-move') socket.emit('move-rejected', { message: 'Solicitud invalida.' });
+      else if (eventName.startsWith('challenge')) socket.emit('challenge-error', 'Solicitud invalida.');
+      else socket.emit('room-error', 'Solicitud invalida.');
+    }
+  });
+
+  function parseSocketPayload(schema, payload, errorEvent = 'room-error') {
+    const result = schema.safeParse(payload ?? {});
+    if (result.success) return result.data;
+    if (errorEvent === 'move-rejected') socket.emit(errorEvent, { message: 'Solicitud invalida.' });
+    else if (errorEvent === 'search-user-result') socket.emit(errorEvent, { error: 'Solicitud invalida.' });
+    else socket.emit(errorEvent, 'Solicitud invalida.');
+    return null;
+  }
+
+  async function consumeSocketLimit(name, errorEvent = 'room-error') {
+    const limiter = socketLimiters[name];
+    if (!limiter) return true;
+    try {
+      await limiter.consume(`${socket.data.userId || 'anon'}:${socket.id}`);
+      return true;
+    } catch (_) {
+      const message = 'Demasiadas acciones. Espera un momento.';
+      socket.emit(errorEvent, name === 'playerMove' ? { message } : message);
+      console.warn(`[RATE] ${name} limitado socket=${socket.id} user=${socket.data.userId || 'anon'}`);
+      return false;
+    }
+  }
+
   function requireSocketAuth(message = 'Debes iniciar sesión para jugar.') {
     if (socket.data.userId) return true;
     socket.emit('auth-error', message);
@@ -759,9 +849,9 @@ io.on('connection', (socket) => {
   }
 
   async function getPlayerInfo(playerName, fallbackCountry = 'DO') {
-    if (socket.data.userId) {
-      const user = await User.findById(socket.data.userId).select('username country avatar avatarImage elo').lean();
-      if (user) return { userId: user._id, name: user.username, country: user.country, avatar: user.avatar, avatarImage: user.avatarImage, elo: user.elo };
+    if (socket.data.user) {
+      const user = socket.data.user;
+      return { userId: user.id, name: user.username, country: user.country, avatar: user.avatar, avatarImage: user.avatarImage, elo: user.elo };
     }
     return { userId: null, name: playerName || 'Jugador', country: fallbackCountry, avatar: 0, avatarImage: '', elo: 1200 };
   }
@@ -771,6 +861,7 @@ io.on('connection', (socket) => {
       white: wSocket.id, black: bSocket.id,
       currentTurn: 'w', rematchReady: new Set(), drawOfferBy: null,
       timer: null, status: 'playing', playerInfo: { w: wInfo, b: bInfo }, matchId: null,
+      tokens: { w: createRoomToken(), b: createRoomToken() },
       game: createGameState(),
       clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS, clockInterval: null,
     });
@@ -803,15 +894,18 @@ io.on('connection', (socket) => {
     if (onlinePlayers.has(bSocket.id)) onlinePlayers.get(bSocket.id).inGame = true;
     broadcastOnlinePlayers();
 
-    wSocket.emit('game-start', { code, color: 'w', playerInfo: { w: wInfo, b: bInfo }, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
-    bSocket.emit('game-start', { code, color: 'b', playerInfo: { w: wInfo, b: bInfo }, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
+    wSocket.emit('game-start', { code, color: 'w', roomToken: room.tokens.w, playerInfo: { w: wInfo, b: bInfo }, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
+    bSocket.emit('game-start', { code, color: 'b', roomToken: room.tokens.b, playerInfo: { w: wInfo, b: bInfo }, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
     startClock(code);
 
     console.log(`[MM] Partida creada: ${wInfo.name} (w) vs ${bInfo.name} (b) — sala ${code}`);
   }
 
   // ── MATCHMAKING: unirse a la cola ─────────────────────────────
-  socket.on('quick-match', async ({ playerName = 'Jugador', country = 'DO' } = {}) => {
+  socket.on('quick-match', async (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.quickMatch, payload);
+    if (!data) return;
+    const { playerName = 'Jugador', country = 'DO' } = data;
     if (!requireSocketAuth()) return;
     const existingIdx = matchQueue.findIndex(e => e.socketId === socket.id);
     if (existingIdx !== -1) matchQueue.splice(existingIdx, 1);
@@ -863,7 +957,11 @@ io.on('connection', (socket) => {
   });
 
   // ── Crear sala ────────────────────────────────────────────────
-  socket.on('create-room', async ({ playerName = 'Jugador 1', country = 'DO' } = {}) => {
+  socket.on('create-room', async (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.createRoom, payload);
+    if (!data) return;
+    if (!(await consumeSocketLimit('createRoom'))) return;
+    const { playerName = 'Jugador 1', country = 'DO' } = data;
     if (!requireSocketAuth()) return;
     let code;
     do { code = generateCode(); } while (rooms.has(code));
@@ -874,6 +972,7 @@ io.on('connection', (socket) => {
       white: socket.id, black: null,
       currentTurn: 'w', rematchReady: new Set(), drawOfferBy: null,
       timer: null, status: 'waiting', playerInfo: { w: pInfo, b: null }, matchId: null,
+      tokens: { w: createRoomToken(), b: null },
       game: createGameState(),
       clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS, clockInterval: null,
     });
@@ -887,7 +986,7 @@ io.on('connection', (socket) => {
       broadcastOnlinePlayers();
     }
 
-    socket.emit('room-created', { code, color: 'w', playerInfo: pInfo });
+    socket.emit('room-created', { code, color: 'w', roomToken: rooms.get(code).tokens.w, playerInfo: pInfo });
 
     await Room.findOneAndUpdate(
       { roomCode: code },
@@ -906,9 +1005,13 @@ io.on('connection', (socket) => {
   });
 
   // ── Unirse a sala ─────────────────────────────────────────────
-  socket.on('join-room', async ({ code, playerName = 'Jugador 2', country = 'DO' }) => {
+  socket.on('join-room', async (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.joinRoom, payload);
+    if (!data) return;
+    if (!(await consumeSocketLimit('joinRoom'))) return;
+    const { code, playerName = 'Jugador 2', country = 'DO' } = data;
     if (!requireSocketAuth()) return;
-    const cleanCode = (code || '').toUpperCase().trim();
+    const cleanCode = code;
     const room      = rooms.get(cleanCode);
 
     if (!room)                    { socket.emit('room-error', 'Sala no encontrada.'); return; }
@@ -924,6 +1027,8 @@ io.on('connection', (socket) => {
     room.black        = socket.id;
     room.playerInfo.b = pInfo;
     room.status       = 'playing';
+    room.tokens = room.tokens || { w: null, b: null };
+    room.tokens.b = createRoomToken();
 
     const wInfo = room.playerInfo.w;
     const match = await Match.create({
@@ -949,27 +1054,35 @@ io.on('connection', (socket) => {
     if (onlinePlayers.has(room.white)) onlinePlayers.get(room.white).inGame = true;
     broadcastOnlinePlayers();
 
-    socket.emit('room-joined', { code: cleanCode, color: 'b', playerInfo: pInfo });
-    io.to(room.white).emit('game-start', { code: cleanCode, color: 'w', playerInfo: { w: wInfo, b: pInfo }, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
-    socket.emit('game-start',            { code: cleanCode, color: 'b', playerInfo: { w: wInfo, b: pInfo }, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
+    socket.emit('room-joined', { code: cleanCode, color: 'b', roomToken: room.tokens.b, playerInfo: pInfo });
+    io.to(room.white).emit('game-start', { code: cleanCode, color: 'w', roomToken: room.tokens.w, playerInfo: { w: wInfo, b: pInfo }, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
+    socket.emit('game-start',            { code: cleanCode, color: 'b', roomToken: room.tokens.b, playerInfo: { w: wInfo, b: pInfo }, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
     startClock(cleanCode);
 
     console.log(`[R] Sala ${cleanCode} — ${wInfo.name} vs ${pInfo.name}`);
   });
 
   // ── Reconexión ────────────────────────────────────────────────
-  socket.on('rejoin', async ({ roomCode, color, playerName }) => {
+  socket.on('rejoin', async (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.rejoin, payload, 'rejoin-failed');
+    if (!data) return;
     if (!requireSocketAuth()) return;
+    const { roomCode, color, token } = data;
     const room = await getOrRestoreRoom(roomCode);
-    if (!room) { socket.emit('rejoin-failed', 'La sala ya no existe.'); return; }
-    const cleanRoomCode = roomCode.toUpperCase().trim();
-    const requestedColor = color === 'white' ? COLOR.WHITE : color === 'black' ? COLOR.BLACK : color;
-    let assignedColor = requestedColor;
-    if (!canUseRoomColor(room, assignedColor, socket.data.userId)) {
-      assignedColor = [COLOR.WHITE, COLOR.BLACK].find((candidate) => canUseRoomColor(room, candidate, socket.data.userId));
+    const rejoinFailed = (reason) => {
+      console.warn(`[SECURITY] Rejoin rejected socket=${socket.id} user=${socket.data.userId || 'anon'} room=${roomCode} reason=${reason}`);
+      socket.emit('rejoin-failed', 'No se pudo restaurar la partida.');
+    };
+    if (!room) { rejoinFailed('room_unavailable'); return; }
+    const cleanRoomCode = roomCode;
+    const requestedColor = color;
+    if (!room.tokens?.[requestedColor] || room.tokens[requestedColor] !== token) {
+      rejoinFailed('bad_room_token');
+      return;
     }
-    if (!assignedColor) {
-      socket.emit('rejoin-failed', 'Esta cuenta no corresponde a ese color en la sala.');
+    const assignedColor = requestedColor;
+    if (!canUseRoomColor(room, assignedColor, socket.data.userId)) {
+      rejoinFailed('wrong_account');
       return;
     }
 
@@ -977,7 +1090,7 @@ io.on('connection', (socket) => {
     socket.join(cleanRoomCode);
     socket.data.roomCode   = cleanRoomCode;
     socket.data.color      = assignedColor;
-    socket.data.playerName = playerName || '';
+    socket.data.playerName = socket.data.user?.username || '';
 
     if (assignedColor === 'w') room.white = socket.id;
     else                       room.black = socket.id;
@@ -996,6 +1109,7 @@ io.on('connection', (socket) => {
       currentTurn: room.game?.turn || room.currentTurn,
       clockW: room.clockW || DEFAULT_TIME_MS,
       clockB: room.clockB || DEFAULT_TIME_MS,
+      roomToken: room.tokens[assignedColor],
       game: createGameSnapshot(room.game),
     });
     socket.to(cleanRoomCode).emit('opponent-reconnected', { playerName: socket.data.playerName });
@@ -1007,9 +1121,12 @@ if (room.white && room.black && !room.clockInterval) {
   });
 
   // ── Movida ────────────────────────────────────────────────────
-  socket.on('player-move', async ({ room: code, from, to, promotion }) => {
+  socket.on('player-move', async (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.playerMove, payload, 'move-rejected');
+    if (!data) return;
+    if (!(await consumeSocketLimit('playerMove', 'move-rejected'))) return;
+    const { room: code, from, to, promotion } = data;
     if (!requireSocketAuth()) return;
-    if (!code || !from || !to) return;
     const room = rooms.get(code);
     if (!room) { socket.emit('move-rejected', { message: 'La sala ya no existe.' }); return; }
 
@@ -1071,8 +1188,10 @@ if (room.white && room.black && !room.clockInterval) {
   });
 
   // ── Chat ──────────────────────────────────────────────────────
-  socket.on('chat-message', ({ room: code, message }) => {
-    if (!code || !message) return;
+  socket.on('chat-message', (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.chat, payload);
+    if (!data) return;
+    const { room: code, message } = data;
     const room = rooms.get(code);
     if (!isAuthorizedRoomSocket(room, socket, code)) return;
     const clean = String(message).trim().slice(0, 200);
@@ -1086,7 +1205,10 @@ if (room.white && room.black && !room.clockInterval) {
   });
 
   // ── Abandonar ─────────────────────────────────────────────────
-  socket.on('player-resign', async ({ room: code, pgn = '' } = {}) => {
+  socket.on('player-resign', async (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.resign, payload);
+    if (!data) return;
+    const { room: code, pgn = '' } = data;
     const room   = rooms.get(code);
     if (!isAuthorizedRoomSocket(room, socket, code) || room.status !== 'playing') return;
     stopClock(room);
@@ -1104,7 +1226,10 @@ if (room.white && room.black && !room.clockInterval) {
   });
 
   // ── Partida finalizada ────────────────────────────────────────
-  socket.on('game-finished', async ({ room: code, result, winner = null, pgn = '' } = {}) => {
+  socket.on('game-finished', async (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.gameFinished, payload);
+    if (!data) return;
+    const { room: code, result, winner = null, pgn = '' } = data;
     const room = rooms.get(code);
     if (!room || !room.matchId) return;
     if (!isAuthorizedRoomSocket(room, socket, code) || room.status !== 'playing') return;
@@ -1129,14 +1254,20 @@ if (room.white && room.black && !room.clockInterval) {
   });
 
   // ── Revancha ──────────────────────────────────────────────────
-  socket.on('rematch-request', ({ room: code }) => {
+  socket.on('rematch-request', (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.roomOnly, payload);
+    if (!data) return;
+    const { room: code } = data;
     const room = rooms.get(code);
     if (!isAuthorizedRoomSocket(room, socket, code) || room.status !== 'finished') return;
     room.rematchReady.add(socket.id);
     socket.to(code).emit('rematch-requested', { playerName: socket.data.playerName });
   });
 
-  socket.on('rematch-accept', async ({ room: code }) => {
+  socket.on('rematch-accept', async (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.roomOnly, payload);
+    if (!data) return;
+    const { room: code } = data;
     const room = rooms.get(code);
     if (!isAuthorizedRoomSocket(room, socket, code) || room.status !== 'finished') return;
     room.rematchReady.add(socket.id);
@@ -1149,6 +1280,7 @@ if (room.white && room.black && !room.clockInterval) {
       room.game = createGameState();
       room.clockW = DEFAULT_TIME_MS;
       room.clockB = DEFAULT_TIME_MS;
+      room.tokens = { w: createRoomToken(), b: createRoomToken() };
       const wInfo = room.playerInfo.w;
       const bInfo = room.playerInfo.b;
       const match = await Match.create({
@@ -1166,20 +1298,27 @@ if (room.white && room.black && !room.clockInterval) {
         status: 'playing',
         lastActivityAt: new Date(),
       }}).catch(() => {});
-      io.to(code).emit('rematch-start', { clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
+      if (room.white) io.to(room.white).emit('rematch-start', { roomToken: room.tokens.w, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
+      if (room.black) io.to(room.black).emit('rematch-start', { roomToken: room.tokens.b, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
       startClock(code);
       console.log(`[R] Revancha en sala ${code}`);
     }
   });
 
-  socket.on('rematch-decline', ({ room: code }) => {
+  socket.on('rematch-decline', (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.roomOnly, payload);
+    if (!data) return;
+    const { room: code } = data;
     const room = rooms.get(code);
     if (!isAuthorizedRoomSocket(room, socket, code)) return;
     room.rematchReady = new Set();
     socket.to(code).emit('rematch-declined');
   });
 
-  socket.on('draw-offer', ({ room: code }) => {
+  socket.on('draw-offer', (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.roomOnly, payload);
+    if (!data) return;
+    const { room: code } = data;
     const room = rooms.get(code);
     if (!room || room.status !== 'playing') return;
     if (!isAuthorizedRoomSocket(room, socket, code)) return;
@@ -1187,7 +1326,10 @@ if (room.white && room.black && !room.clockInterval) {
     socket.to(code).emit('draw-offered', { playerName: socket.data.playerName });
   });
 
-  socket.on('draw-decline', ({ room: code }) => {
+  socket.on('draw-decline', (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.roomOnly, payload);
+    if (!data) return;
+    const { room: code } = data;
     const room = rooms.get(code);
     if (!isAuthorizedRoomSocket(room, socket, code)) return;
     if (!room.drawOfferBy || room.drawOfferBy === socket.id) return;
@@ -1195,7 +1337,10 @@ if (room.white && room.black && !room.clockInterval) {
     socket.to(code).emit('draw-declined', { playerName: socket.data.playerName });
   });
 
-  socket.on('draw-accept', async ({ room: code }) => {
+  socket.on('draw-accept', async (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.roomOnly, payload);
+    if (!data) return;
+    const { room: code } = data;
     const room = rooms.get(code);
     if (!room || room.status !== 'playing' || !room.drawOfferBy) return;
     if (!isAuthorizedRoomSocket(room, socket, code)) return;
@@ -1210,7 +1355,10 @@ if (room.white && room.black && !room.clockInterval) {
     console.log(`[G] Partida ${code} finalizada: draw por acuerdo`);
   });
 
-  socket.on('player-online', async ({ username, elo = 1200, country = 'DO' } = {}) => {
+  socket.on('player-online', async (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.playerOnline, payload);
+    if (!data) return;
+    const { username, elo = 1200, country = 'DO' } = data;
     if (!requireSocketAuth()) return;
     const info = await getPlayerInfo(username, country);
     onlinePlayers.set(socket.id, {
@@ -1225,12 +1373,11 @@ if (room.white && room.black && !room.clockInterval) {
   });
 
   // ── Buscar usuario online ─────────────────────────────────────
-  socket.on('search-user', async ({ username }) => {
+  socket.on('search-user', async (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.searchUser, payload, 'search-user-result');
+    if (!data) return;
+    const { username } = data;
     if (!requireSocketAuth()) return;
-    if (!username || username.trim().length < 2) {
-      socket.emit('search-user-result', { error: 'Ingresa al menos 2 caracteres.' });
-      return;
-    }
     try {
       const user = await User.findOne({
         username: { $regex: username.trim(), $options: 'i' }
@@ -1255,7 +1402,11 @@ if (room.white && room.black && !room.clockInterval) {
   });
 
   // ── Enviar desafío ────────────────────────────────────────────
-  socket.on('challenge-send', async ({ targetUsername }) => {
+  socket.on('challenge-send', async (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.challengeSend, payload, 'challenge-error');
+    if (!data) return;
+    if (!(await consumeSocketLimit('challengeSend', 'challenge-error'))) return;
+    const { targetUsername } = data;
     if (!requireSocketAuth('Debes iniciar sesión para desafiar.')) return;
     const cleanTarget = String(targetUsername || '').trim().toLowerCase();
     if (!/^[a-z0-9_]{3,20}$/.test(cleanTarget)) {
@@ -1304,7 +1455,10 @@ if (room.white && room.black && !room.clockInterval) {
   });
 
   // ── Aceptar desafío ───────────────────────────────────────────
-  socket.on('challenge-accept', async ({ challengerSocketId }) => {
+  socket.on('challenge-accept', async (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.challengeSocket, payload, 'challenge-error');
+    if (!data) return;
+    const { challengerSocketId } = data;
     if (!requireSocketAuth()) return;
     const pending = pendingChallenges.get(socket.id);
     if (!pending?.has(challengerSocketId)) {
@@ -1345,7 +1499,10 @@ if (room.white && room.black && !room.clockInterval) {
   });
 
   // ── Rechazar desafío ──────────────────────────────────────────
-  socket.on('challenge-decline', ({ challengerSocketId }) => {
+  socket.on('challenge-decline', (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.challengeSocket, payload, 'challenge-error');
+    if (!data) return;
+    const { challengerSocketId } = data;
     const pending = pendingChallenges.get(socket.id);
     if (!pending?.has(challengerSocketId)) return;
     pending.delete(challengerSocketId);

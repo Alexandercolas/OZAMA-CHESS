@@ -34,7 +34,7 @@
   <script src="/pwa.js" defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -82,8 +82,13 @@
       --red: #7A2F24;
       --blue: #1A3155;
       --line: rgba(200, 152, 60, 0.22);
-      --title: 'Cinzel', Georgia, serif;
+      --title: 'Cormorant Garamond', Georgia, serif;
       --body: 'Inter', Arial, sans-serif;
+      --mono: 'IBM Plex Mono', monospace;
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      --dur-fast: 0.18s;
+      --dur-base: 0.3s;
+      --dur-slow: 0.6s;
     }
 
     html { scroll-behavior: smooth; }
@@ -226,8 +231,16 @@
       font: 800 11px/1 var(--body);
       letter-spacing: 2.4px;
       text-transform: uppercase;
-      transition: transform 220ms ease, box-shadow 240ms ease, border-color 240ms ease, background 240ms ease;
+      transition:
+        transform var(--dur-fast) var(--ease-out),
+        box-shadow var(--dur-base) var(--ease-out),
+        border-color var(--dur-base) var(--ease-out),
+        background var(--dur-base) var(--ease-out),
+        color var(--dur-base) var(--ease-out),
+        text-shadow var(--dur-base) var(--ease-out);
       cursor: pointer;
+      position: relative;
+      overflow: hidden;
     }
 
     .nav-cta,
@@ -242,6 +255,18 @@
         0 8px 26px rgba(0,0,0,0.34);
     }
 
+    .nav-cta::before,
+    .btn-primary::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      left: -105%;
+      width: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.14), transparent);
+      transition: left 420ms var(--ease-out);
+      pointer-events: none;
+    }
+
     .btn-secondary {
       color: var(--gold-2);
       background: rgba(8,7,5,0.42);
@@ -249,11 +274,21 @@
     }
 
     .nav-cta:hover,
-    .btn-primary:hover,
-    .btn-secondary:hover {
+    .btn-primary:hover {
       transform: translateY(-2px);
       border-color: rgba(226,185,96,0.86);
       box-shadow: 0 0 0 1px rgba(200,152,60,0.18), 0 12px 34px rgba(200,152,60,0.22);
+    }
+
+    .nav-cta:hover::before,
+    .btn-primary:hover::before { left: 105%; }
+
+    .btn-secondary:hover {
+      transform: translateY(-2px);
+      color: var(--gold-2);
+      border-color: var(--gold-2);
+      text-shadow: 0 0 16px rgba(200,152,60,0.28);
+      box-shadow: 0 0 0 1px rgba(200,152,60,0.14), 0 10px 26px rgba(0,0,0,0.30);
     }
 
     .hero {
@@ -266,6 +301,7 @@
       gap: clamp(20px, 4vw, 56px);
       padding: 118px clamp(22px, 5vw, 76px) 36px;
       overflow: hidden;
+      isolation: isolate;
       border-bottom: 1px solid rgba(200,152,60,0.16);
       background:
         linear-gradient(90deg, rgba(5,4,3,0.97), rgba(5,4,3,0.84) 40%, rgba(5,4,3,0.34) 68%, rgba(5,4,3,0.70)),
@@ -273,11 +309,32 @@
         url('/assets/brand/ozama-hero-brutal.jpg') center center / cover no-repeat;
     }
 
+    .hero-watermark {
+      position: absolute;
+      right: clamp(-460px, -26vw, -260px);
+      top: 58%;
+      max-width: min(72vw, 980px);
+      transform: translateY(-50%) rotate(-3deg);
+      font-family: var(--title);
+      font-weight: 700;
+      font-size: clamp(54px, 10vw, 168px);
+      line-height: 0.78;
+      color: var(--gold-2);
+      opacity: 0.055;
+      letter-spacing: 0.16em;
+      pointer-events: none;
+      z-index: 0;
+      text-align: right;
+      text-transform: uppercase;
+      mix-blend-mode: lighten;
+    }
+
     .hero::before {
       content: "";
       position: absolute;
       inset: 0;
-      z-index: -1;
+      z-index: 0;
+      pointer-events: none;
       background:
         radial-gradient(ellipse at 26% 42%, rgba(200,152,60,0.12), transparent 28rem),
         radial-gradient(ellipse at 76% 44%, rgba(200,152,60,0.10), transparent 24rem),
@@ -334,6 +391,8 @@
         0 2px 0 rgba(0,0,0,0.8),
         0 0 44px rgba(200,152,60,0.25);
     }
+
+    .hero h1 span { display: block; }
 
     .hero-subtitle {
       margin-top: 22px;
@@ -437,6 +496,58 @@
       color: rgba(238,229,213,0.55);
       font-size: 12px;
       line-height: 1.55;
+    }
+
+    .oz-enter {
+      opacity: 0;
+      transform: translateY(14px);
+      animation: ozEnter var(--dur-slow) var(--ease-out) forwards;
+      animation-delay: calc(var(--d, 0) * 70ms);
+      will-change: opacity, transform;
+    }
+
+    .oz-enter-split {
+      opacity: 0;
+      transform: translateY(18px);
+      animation: ozEnter var(--dur-slow) var(--ease-out) forwards;
+      animation-delay: calc(var(--d, 0) * 70ms);
+      will-change: opacity, transform;
+    }
+
+    .hero-actions .oz-enter {
+      animation-delay: calc((var(--d, 0) * 70ms) + (var(--s, 0) * 70ms));
+    }
+
+    .scroll-reveal {
+      opacity: 0;
+      transform: translateY(18px);
+      transition:
+        opacity var(--dur-slow) var(--ease-out),
+        transform var(--dur-slow) var(--ease-out);
+      will-change: opacity, transform;
+    }
+
+    .scroll-reveal.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @keyframes ozEnter {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .oz-enter,
+      .oz-enter-split,
+      .scroll-reveal {
+        opacity: 1;
+        transform: none;
+        animation: none;
+        transition: none;
+      }
     }
 
     .section {
@@ -1081,6 +1192,9 @@
       .hero {
         background-position: 62% center;
       }
+      .hero-watermark {
+        display: none;
+      }
       .hero-feature-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .hero-feature:nth-child(2) { border-right: none; }
       .hero-feature:nth-child(-n+2) { border-bottom: 1px solid rgba(200,152,60,0.16); }
@@ -1107,6 +1221,9 @@
           linear-gradient(90deg, rgba(5,4,3,0.96), rgba(5,4,3,0.74) 56%, rgba(5,4,3,0.56)),
           linear-gradient(180deg, rgba(5,4,3,0.30), rgba(5,4,3,0.82)),
           url('/assets/brand/ozama-hero-brutal.jpg') 62% -120px / auto calc(100% + 170px) no-repeat;
+      }
+      .hero-watermark {
+        display: none;
       }
       .hero h1 { font-size: clamp(48px, 17vw, 76px); }
       .feature-story,
@@ -1148,7 +1265,7 @@
 <body>
   <div class="shell">
     <nav class="nav" aria-label="Principal">
-      <a class="brand" href="/" aria-label="OZAMA CHESS inicio">
+      <a class="brand oz-enter" href="/" aria-label="OZAMA CHESS inicio" style="--d:0">
         <img class="brand-mark" src="/favicon.png?v=6" alt="">
         <span>
           <span class="brand-title">OZAMA<br>CHESS</span>
@@ -1160,33 +1277,37 @@
         <a href="/leaderboard.html">Ranking</a>
         <a href="#como">Cómo jugar</a>
         <a href="/login.html" id="nav-profile" hidden>Perfil</a>
-        <a class="nav-cta" href="/login.html" id="nav-cta">Jugar ahora</a>
+        <a class="nav-cta oz-enter" href="/login.html" id="nav-cta" style="--d:0">Jugar ahora</a>
       </div>
     </nav>
 
     <main>
       <section class="hero">
+        <div class="hero-watermark" aria-hidden="true">Dominican Heritage Edition</div>
         <div class="hero-copy">
-          <div class="kicker">Edicion Dominicana</div>
-          <h1>OZAMA<br>CHESS</h1>
-          <p class="hero-subtitle">Ajedrez online en tiempo real</p>
-          <p class="hero-text">
+          <div class="kicker oz-enter" style="--d:1">Edicion Dominicana</div>
+          <h1>
+            <span class="oz-enter" style="--d:2;display:block">OZAMA</span>
+            <span class="oz-enter" style="--d:2.35;display:block">CHESS</span>
+          </h1>
+          <p class="hero-subtitle oz-enter" style="--d:3">Ajedrez online en tiempo real</p>
+          <p class="hero-text oz-enter" style="--d:4">
             Entra a una sala, reta a un rival y juega con reloj, chat, ELO y partidas guardadas.
             Una plataforma de ajedrez con energia dominicana: estrategia pura, duelo rapido y una identidad visual sobria.
           </p>
           <div class="hero-actions">
-            <a class="btn-primary" href="/login.html" id="cta-play">Jugar ahora</a>
-            <a class="btn-secondary" href="/login.html" id="cta-bot">VS OZAMA BOT</a>
-            <a class="btn-secondary" href="/login.html" id="cta-register">Crear cuenta</a>
+            <a class="btn-primary oz-enter" href="/login.html" id="cta-play" style="--d:5;--s:0">Jugar ahora</a>
+            <a class="btn-secondary oz-enter" href="/login.html" id="cta-bot" style="--d:5;--s:1">VS OZAMA BOT</a>
+            <a class="btn-secondary oz-enter" href="/login.html" id="cta-register" style="--d:5;--s:2">Crear cuenta</a>
           </div>
-          <div class="hero-meta" aria-label="Funciones principales">
+          <div class="hero-meta oz-enter" aria-label="Funciones principales" style="--d:6">
             <span>Partidas en tiempo real</span>
             <span>Ranking competitivo</span>
             <span>Salas por codigo</span>
           </div>
         </div>
 
-        <div class="hero-feature-strip" aria-label="Funciones destacadas">
+        <div class="hero-feature-strip scroll-reveal" aria-label="Funciones destacadas">
           <div class="hero-feature">
             <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M26 2 9 27h12l-3 19 21-29H26V2Zm-5 21h-5l7-10v8h7l-8 11 1-9h-2Z"/></svg>
             <strong>Juego rápido</strong>
@@ -1384,6 +1505,31 @@
   </div>
 
   <script>
+    // Entrance trigger and one-shot scroll reveal.
+    (function(){
+      try {
+        document.addEventListener('DOMContentLoaded', () => {
+          document.body.classList.add('is-loaded');
+
+          const revealTargets = document.querySelectorAll('.scroll-reveal');
+          if (!('IntersectionObserver' in window)) {
+            revealTargets.forEach(el => el.classList.add('is-visible'));
+            return;
+          }
+
+          const io = new IntersectionObserver((entries, obs) => {
+            entries.forEach(e => {
+              if (e.isIntersecting) {
+                e.target.classList.add('is-visible');
+                obs.unobserve(e.target);
+              }
+            });
+          }, { threshold: 0.12 });
+          revealTargets.forEach(el => io.observe(el));
+        });
+      } catch (e) { /* fail silently */ }
+    })();
+
     const storedUser = (() => {
       try { return JSON.parse(localStorage.getItem('ozama-user') || 'null'); }
       catch (_) { return null; }
