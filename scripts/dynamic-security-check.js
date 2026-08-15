@@ -6,21 +6,13 @@ const { spawn } = require('node:child_process');
 const { once } = require('node:events');
 const mongoose = require('mongoose');
 const { io } = require('socket.io-client');
+const { createIsolatedMongoEnv } = require('./test-db-guard');
 
 const port = Number(process.env.OZAMA_DYNAMIC_TEST_PORT || 3137);
 const baseUrl = `http://127.0.0.1:${port}`;
-const testDbName = `ozama_dynamic_security_${Date.now()}`;
-
-function testMongoUri() {
-  const uri = process.env.MONGODB_URI || '';
-  if (!uri) throw new Error('MONGODB_URI is required for dynamic verification.');
-  if (!/^mongodb(\+srv)?:\/\//i.test(uri)) throw new Error('MONGODB_URI must be a real MongoDB URI.');
-  const [withoutQuery, query = ''] = uri.split('?');
-  const trimmed = withoutQuery.replace(/\/[^/@]*$/, '');
-  return `${trimmed}/${testDbName}${query ? `?${query}` : ''}`;
-}
-
-const mongoUri = testMongoUri();
+const isolatedMongo = createIsolatedMongoEnv({ prefix: 'ozama_dynamic_security' });
+const mongoUri = isolatedMongo.uri;
+const testDbName = isolatedMongo.dbName;
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -118,7 +110,7 @@ async function main() {
     env: {
       ...process.env,
       PORT: String(port),
-      MONGODB_URI: mongoUri,
+      ...isolatedMongo.env,
       JWT_SECRET: process.env.JWT_SECRET || 'dynamic-security-test-secret-at-least-32-chars',
       APP_ORIGINS: `${baseUrl},http://localhost:${port}`,
       NODE_ENV: 'test',
@@ -244,7 +236,7 @@ async function main() {
     for (const socket of sockets) socket.disconnect();
     proc.kill();
     await wait(500);
-    await mongoose.connect(mongoUri);
+    await mongoose.connect(mongoUri, { dbName: testDbName });
     await mongoose.connection.dropDatabase();
     await mongoose.disconnect();
     console.log(`DYNAMIC_DB_DROPPED=${testDbName}`);

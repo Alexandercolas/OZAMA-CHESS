@@ -35,6 +35,16 @@ function premiumCapabilities(user) {
   };
 }
 
+function publicLeaderboardFilter() {
+  return {
+    isActive: true,
+    username: {
+      $nin: ['imgsrconeerror'],
+      $not: /^sec[A-D]_\d{8}$/i,
+    },
+  };
+}
+
 // GET /api/user/me - own profile
 router.get('/me', requireAuth, async (req, res) => {
   res.set('Cache-Control', 'no-store');
@@ -124,7 +134,7 @@ router.get('/history', requireAuth, async (req, res) => {
 router.get('/leaderboard', async (req, res) => {
   try {
     res.set('Cache-Control', 'no-store');
-    const players = await User.find({ isActive: true })
+    const players = await User.find(publicLeaderboardFilter())
       .sort({ elo: -1 })
       .limit(20)
       .select('username country avatar avatarImage elo stats plan');

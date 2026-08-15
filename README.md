@@ -49,6 +49,7 @@ Crea `.env` local usando `.env.example` como base:
 
 ```text
 MONGODB_URI=
+MONGODB_DB_NAME=ozama-chess
 JWT_SECRET=
 ADMIN_EMAILS=
 APP_ORIGINS=https://ozama-chess.onrender.com
@@ -58,9 +59,18 @@ PORT=3000
 Notas:
 
 - `.env` no se sube a GitHub.
+- `MONGODB_DB_NAME` debe ser `ozama-chess` en produccion. Los scripts de prueba deben usar siempre una base temporal con prefijo `ozama_dynamic_`, `ozama_test_`, `ozama_security_` u `ozama_tmp_`.
 - `ADMIN_EMAILS` acepta uno o varios correos separados por coma.
 - `APP_ORIGINS` permite agregar origenes nativos o dominios propios, separados por coma.
 - En Render, estas variables deben vivir en el panel de Environment.
+
+## Regla De Pruebas Dinamicas
+
+Toda prueba dinamica o de seguridad que escriba en MongoDB debe correr contra una base aislada y temporal, nunca contra `ozama-chess`. Los scripts de prueba deben usar `scripts/test-db-guard.js`; ese guard aborta antes de arrancar si detecta `MONGODB_DB_NAME=ozama-chess` o cualquier nombre que no parezca temporal.
+
+## Ranking Publico
+
+`/leaderboard.html` es una vitrina publica y finita: el backend devuelve solo el Top 20. La API publica no expone email, ultimo acceso, amigos ni IDs internos en la seleccion de campos. Las cuentas de prueba conocidas o generadas por scripts (`sec[A-D]_########`) quedan excluidas del ranking aunque existan temporalmente en la base.
 
 ## Comandos
 

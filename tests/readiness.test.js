@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
+const { assertSafeTestDatabase, createIsolatedMongoEnv } = require('../scripts/test-db-guard');
 
 const root = path.resolve(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
@@ -111,9 +112,39 @@ test('repository ignores local secrets and documents production variables', () =
   assert.match(read('.gitignore'), /^\.env$/m);
   const example = read('.env.example');
   assert.match(example, /^MONGODB_URI=$/m);
+  assert.match(example, /^MONGODB_DB_NAME=ozama-chess$/m);
   assert.match(example, /^JWT_SECRET=/m);
   assert.match(example, /^ADMIN_EMAILS=$/m);
   assert.doesNotMatch(example, /mongodb\+srv:\/\//i);
+});
+
+test('dynamic test scripts cannot target the production MongoDB database', () => {
+  assert.throws(
+    () => assertSafeTestDatabase({ uri: 'mongodb://localhost/ozama-chess', dbName: 'ozama-chess' }),
+    /Refusing to run test script against production database/,
+  );
+  assert.throws(
+    () => assertSafeTestDatabase({ uri: 'mongodb://localhost/dev-scratch', dbName: 'dev-scratch' }),
+    /Refusing to run test script against non-temporary database/,
+  );
+
+  const isolated = createIsolatedMongoEnv({
+    env: { MONGODB_URI: 'mongodb://localhost/ozama-chess' },
+    prefix: 'ozama_dynamic_security',
+  });
+  assert.match(isolated.dbName, /^ozama_dynamic_security_\d{8,}$/);
+  assert.equal(isolated.env.MONGODB_DB_NAME, isolated.dbName);
+});
+
+test('public leaderboard stays finite and excludes known test accounts', () => {
+  const route = read('routes/user.js');
+  assert.match(route, /function publicLeaderboardFilter\(\)/);
+  assert.match(route, /\$not: \/\^sec\[A-D\]_\\d\{8\}\$\/i/);
+  assert.match(route, /\$nin: \['imgsrconeerror'\]/);
+  assert.match(route, /\.limit\(20\)/);
+  assert.match(route, /\.select\('username country avatar avatarImage elo stats plan'\)/);
+  assert.doesNotMatch(route, /\.select\([^)]*email/);
+  assert.doesNotMatch(route, /\.select\([^)]*lastSeenAt/);
 });
 
 test('native runtime sends only API and socket traffic to production', () => {
