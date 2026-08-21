@@ -12,7 +12,9 @@ keystore.properties
 public/Untitled-1.css
 public/css/
 x/
-public/js/
+public/js/*
+!public/js/admin.js
+!public/js/admin-access.js
 
 # Windows
 desktop.ini

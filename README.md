@@ -115,12 +115,20 @@ http://localhost:3000/
 
 El panel admin esta protegido por JWT y por email autorizado en `ADMIN_EMAILS`.
 
-El admin inicial permite:
+El panel administrativo usa la misma cuenta de jugador, sin un segundo login. El acceso solo aparece cuando `/api/admin/verify` confirma que el correo activo esta incluido en `ADMIN_EMAILS`.
 
-- Ver estadisticas de plataforma
-- Crear y publicar eventos
-- Ver usuarios registrados
-- Marcar usuarios como premium
+Permite:
+
+- Ver usuarios registrados, jugadores Socket.IO, salas vivas y partidas guardadas
+- Buscar usuarios, suspender/reactivar cuentas y gestionar Premium
+- Revocar todas las sesiones de un usuario mediante `tokenVersion`
+- Inspeccionar salas en memoria y ejecutar un cierre de emergencia auditado
+- Revisar partidas finalizadas y su PGN
+- Crear torneos, eventos, anuncios y mantenimientos
+- Controlar estados de evento: borrador, activo, finalizado o cancelado
+- Revisar salud basica del servidor y acciones administrativas recientes
+
+La carcasa de `/admin.html` no contiene datos sensibles. Todas las lecturas y operaciones viven bajo `/api/admin/*`, requieren JWT vigente, cuenta activa, correo autorizado y limites de solicitudes.
 
 ## Deploy
 
@@ -188,6 +196,7 @@ Estos elementos se mantienen fuera de Git:
 - `node_modules/`
 - `.tools/` (JDK y Android SDK locales)
 - logs `*.log`, `*.err.log`, `*.out.log`
-- copias legacy locales `public/css/`, `public/js/`, `public/Untitled-1.css`
+- copias legacy locales `public/css/`, `public/Untitled-1.css` y cualquier archivo de
+  `public/js/` distinto de los modulos administrativos versionados
 
 La app activa usa los archivos directos de `public/`, especialmente `public/style.css` y `public/script.js`.

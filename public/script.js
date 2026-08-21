@@ -1257,6 +1257,19 @@ function setupOnlineSocket() {
     );
   });
 
+  socket.on('room-closed', ({ reason } = {}) => {
+    CLOCK.stop();
+    playSound('gameover');
+    state.status = STATUS.DRAW;
+    state.winner = null;
+    state.selected = null;
+    state.legalMoves = [];
+    updateStatusDisplay();
+    renderBoard();
+    clearOnlineSession();
+    showGameEnd('PARTIDA CERRADA', reason || 'La sala fue cerrada por administracion.', { online: true, canPlayAgain: false });
+  });
+
   socket.on('rematch-requested', ({ playerName } = {}) => {
     const sub = document.getElementById('rematch-sub');
     if (sub) sub.textContent = `${playerName || 'Tu rival'} quiere la revancha`;

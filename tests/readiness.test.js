@@ -91,6 +91,35 @@ test('JWT and password recovery remain hardened', () => {
   assert.match(auth, /limitReset/);
 });
 
+test('admin control plane is allowlisted, rate limited, and server-authorized', () => {
+  const middleware = read('middleware/auth.js');
+  const admin = read('routes/admin.js');
+  const server = read('server.js');
+  const panel = read('public/admin.html');
+  const panelScript = read('public/js/admin.js');
+  const accessScript = read('public/js/admin-access.js');
+
+  assert.match(middleware, /adminEmails\(\)\.includes/);
+  assert.match(middleware, /if \(!user\?\.isActive\) return false/);
+  assert.doesNotMatch(middleware, /if \(user\.isAdmin\) return true/);
+  assert.match(admin, /router\.use\(requireAdmin\)/);
+  assert.match(admin, /new RateLimiterMemory/);
+  assert.match(admin, /router\.get\(\['\/verify', '\/me'\]/);
+  assert.match(admin, /router\.patch\('\/users\/:id'/);
+  assert.match(admin, /router\.get\('\/rooms\/active'/);
+  assert.match(admin, /router\.delete\('\/rooms\/:code'/);
+  assert.match(admin, /router\.get\('\/matches'/);
+  assert.match(admin, /router\.get\('\/system'/);
+  assert.match(admin, /\.select\(publicUserFields\)/);
+  assert.doesNotMatch(admin.match(/const publicUserFields = ([^;]+)/)?.[1] || '', /password|recoveryCodeHash|tokenVersion|__v/);
+  assert.match(server, /app\.locals\.adminRuntime/);
+  assert.match(server, /roomSocket\.emit\('room-closed'/);
+  assert.match(panel, /<script src="\/js\/admin\.js" defer><\/script>/);
+  assert.doesNotMatch(panel, /ADMIN_EMAILS|localStorage\.getItem/);
+  assert.match(panelScript, /api\('\/api\/admin\/verify'\)/);
+  assert.match(accessScript, /fetch\('\/api\/admin\/verify'/);
+});
+
 test('Socket.IO gameplay events are bound to auth, validation, room tokens, and rate limits', () => {
   const server = read('server.js');
   const lobby = read('public/lobby.html');

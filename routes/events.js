@@ -7,7 +7,7 @@ const router = express.Router();
 
 router.get('/', async (_req, res) => {
   try {
-    const events = await Event.find({ status: 'published' })
+    const events = await Event.find({ status: { $in: ['published', 'active'] } })
       .sort({ startsAt: 1, createdAt: -1 })
       .limit(20)
       .select('title type description startsAt endsAt maxPlayers createdAt')

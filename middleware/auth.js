@@ -11,9 +11,8 @@ function adminEmails() {
 }
 
 function userIsAdmin(user) {
-  if (!user) return false;
-  if (user.isAdmin) return true;
-  return adminEmails().includes(String(user.email || '').toLowerCase());
+  if (!user?.isActive) return false;
+  return adminEmails().includes(String(user.email || '').trim().toLowerCase());
 }
 
 // Required auth middleware

@@ -17,7 +17,7 @@ const EventSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['draft', 'published', 'closed'],
+      enum: ['draft', 'active', 'finished', 'cancelled', 'published', 'closed'],
       default: 'draft',
     },
     description: {
@@ -39,6 +39,7 @@ const EventSchema = new mongoose.Schema(
       ref: 'User',
       default: null,
     },
+    participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   },
   { timestamps: true }
 );

@@ -290,6 +290,98 @@ function broadcastOnlinePlayers() {
   io.emit('players-online', [...onlinePlayers.values()]);
 }
 
+function adminRoomSnapshot(code, room) {
+  const connected = io.sockets.adapter.rooms.get(code)?.size || 0;
+  const player = (info, socketId) => info ? {
+    name: info.name || 'Jugador',
+    country: info.country || 'DO',
+    elo: Number(info.elo || 1200),
+    connected: !!socketId,
+  } : null;
+  return {
+    code,
+    status: room.status || 'waiting',
+    turn: room.game?.turn || room.currentTurn || 'w',
+    clockW: Number(room.clockW || 0),
+    clockB: Number(room.clockB || 0),
+    connected,
+    matchId: room.matchId ? String(room.matchId) : null,
+    white: player(room.playerInfo?.w, room.white),
+    black: player(room.playerInfo?.b, room.black),
+  };
+}
+
+function adminRuntimeSnapshot() {
+  const activeRooms = [...rooms.values()].filter((room) => ['waiting', 'playing'].includes(room.status)).length;
+  const authenticatedUsers = new Set(
+    [...io.sockets.sockets.values()]
+      .map((socket) => socket.data.userId && String(socket.data.userId))
+      .filter(Boolean)
+  );
+  return {
+    socketConnections: io.sockets.sockets.size,
+    onlineUsers: authenticatedUsers.size,
+    activeRooms,
+    waitingPlayers: matchQueue.length,
+  };
+}
+
+function adminActiveRooms() {
+  return [...rooms.entries()]
+    .filter(([, room]) => ['waiting', 'playing'].includes(room.status))
+    .map(([code, room]) => adminRoomSnapshot(code, room))
+    .sort((a, b) => a.code.localeCompare(b.code));
+}
+
+async function adminCloseRoom(code, reason) {
+  const room = rooms.get(code);
+  if (!room) return null;
+  const snapshot = adminRoomSnapshot(code, room);
+
+  cancelTimer(room);
+  stopClock(room);
+  room.status = 'closed';
+  if (room.matchId) await finishMatch(room.matchId, 'abandoned', null);
+  await Room.updateOne({ roomCode: code }, {
+    $set: { status: 'closed', lastActivityAt: new Date() },
+  }).catch((err) => console.warn('[Admin] No se pudo cerrar Room:', err.message));
+
+  const socketIds = [...(io.sockets.adapter.rooms.get(code) || [])];
+  for (const socketId of socketIds) {
+    const roomSocket = io.sockets.sockets.get(socketId);
+    if (!roomSocket) continue;
+    roomSocket.emit('room-closed', { reason });
+    roomSocket.leave(code);
+    roomSocket.data.roomCode = null;
+    roomSocket.data.color = null;
+    const online = onlinePlayers.get(socketId);
+    if (online) online.inGame = false;
+  }
+
+  rooms.delete(code);
+  broadcastOnlinePlayers();
+  console.warn(`[Admin] Sala ${code} cerrada manualmente`);
+  return snapshot;
+}
+
+function adminDisconnectUser(userId) {
+  let disconnected = 0;
+  for (const socket of io.sockets.sockets.values()) {
+    if (!sameId(socket.data.userId, userId)) continue;
+    socket.emit('auth-error', 'Tu sesion fue cerrada por administracion.');
+    socket.disconnect(true);
+    disconnected += 1;
+  }
+  return disconnected;
+}
+
+app.locals.adminRuntime = {
+  snapshot: adminRuntimeSnapshot,
+  rooms: adminActiveRooms,
+  closeRoom: adminCloseRoom,
+  disconnectUser: adminDisconnectUser,
+};
+
 const PIECE = { PAWN: 'p', KNIGHT: 'n', BISHOP: 'b', ROOK: 'r', QUEEN: 'q', KING: 'k' };
 const COLOR = { WHITE: 'w', BLACK: 'b' };
 const PROMOTION_PIECES = new Set([PIECE.QUEEN, PIECE.ROOK, PIECE.BISHOP, PIECE.KNIGHT]);

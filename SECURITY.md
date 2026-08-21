@@ -32,9 +32,17 @@ Este documento resume las reglas minimas de seguridad para operar OZAMA CHESS co
 
 ## Admin
 
-- El panel admin requiere JWT y email autorizado.
+- El panel admin usa la cuenta normal del propietario; no existe un segundo login administrativo.
+- El permiso depende exclusivamente de `ADMIN_EMAILS`; el campo `isAdmin` de MongoDB no concede acceso por si solo.
+- Cada solicitud valida JWT, `tokenVersion`, cuenta activa y correo autorizado en el servidor.
+- `/api/admin/*` aplica limites por IP y por administrador autenticado.
 - Las operaciones admin validan IDs de MongoDB antes de consultar.
+- Las listas usan proyecciones positivas y nunca retornan password, recoveryCodeHash, tokenVersion o secretos de sala.
+- Suspender una cuenta o cerrar sus sesiones incrementa `tokenVersion` y desconecta sus sockets.
+- El administrador no puede suspenderse ni revocar su propia sesion desde el panel.
+- Los cierres de emergencia terminan la partida como abandonada y no adjudican ELO.
 - Eventos admin validan tipo, estado, fechas y limite de jugadores.
+- Las acciones administrativas se auditan en MongoDB y expiran automaticamente despues de 90 dias.
 - Premium no debe dar ventajas deportivas.
 
 ## Frontend

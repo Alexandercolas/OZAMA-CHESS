@@ -1,391 +1,553 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://flagcdn.com; media-src 'self'; connect-src 'self' https://ozama-chess.onrender.com wss://ozama-chess.onrender.com ws: wss:">
-  <script src="/mobile-runtime.js"></script>
-  <meta name="theme-color" content="#0D0B08"/>
-  <meta name="mobile-web-app-capable" content="yes"/>
-  <meta name="apple-mobile-web-app-capable" content="yes"/>
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <meta name="apple-mobile-web-app-title" content="OZAMA CHESS"/>
-  <meta name="robots" content="noindex, nofollow"/>
-  <title>OZAMA CHESS - Admin</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; media-src 'self'; connect-src 'self' https://ozama-chess.onrender.com wss://ozama-chess.onrender.com ws: wss:">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0D0B08">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>OZAMA CHESS - Administración</title>
   <link rel="icon" href="/favicon.ico" sizes="any">
-  <link rel="icon" type="image/png" href="/favicon.png?v=5">
-  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png?v=5">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=5">
   <link rel="manifest" href="/manifest.webmanifest">
-  <script src="/pwa.js" defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <script src="/mobile-runtime.js"></script>
+  <script src="/pwa.js" defer></script>
+  <script src="/js/admin.js" defer></script>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; }
     :root {
-      --black:#060504; --carbon:#0D0B08; --iron:#211D18; --warm:#EEE5D5;
-      --muted:rgba(238,229,213,.58); --faint:rgba(238,229,213,.34);
-      --gold:#C8983C; --gold2:#E2B960; --red:#C0392B; --line:rgba(200,152,60,.22);
-      --title:'Cinzel', Georgia, serif; --body:'Inter', Arial, sans-serif; --mono:'IBM Plex Mono', Consolas, monospace;
+      --black: #060504;
+      --carbon: #0D0B08;
+      --iron: #201C17;
+      --iron-2: #29231C;
+      --warm: #EEE5D5;
+      --muted: rgba(238, 229, 213, 0.62);
+      --faint: rgba(238, 229, 213, 0.36);
+      --gold: #C8983C;
+      --gold-2: #E2B960;
+      --green: #4DB276;
+      --red: #D45A4E;
+      --line: rgba(200, 152, 60, 0.22);
+      --line-soft: rgba(238, 229, 213, 0.09);
+      --title: "Cinzel", Georgia, serif;
+      --body: "Inter", Arial, sans-serif;
+      --mono: "IBM Plex Mono", Consolas, monospace;
     }
+    html { min-height: 100%; background: var(--black); }
     body {
-      min-height:100vh; color:var(--warm); font-family:var(--body);
+      min-width: 320px;
+      min-height: 100vh;
+      min-height: 100dvh;
+      margin: 0;
+      color: var(--warm);
       background:
-        radial-gradient(ellipse at 50% 0%, rgba(200,152,60,.10), transparent 34rem),
-        linear-gradient(180deg,#0B0906,#040302);
-      overflow-x:hidden;
+        linear-gradient(rgba(200, 152, 60, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(200, 152, 60, 0.025) 1px, transparent 1px),
+        var(--black);
+      background-size: 72px 72px;
+      font-family: var(--body);
+      overflow-x: hidden;
+      -webkit-tap-highlight-color: transparent;
     }
     body::before {
-      content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
-      background:
-        repeating-linear-gradient(90deg, rgba(200,152,60,.030) 0 1px, transparent 1px 88px),
-        repeating-linear-gradient(0deg, rgba(200,152,60,.022) 0 1px, transparent 1px 88px);
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background: linear-gradient(180deg, rgba(200, 152, 60, 0.08), transparent 260px);
     }
-    a { color:inherit; text-decoration:none; }
-    .topbar {
-      min-height:72px; display:flex; align-items:center; justify-content:space-between; gap:16px;
-      padding:0 clamp(18px,4vw,56px); border-bottom:1px solid var(--line);
-      background:rgba(6,5,4,.84); backdrop-filter:blur(12px);
-      min-width:0;
+    button, input, select, textarea { font: inherit; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    button { cursor: pointer; }
+    a { color: inherit; text-decoration: none; }
+    [hidden] { display: none !important; }
+
+    .admin-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      min-height: calc(72px + env(safe-area-inset-top, 0px));
+      padding: env(safe-area-inset-top, 0px) clamp(16px, 3vw, 42px) 0;
+      display: grid;
+      grid-template-columns: minmax(190px, 1fr) auto auto;
+      align-items: center;
+      gap: 20px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(6, 5, 4, 0.95);
+      backdrop-filter: blur(16px);
     }
-    .brand { font-family:var(--title); color:var(--gold2); font-weight:900; letter-spacing:2px; }
-    .nav { display:flex; flex-wrap:wrap; gap:18px; color:var(--muted); font-size:11px; font-weight:900; letter-spacing:1.6px; text-transform:uppercase; }
-    .nav a:hover { color:var(--gold2); }
-    .page { width:min(1180px, calc(100% - 36px)); margin:0 auto; padding:46px 0 72px; }
-    .hero { display:flex; justify-content:space-between; gap:24px; align-items:flex-end; margin-bottom:24px; }
-    .kicker { color:var(--gold2); font-size:11px; font-weight:900; letter-spacing:4px; text-transform:uppercase; }
-    h1 { margin-top:10px; font-family:var(--title); font-size:clamp(38px,6vw,72px); line-height:.92; color:#F0DCA9; }
-    .hero p { max-width:650px; margin-top:16px; color:var(--muted); font-size:14px; line-height:1.8; }
-    .status { color:var(--muted); font-size:12px; font-weight:800; text-align:right; }
-    .grid { display:grid; grid-template-columns: 360px 1fr; gap:18px; align-items:start; }
-    .panel {
-      border:1px solid var(--line);
-      background:linear-gradient(180deg, rgba(255,255,255,.030), transparent 28%), rgba(13,11,8,.92);
-      box-shadow:0 18px 52px rgba(0,0,0,.38), inset 0 0 0 1px rgba(255,255,255,.025);
-      padding:18px;
+    .brand { display: inline-flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand img {
+      width: 40px;
+      height: 40px;
+      border: 1px solid rgba(226, 185, 96, 0.48);
+      border-radius: 50%;
+      object-fit: cover;
     }
-    .panel-title {
-      margin-bottom:14px; color:var(--gold2); font-family:var(--title); font-size:14px; font-weight:800;
-      letter-spacing:2px; text-transform:uppercase;
+    .brand-copy { min-width: 0; }
+    .brand-name {
+      display: block;
+      color: var(--gold-2);
+      font-family: var(--title);
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 1.8px;
+      white-space: nowrap;
     }
-    .stats { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:18px; }
-    .stat { padding:12px; border:1px solid rgba(200,152,60,.12); background:rgba(0,0,0,.22); }
-    .stat-value { color:var(--gold2); font-family:var(--mono); font-size:24px; font-weight:700; }
-    .stat-label { margin-top:6px; color:var(--faint); font-size:10px; font-weight:900; letter-spacing:1.5px; text-transform:uppercase; }
-    .form { display:grid; gap:12px; }
-    label { color:var(--muted); font-size:10px; font-weight:900; letter-spacing:1.7px; text-transform:uppercase; }
-    input, select, textarea {
-      width:100%; min-height:42px; margin-top:6px; padding:10px 12px; outline:none;
-      border:1px solid rgba(200,152,60,.18); background:rgba(0,0,0,.28); color:var(--warm);
-      font-family:var(--body); font-size:13px; font-weight:650;
+    .brand-section {
+      display: block;
+      margin-top: 3px;
+      color: var(--faint);
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
     }
-    textarea { min-height:120px; resize:vertical; line-height:1.55; }
-    input:focus, select:focus, textarea:focus { border-color:var(--gold); box-shadow:0 0 0 3px rgba(200,152,60,.10); }
-    option { background:#13100D; }
-    .row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    .btn {
-      min-height:42px; padding:0 18px; border:1px solid rgba(226,185,96,.58);
-      background:linear-gradient(180deg,#E2B960,#B9842C 60%,#7A5521); color:#080604;
-      font-family:var(--title); font-size:11px; font-weight:900; letter-spacing:1.8px; text-transform:uppercase; cursor:pointer;
+    .admin-identity { min-width: 0; text-align: right; }
+    .admin-identity strong { display: block; color: var(--gold-2); font-size: 12px; }
+    .admin-identity span { display: block; margin-top: 3px; color: var(--faint); font-size: 10px; }
+    .back-button,
+    .primary-button,
+    .secondary-button,
+    .danger-button,
+    .icon-button {
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      color: var(--warm);
+      background: rgba(255, 255, 255, 0.025);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1.3px;
+      text-transform: uppercase;
+      transition: border-color 220ms ease, color 220ms ease, background 220ms ease, transform 220ms ease;
     }
-    .btn.secondary { background:rgba(0,0,0,.16); color:var(--gold2); border-color:rgba(200,152,60,.26); }
-    .message { min-height:20px; color:var(--muted); font-size:12px; font-weight:750; }
-    .message.error { color:#ECA7A0; }
-    .message.success { color:#9BE6B7; }
-    .event-list { display:grid; gap:10px; }
-    .event,
-    .user-row {
-      display:grid; grid-template-columns:minmax(0,1fr) auto; gap:12px; padding:14px;
-      border:1px solid rgba(200,152,60,.12); background:rgba(0,0,0,.20);
+    .back-button { display: inline-flex; align-items: center; justify-content: center; padding: 0 16px; }
+    .primary-button { padding: 0 18px; border-color: var(--gold-2); color: #0A0805; background: linear-gradient(180deg, var(--gold-2), #A87520); }
+    .secondary-button { padding: 0 14px; color: var(--gold-2); }
+    .danger-button { padding: 0 14px; border-color: rgba(212, 90, 78, 0.42); color: #F2A69E; background: rgba(212, 90, 78, 0.08); }
+    .icon-button { width: 42px; padding: 0; font-size: 18px; letter-spacing: 0; }
+    .back-button:hover, .secondary-button:hover, .icon-button:hover { border-color: var(--gold); color: var(--gold-2); }
+    .primary-button:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    .danger-button:hover { border-color: var(--red); background: rgba(212, 90, 78, 0.14); }
+    button:disabled { opacity: 0.38; cursor: not-allowed; transform: none !important; }
+
+    .admin-shell { width: min(1480px, calc(100% - 40px)); margin: 0 auto; padding: 34px 0 calc(72px + env(safe-area-inset-bottom, 0px)); }
+    .page-heading { display: flex; justify-content: space-between; gap: 24px; align-items: end; margin-bottom: 22px; }
+    .eyebrow { color: var(--gold); font-size: 10px; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; }
+    h1, h2, h3, p { margin: 0; }
+    h1 { margin-top: 8px; color: #F0DCA9; font-family: var(--title); font-size: clamp(30px, 4vw, 52px); letter-spacing: 0; }
+    .heading-copy { max-width: 640px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+
+    .tabbar {
+      position: sticky;
+      top: calc(72px + env(safe-area-inset-top, 0px));
+      z-index: 40;
+      display: flex;
+      gap: 0;
+      margin: 0 0 24px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      border: 1px solid var(--line);
+      background: rgba(13, 11, 8, 0.96);
     }
-    .event-title { color:var(--warm); font-weight:850; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .event-meta { margin-top:6px; color:var(--faint); font-family:var(--mono); font-size:11px; }
-    .pill { display:inline-flex; align-items:center; min-height:28px; padding:0 10px; color:var(--gold2); border:1px solid rgba(200,152,60,.22); font-size:10px; font-weight:900; letter-spacing:1.2px; text-transform:uppercase; }
-    .user-tools { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; align-items:center; }
-    .mini-select,
-    .mini-date {
-      width:auto; min-height:32px; margin:0; padding:6px 8px; font-size:11px;
-      border:1px solid rgba(200,152,60,.18); background:rgba(0,0,0,.28); color:var(--warm);
+    .tabbar::-webkit-scrollbar { display: none; }
+    .tab-button {
+      flex: 1 0 auto;
+      min-width: 132px;
+      min-height: 48px;
+      padding: 0 16px;
+      border: 0;
+      border-right: 1px solid var(--line-soft);
+      border-bottom: 2px solid transparent;
+      color: var(--faint);
+      background: transparent;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1.4px;
+      text-transform: uppercase;
     }
-    .mini-check { display:inline-flex; align-items:center; gap:6px; color:var(--muted); font-size:10px; font-weight:900; letter-spacing:1px; text-transform:uppercase; }
-    .mini-check input { width:auto; min-height:0; margin:0; accent-color:var(--gold); }
-    .mini-btn {
-      min-height:32px; padding:0 10px; border:1px solid rgba(226,185,96,.45);
-      background:rgba(200,152,60,.10); color:var(--gold2); font-size:10px; font-weight:900; letter-spacing:1px; text-transform:uppercase; cursor:pointer;
+    .tab-button:hover { color: var(--gold-2); background: rgba(200, 152, 60, 0.045); }
+    .tab-button.active { color: var(--gold-2); border-bottom-color: var(--gold); background: rgba(200, 152, 60, 0.08); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; animation: panel-in 220ms ease both; }
+    @keyframes panel-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    .section-head { display: flex; justify-content: space-between; align-items: end; gap: 18px; margin-bottom: 16px; }
+    .section-title { color: var(--gold-2); font-family: var(--title); font-size: 17px; letter-spacing: 1px; }
+    .section-sub { margin-top: 5px; color: var(--faint); font-size: 11px; line-height: 1.5; }
+    .toolbar { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+    .search-input,
+    .field input,
+    .field select,
+    .field textarea,
+    .inline-select {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      outline: none;
+      color: var(--warm);
+      background: rgba(0, 0, 0, 0.28);
     }
-    .hidden { display:none !important; }
-    .locked { min-height:50vh; display:grid; place-items:center; text-align:center; color:var(--muted); }
-    .locked h2 { color:var(--gold2); font-family:var(--title); letter-spacing:2px; margin-bottom:10px; }
-    @media (max-width:900px) { .grid { grid-template-columns:1fr; } .hero { align-items:flex-start; flex-direction:column; } .status { text-align:left; } }
-    @media (max-width:560px) {
-      .topbar { align-items:flex-start; flex-direction:column; padding:16px 14px; }
-      .brand { font-size:14px; letter-spacing:1.2px; }
-      .nav { gap:12px; font-size:10px; letter-spacing:1.1px; }
-      .page { width:min(100% - 24px, 1180px); }
-      .row,.stats { grid-template-columns:1fr; }
-      .event,.user-row { grid-template-columns:1fr; }
-      .user-tools { justify-content:flex-start; }
-      .mini-select,.mini-date { width:100%; }
+    .search-input { width: min(320px, 100%); padding: 0 13px; }
+    .field input, .field select, .field textarea { margin-top: 6px; padding: 10px 12px; }
+    .field textarea { min-height: 112px; resize: vertical; line-height: 1.5; }
+    .inline-select { width: auto; min-height: 34px; padding: 0 9px; font-size: 11px; }
+    .search-input:focus, .field input:focus, .field select:focus, .field textarea:focus, .inline-select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(200, 152, 60, 0.09); }
+    option { background: #15110D; }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+    .kpi {
+      min-height: 132px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: linear-gradient(155deg, rgba(200, 152, 60, 0.08), transparent 52%), rgba(13, 11, 8, 0.82);
+      box-shadow: 0 16px 38px rgba(0, 0, 0, 0.24);
     }
+    .kpi-value { color: var(--gold-2); font-family: var(--mono); font-size: clamp(26px, 3vw, 38px); font-weight: 700; }
+    .kpi-label { margin-top: 14px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: 1.3px; text-transform: uppercase; }
+    .kpi-detail { margin-top: 5px; color: var(--faint); font-size: 10px; }
+    .dashboard-band { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.7fr); gap: 16px; margin-top: 16px; }
+    .surface { border: 1px solid var(--line); background: rgba(13, 11, 8, 0.78); }
+    .surface-head { min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 16px; border-bottom: 1px solid var(--line-soft); }
+    .surface-title { color: var(--gold-2); font-family: var(--title); font-size: 12px; letter-spacing: 1.3px; text-transform: uppercase; }
+    .surface-body { padding: 16px; }
+    .pulse-list, .audit-list { display: grid; gap: 1px; background: var(--line-soft); }
+    .pulse-row, .audit-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; padding: 13px 14px; background: #0C0A07; }
+    .pulse-label, .audit-action { color: var(--muted); font-size: 12px; }
+    .pulse-value { color: var(--gold-2); font-family: var(--mono); font-size: 12px; }
+    .status-dot { width: 9px; height: 9px; display: inline-block; margin-right: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 12px rgba(77, 178, 118, 0.38); }
+    .status-dot.off { background: var(--red); box-shadow: none; }
+
+    .data-surface { overflow: hidden; border: 1px solid var(--line); background: rgba(13, 11, 8, 0.76); }
+    .table-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 920px; }
+    th { height: 46px; padding: 0 13px; color: var(--faint); text-align: left; font-size: 9px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; background: rgba(255, 255, 255, 0.018); }
+    td { padding: 14px 13px; border-top: 1px solid var(--line-soft); color: var(--muted); font-size: 12px; vertical-align: middle; }
+    tbody tr:hover td { background: rgba(200, 152, 60, 0.035); }
+    .user-cell { display: flex; align-items: center; gap: 11px; min-width: 190px; }
+    .avatar {
+      width: 38px;
+      height: 38px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      border: 1px solid rgba(226, 185, 96, 0.42);
+      border-radius: 50%;
+      color: var(--gold-2);
+      background: #17120B;
+      font-family: var(--title);
+      font-weight: 800;
+    }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .user-name { display: block; color: var(--warm); font-weight: 700; }
+    .user-email { display: block; max-width: 230px; margin-top: 3px; overflow: hidden; color: var(--faint); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+    .mono { font-family: var(--mono); }
+    .badge { display: inline-flex; align-items: center; min-height: 26px; padding: 0 9px; border: 1px solid var(--line); color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; }
+    .badge.good { border-color: rgba(77, 178, 118, 0.35); color: #8AD7A8; background: rgba(77, 178, 118, 0.07); }
+    .badge.warn { border-color: rgba(226, 185, 96, 0.38); color: var(--gold-2); background: rgba(200, 152, 60, 0.07); }
+    .badge.bad { border-color: rgba(212, 90, 78, 0.38); color: #F2A69E; background: rgba(212, 90, 78, 0.07); }
+    .action-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .action-row button { min-height: 32px; padding: 0 9px; font-size: 9px; }
+    .pagination { min-height: 54px; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 0 14px; border-top: 1px solid var(--line-soft); }
+    .pagination span { color: var(--faint); font-size: 10px; }
+    .pagination-controls { display: flex; gap: 7px; }
+
+    .room-grid, .event-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .room-card, .event-card { padding: 16px; border: 1px solid var(--line); border-radius: 4px; background: rgba(13, 11, 8, 0.82); }
+    .room-top, .event-top { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+    .room-code, .event-name { color: var(--gold-2); font-family: var(--title); font-size: 15px; font-weight: 800; }
+    .versus { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; margin: 18px 0; }
+    .player-block:last-child { text-align: right; }
+    .player-name { color: var(--warm); font-size: 12px; font-weight: 700; }
+    .player-meta { margin-top: 4px; color: var(--faint); font-size: 9px; }
+    .versus-mark { color: var(--gold); font-family: var(--title); font-size: 11px; }
+    .room-meta, .event-meta { display: flex; flex-wrap: wrap; gap: 10px 16px; color: var(--faint); font-size: 10px; }
+    .room-actions, .event-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line-soft); }
+    .empty-state { min-height: 220px; display: grid; place-items: center; padding: 30px; text-align: center; color: var(--faint); border: 1px solid var(--line); background: rgba(13, 11, 8, 0.58); }
+    .empty-state strong { display: block; margin-bottom: 8px; color: var(--gold-2); font-family: var(--title); }
+
+    .auth-gate { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 24px; text-align: center; }
+    .auth-gate img { width: 84px; height: 84px; border: 1px solid var(--line); border-radius: 50%; }
+    .auth-gate h1 { font-size: 28px; }
+    .auth-gate p { max-width: 430px; margin: 12px auto 0; color: var(--muted); line-height: 1.6; }
+    .loader { width: 42px; height: 2px; margin: 24px auto 0; overflow: hidden; background: var(--line); }
+    .loader::after { content: ""; display: block; width: 50%; height: 100%; background: var(--gold-2); animation: load 900ms ease-in-out infinite alternate; }
+    @keyframes load { to { transform: translateX(100%); } }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+      z-index: 100;
+      width: min(390px, calc(100% - 36px));
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      color: var(--warm);
+      background: #15110D;
+      box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .toast.success { border-color: rgba(77, 178, 118, 0.55); }
+    .toast.error { border-color: rgba(212, 90, 78, 0.65); }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      display: grid;
+      place-items: center;
+      padding: max(18px, env(safe-area-inset-top, 0px)) 18px max(18px, env(safe-area-inset-bottom, 0px));
+      background: rgba(0, 0, 0, 0.76);
+      backdrop-filter: blur(8px);
+    }
+    .modal-dialog { width: min(620px, 100%); max-height: min(820px, calc(100dvh - 36px)); overflow-y: auto; border: 1px solid rgba(226, 185, 96, 0.42); background: #100D09; box-shadow: 0 24px 80px rgba(0, 0, 0, 0.74); }
+    .modal-head { min-height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 16px; border-bottom: 1px solid var(--line); }
+    .modal-title { color: var(--gold-2); font-family: var(--title); font-size: 14px; }
+    .modal-body { padding: 18px; }
+    .modal-copy { color: var(--muted); font-size: 13px; line-height: 1.65; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 18px; border-top: 1px solid var(--line); }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+    .field { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+    .field.full { grid-column: 1 / -1; }
+    .pgn-view { min-height: 240px; margin: 0; padding: 14px; overflow: auto; border: 1px solid var(--line-soft); color: #DCD3C2; background: #080604; font: 12px/1.7 var(--mono); white-space: pre-wrap; word-break: break-word; }
+
+    @media (max-width: 1120px) {
+      .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .room-grid, .event-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 820px) {
+      .admin-header { grid-template-columns: 1fr auto; gap: 10px; }
+      .admin-identity { display: none; }
+      .admin-shell { width: min(100% - 24px, 1480px); padding-top: 24px; }
+      .page-heading { display: block; }
+      .heading-copy { margin-top: 12px; }
+      .tabbar { top: calc(72px + env(safe-area-inset-top, 0px)); }
+      .dashboard-band { grid-template-columns: 1fr; }
+      .room-grid, .event-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 680px) {
+      .brand-section { display: none; }
+      .brand img { width: 36px; height: 36px; }
+      .brand-name { font-size: 12px; letter-spacing: 1.1px; }
+      .back-button { min-height: 38px; padding: 0 10px; font-size: 9px; }
+      .kpi-grid { grid-template-columns: 1fr 1fr; }
+      .kpi { min-height: 116px; padding: 14px; }
+      .section-head { align-items: stretch; flex-direction: column; }
+      .toolbar { justify-content: stretch; }
+      .search-input { width: 100%; }
+      .table-scroll { overflow: visible; }
+      table, thead, tbody, tr, th, td { display: block; min-width: 0; }
+      thead { display: none; }
+      tbody { display: grid; gap: 10px; padding: 10px; }
+      tbody tr { border: 1px solid var(--line-soft); background: rgba(0, 0, 0, 0.18); }
+      td { min-height: 42px; display: grid; grid-template-columns: 112px minmax(0, 1fr); align-items: center; gap: 10px; padding: 10px; border-top: 1px solid var(--line-soft); }
+      td:first-child { border-top: 0; }
+      td::before { content: attr(data-label); color: var(--faint); font-size: 8px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+      td.user-column { display: block; }
+      td.user-column::before { display: none; }
+      .user-email { max-width: 180px; }
+      .action-row { justify-content: flex-start; }
+      .pagination { align-items: stretch; flex-direction: column; padding: 12px; }
+      .pagination-controls button { flex: 1; }
+      .form-grid { grid-template-columns: 1fr; }
+      .field.full { grid-column: auto; }
+    }
+    @media (max-width: 420px) {
+      .admin-shell { width: min(100% - 16px, 1480px); }
+      .kpi-grid { grid-template-columns: 1fr; }
+      .tab-button { min-width: 118px; }
+      .modal-actions { align-items: stretch; flex-direction: column-reverse; }
+      .modal-actions button { width: 100%; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <a href="/" class="brand">OZAMA CHESS ADMIN</a>
-    <nav class="nav">
-      <a href="/lobby.html">Lobby</a>
-      <a href="/leaderboard.html">Ranking</a>
-      <a href="/profile.html">Perfil</a>
-    </nav>
-  </header>
+  <section class="auth-gate" id="auth-gate" aria-live="polite">
+    <div>
+      <img src="/assets/brand/ozama-knight-icon.png" alt="">
+      <div class="eyebrow" style="margin-top:18px">Acceso privado</div>
+      <h1 id="gate-title">Verificando credenciales</h1>
+      <p id="gate-copy">OZAMA está confirmando tu sesión y permisos administrativos.</p>
+      <div class="loader" id="gate-loader"></div>
+    </div>
+  </section>
 
-  <main class="page">
-    <section class="hero">
-      <div>
-        <div class="kicker">Panel privado</div>
-        <h1>Control<br>Ozama</h1>
-        <p>Gestiona eventos, torneos, anuncios y operaciones internas sin mezclar herramientas administrativas con la experiencia del jugador.</p>
+  <div id="admin-app" hidden>
+    <header class="admin-header">
+      <a class="brand" href="/lobby.html" aria-label="OZAMA CHESS">
+        <img src="/assets/brand/ozama-knight-icon.png" alt="">
+        <span class="brand-copy">
+          <span class="brand-name">OZAMA CHESS</span>
+          <span class="brand-section">Centro de administración</span>
+        </span>
+      </a>
+      <div class="admin-identity">
+        <strong id="admin-name">Administrador</strong>
+        <span id="admin-email"></span>
       </div>
-      <div class="status" id="admin-status">Verificando acceso...</div>
-    </section>
+      <a class="back-button" href="/lobby.html" id="back-to-game">Volver al juego</a>
+    </header>
 
-    <section id="locked" class="locked hidden">
-      <div>
-        <h2>ACCESO RESTRINGIDO</h2>
-        <p>Inicia sesion con una cuenta administradora para entrar.</p>
+    <div class="admin-shell">
+      <div class="page-heading">
+        <div>
+          <div class="eyebrow">Operaciones privadas</div>
+          <h1>Control de plataforma</h1>
+        </div>
+        <p class="heading-copy">Supervisa jugadores, partidas y eventos. Las acciones críticas quedan registradas y requieren confirmación.</p>
       </div>
-    </section>
 
-    <section id="admin-app" class="grid hidden">
-      <aside class="panel">
-        <div class="panel-title">Resumen</div>
-        <div class="stats">
-          <div class="stat"><div class="stat-value" id="stat-users">--</div><div class="stat-label">Usuarios</div></div>
-          <div class="stat"><div class="stat-value" id="stat-matches">--</div><div class="stat-label">Partidas</div></div>
-          <div class="stat"><div class="stat-value" id="stat-events">--</div><div class="stat-label">Eventos</div></div>
-          <div class="stat"><div class="stat-value" id="stat-published">--</div><div class="stat-label">Publicados</div></div>
-        </div>
+      <nav class="tabbar" aria-label="Secciones de administración">
+        <button class="tab-button active" type="button" data-tab="dashboard">Resumen</button>
+        <button class="tab-button" type="button" data-tab="users">Usuarios</button>
+        <button class="tab-button" type="button" data-tab="rooms">Salas en vivo</button>
+        <button class="tab-button" type="button" data-tab="matches">Partidas</button>
+        <button class="tab-button" type="button" data-tab="events">Eventos</button>
+        <button class="tab-button" type="button" data-tab="system">Sistema</button>
+      </nav>
 
-        <div class="panel-title">Crear evento</div>
-        <div class="form">
-          <label>Titulo
-            <input id="event-title" maxlength="90" placeholder="Copa Ozama">
-          </label>
-          <div class="row">
-            <label>Tipo
-              <select id="event-type">
-                <option value="event">Evento</option>
-                <option value="tournament">Torneo</option>
-                <option value="announcement">Anuncio</option>
-                <option value="maintenance">Mantenimiento</option>
-              </select>
-            </label>
-            <label>Estado
-              <select id="event-status">
-                <option value="draft">Borrador</option>
-                <option value="published">Publicado</option>
-                <option value="closed">Cerrado</option>
-              </select>
-            </label>
+      <main>
+        <section class="tab-panel active" data-panel="dashboard">
+          <div class="section-head">
+            <div><h2 class="section-title">Estado general</h2><p class="section-sub">Lectura actual de la plataforma y sus jugadores conectados.</p></div>
+            <button class="secondary-button" type="button" data-refresh="dashboard">Actualizar</button>
           </div>
-          <div class="row">
-            <label>Inicio
-              <input id="event-start" type="datetime-local">
-            </label>
-            <label>Max jugadores
-              <input id="event-max" type="number" min="2" max="512" value="16">
-            </label>
+          <div class="kpi-grid">
+            <article class="kpi"><div class="kpi-value" id="kpi-users">--</div><div class="kpi-label">Usuarios registrados</div><div class="kpi-detail" id="kpi-users-detail">-- activos</div></article>
+            <article class="kpi"><div class="kpi-value" id="kpi-online">--</div><div class="kpi-label">Jugadores conectados</div><div class="kpi-detail" id="kpi-sockets-detail">-- conexiones</div></article>
+            <article class="kpi"><div class="kpi-value" id="kpi-rooms">--</div><div class="kpi-label">Salas activas</div><div class="kpi-detail" id="kpi-queue-detail">-- en cola</div></article>
+            <article class="kpi"><div class="kpi-value" id="kpi-matches">--</div><div class="kpi-label">Partidas guardadas</div><div class="kpi-detail" id="kpi-matches-detail">-- finalizadas</div></article>
+            <article class="kpi"><div class="kpi-value" id="kpi-events">--</div><div class="kpi-label">Eventos activos</div><div class="kpi-detail">Visibles para jugadores</div></article>
           </div>
-          <label>Descripcion
-            <textarea id="event-description" maxlength="1200" placeholder="Detalles del evento..."></textarea>
-          </label>
-          <button class="btn" type="button" onclick="createEvent()">Crear evento</button>
-          <div class="message" id="message"></div>
-        </div>
-      </aside>
-
-      <section class="panel">
-        <div class="panel-title">Eventos y operaciones</div>
-        <div class="event-list" id="event-list"></div>
-      </section>
-
-      <section class="panel" style="grid-column:1 / -1">
-        <div class="panel-title">Usuarios y Premium</div>
-        <div class="event-list" id="user-list"></div>
-      </section>
-    </section>
-  </main>
-
-  <script>
-    const user = JSON.parse(localStorage.getItem('ozama-user') || 'null');
-    const token = localStorage.getItem('ozama-token') || user?.token || user?.jwt || user?.accessToken || '';
-
-    function authHeaders() {
-      return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
-    }
-
-    function escapeHtml(value) {
-      return String(value ?? '').replace(/[&<>"']/g, (char) => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;',
-      }[char]));
-    }
-
-    function setMessage(text, type = '') {
-      const el = document.getElementById('message');
-      el.textContent = text || '';
-      el.className = `message ${type}`;
-    }
-
-    function formatDate(value) {
-      if (!value) return 'Sin fecha';
-      return new Date(value).toLocaleString('es-DO', { dateStyle: 'medium', timeStyle: 'short' });
-    }
-
-    async function api(path, options = {}) {
-      const response = await fetch(path, {
-        ...options,
-        headers: { ...authHeaders(), ...(options.headers || {}) },
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || 'Error de servidor.');
-      return data;
-    }
-
-    function renderStats(stats) {
-      document.getElementById('stat-users').textContent = stats.users ?? 0;
-      document.getElementById('stat-matches').textContent = stats.matches ?? 0;
-      document.getElementById('stat-events').textContent = stats.events ?? 0;
-      document.getElementById('stat-published').textContent = stats.publishedEvents ?? 0;
-    }
-
-    function renderEvents(events) {
-      const list = document.getElementById('event-list');
-      if (!events.length) {
-        list.innerHTML = '<div class="event"><div><div class="event-title">No hay eventos todavia</div><div class="event-meta">Crea el primero desde el panel.</div></div></div>';
-        return;
-      }
-
-      list.innerHTML = events.map((event) => `
-        <article class="event">
-          <div>
-            <div class="event-title">${escapeHtml(event.title)}</div>
-            <div class="event-meta">${escapeHtml(event.type)} · ${formatDate(event.startsAt)} · ${Number(event.maxPlayers || 0)} jugadores</div>
-            <div class="event-meta">${escapeHtml(event.description || '')}</div>
+          <div class="dashboard-band">
+            <section class="surface">
+              <div class="surface-head"><h3 class="surface-title">Pulso de OZAMA</h3><span class="badge good">En directo</span></div>
+              <div class="pulse-list" id="pulse-list"></div>
+            </section>
+            <section class="surface">
+              <div class="surface-head"><h3 class="surface-title">Accesos rápidos</h3></div>
+              <div class="surface-body action-row">
+                <button class="secondary-button" type="button" data-go-tab="users">Gestionar usuarios</button>
+                <button class="secondary-button" type="button" data-go-tab="rooms">Ver salas</button>
+                <button class="primary-button" type="button" data-open-event>Crear evento</button>
+              </div>
+            </section>
           </div>
-          <div class="pill">${escapeHtml(event.status)}</div>
-        </article>
-      `).join('');
-    }
+        </section>
 
-    function renderUsers(users) {
-      const list = document.getElementById('user-list');
-      if (!users.length) {
-        list.innerHTML = '<div class="user-row"><div><div class="event-title">No hay usuarios registrados</div></div></div>';
-        return;
-      }
-
-      list.innerHTML = users.map((u) => {
-        const games = (u.stats?.wins || 0) + (u.stats?.losses || 0) + (u.stats?.draws || 0);
-        const premiumDate = u.premiumUntil ? new Date(u.premiumUntil).toISOString().slice(0, 10) : '';
-        return `
-          <article class="user-row" data-user-id="${escapeHtml(u._id)}">
-            <div>
-              <div class="event-title">${escapeHtml(u.username)} <span class="pill">${escapeHtml(u.plan || 'free')}</span></div>
-              <div class="event-meta">${escapeHtml(u.email)} · ELO ${Number(u.elo || 1200)} · ${games} partidas · ${escapeHtml(u.country || 'DO')}</div>
-              <div class="event-meta">Estado: ${escapeHtml(u.subscriptionStatus || 'none')} · Admin: ${u.isAdmin ? 'si' : 'no'} · Activo: ${u.isActive ? 'si' : 'no'}</div>
+        <section class="tab-panel" data-panel="users">
+          <div class="section-head">
+            <div><h2 class="section-title">Jugadores registrados</h2><p class="section-sub">Suspende cuentas, gestiona Premium o revoca sesiones activas.</p></div>
+            <div class="toolbar"><input class="search-input" id="user-search" type="search" maxlength="80" autocomplete="off" placeholder="Buscar usuario o email"><button class="secondary-button" type="button" data-refresh="users">Actualizar</button></div>
+          </div>
+          <div class="data-surface">
+            <div class="table-scroll">
+              <table>
+                <thead><tr><th>Jugador</th><th>Estado</th><th>Plan</th><th>ELO</th><th>Resultados</th><th>Última actividad</th><th>Acciones</th></tr></thead>
+                <tbody id="user-table"></tbody>
+              </table>
             </div>
-            <div class="user-tools">
-              <select class="mini-select" data-field="plan">
-                <option value="free" ${u.plan === 'free' ? 'selected' : ''}>Free</option>
-                <option value="premium" ${u.plan === 'premium' ? 'selected' : ''}>Premium</option>
-              </select>
-              <select class="mini-select" data-field="subscriptionStatus">
-                ${['none','trial','active','past_due','cancelled'].map((s) => `<option value="${s}" ${u.subscriptionStatus === s ? 'selected' : ''}>${s}</option>`).join('')}
-              </select>
-              <input class="mini-date" data-field="premiumUntil" type="date" value="${premiumDate}">
-              <label class="mini-check"><input data-field="isAdmin" type="checkbox" ${u.isAdmin ? 'checked' : ''}>Admin</label>
-              <label class="mini-check"><input data-field="isActive" type="checkbox" ${u.isActive ? 'checked' : ''}>Activo</label>
-              <button class="mini-btn" type="button" onclick="saveUserPlan('${escapeHtml(u._id)}')">Guardar</button>
+            <div class="pagination"><span id="user-page-label">Página 1</span><div class="pagination-controls"><button class="secondary-button" id="user-prev" type="button">Anterior</button><button class="secondary-button" id="user-next" type="button">Siguiente</button></div></div>
+          </div>
+        </section>
+
+        <section class="tab-panel" data-panel="rooms">
+          <div class="section-head">
+            <div><h2 class="section-title">Salas en tiempo real</h2><p class="section-sub">Solo se muestran datos operativos; los tokens privados nunca salen del servidor.</p></div>
+            <button class="secondary-button" type="button" data-refresh="rooms">Actualizar</button>
+          </div>
+          <div class="room-grid" id="room-grid"></div>
+        </section>
+
+        <section class="tab-panel" data-panel="matches">
+          <div class="section-head">
+            <div><h2 class="section-title">Historial de partidas</h2><p class="section-sub">Resultados finalizados, variación ELO y registro PGN disponible.</p></div>
+            <div class="toolbar"><input class="search-input" id="match-search" type="search" maxlength="80" autocomplete="off" placeholder="Sala o jugador"><button class="secondary-button" type="button" data-refresh="matches">Actualizar</button></div>
+          </div>
+          <div class="data-surface">
+            <div class="table-scroll">
+              <table>
+                <thead><tr><th>Sala</th><th>Blancas</th><th>Negras</th><th>Resultado</th><th>Movimientos</th><th>Finalizada</th><th>Registro</th></tr></thead>
+                <tbody id="match-table"></tbody>
+              </table>
             </div>
-          </article>
-        `;
-      }).join('');
-    }
+            <div class="pagination"><span id="match-page-label">Página 1</span><div class="pagination-controls"><button class="secondary-button" id="match-prev" type="button">Anterior</button><button class="secondary-button" id="match-next" type="button">Siguiente</button></div></div>
+          </div>
+        </section>
 
-    async function loadAdmin() {
-      if (!token) throw new Error('Token requerido.');
-      const me = await api('/api/admin/me');
-      document.getElementById('admin-status').textContent = `Admin: ${me.admin.username}`;
-      document.getElementById('locked').classList.add('hidden');
-      document.getElementById('admin-app').classList.remove('hidden');
-      const [stats, eventData, userData] = await Promise.all([
-        api('/api/admin/stats'),
-        api('/api/admin/events'),
-        api('/api/admin/users'),
-      ]);
-      renderStats(stats);
-      renderEvents(eventData.events || []);
-      renderUsers(userData.users || []);
-    }
+        <section class="tab-panel" data-panel="events">
+          <div class="section-head">
+            <div><h2 class="section-title">Torneos y eventos</h2><p class="section-sub">Crea campañas y controla cuándo son visibles para la comunidad.</p></div>
+            <div class="toolbar"><button class="secondary-button" type="button" data-refresh="events">Actualizar</button><button class="primary-button" type="button" data-open-event>Crear evento</button></div>
+          </div>
+          <div class="event-grid" id="event-grid"></div>
+        </section>
 
-    async function saveUserPlan(userId) {
-      const row = document.querySelector(`[data-user-id="${CSS.escape(userId)}"]`);
-      if (!row) return;
+        <section class="tab-panel" data-panel="system">
+          <div class="section-head">
+            <div><h2 class="section-title">Sistema y auditoría</h2><p class="section-sub">Estado técnico resumido y acciones administrativas recientes.</p></div>
+            <button class="secondary-button" type="button" data-refresh="system">Actualizar</button>
+          </div>
+          <div class="dashboard-band">
+            <section class="surface">
+              <div class="surface-head"><h3 class="surface-title">Actividad administrativa</h3></div>
+              <div class="audit-list" id="audit-list"></div>
+            </section>
+            <section class="surface">
+              <div class="surface-head"><h3 class="surface-title">Salud del servicio</h3></div>
+              <div class="pulse-list" id="system-list"></div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
 
-      const plan = row.querySelector('[data-field="plan"]').value;
-      const subscriptionStatus = row.querySelector('[data-field="subscriptionStatus"]').value;
-      const premiumUntil = row.querySelector('[data-field="premiumUntil"]').value || null;
-      const isAdmin = row.querySelector('[data-field="isAdmin"]').checked;
-      const isActive = row.querySelector('[data-field="isActive"]').checked;
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
-      try {
-        await api(`/api/admin/users/${encodeURIComponent(userId)}/plan`, {
-          method: 'PATCH',
-          body: JSON.stringify({ plan, subscriptionStatus, premiumUntil, isAdmin, isActive }),
-        });
-        setMessage('Usuario actualizado.', 'success');
-        await loadAdmin();
-      } catch (err) {
-        setMessage(err.message, 'error');
-      }
-    }
+  <div class="modal" id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title" hidden>
+    <div class="modal-dialog">
+      <div class="modal-head"><h2 class="modal-title" id="confirm-title">Confirmar acción</h2><button class="icon-button" type="button" data-close-confirm aria-label="Cerrar">×</button></div>
+      <div class="modal-body"><p class="modal-copy" id="confirm-copy"></p></div>
+      <div class="modal-actions"><button class="secondary-button" type="button" data-close-confirm>Cancelar</button><button class="danger-button" type="button" id="confirm-action">Confirmar</button></div>
+    </div>
+  </div>
 
-    async function createEvent() {
-      setMessage('');
-      const payload = {
-        title: document.getElementById('event-title').value.trim(),
-        type: document.getElementById('event-type').value,
-        status: document.getElementById('event-status').value,
-        startsAt: document.getElementById('event-start').value || null,
-        maxPlayers: Number(document.getElementById('event-max').value || 16),
-        description: document.getElementById('event-description').value.trim(),
-      };
+  <div class="modal" id="event-modal" role="dialog" aria-modal="true" aria-labelledby="event-modal-title" hidden>
+    <form class="modal-dialog" id="event-form">
+      <div class="modal-head"><h2 class="modal-title" id="event-modal-title">Crear evento</h2><button class="icon-button" type="button" data-close-event aria-label="Cerrar">×</button></div>
+      <div class="modal-body form-grid">
+        <label class="field full">Título<input id="event-title" maxlength="90" required placeholder="Copa Ozama"></label>
+        <label class="field">Tipo<select id="event-type"><option value="tournament">Torneo</option><option value="event">Evento</option><option value="announcement">Anuncio</option><option value="maintenance">Mantenimiento</option></select></label>
+        <label class="field">Estado<select id="event-status"><option value="draft">Borrador</option><option value="active">Activo</option><option value="finished">Finalizado</option><option value="cancelled">Cancelado</option></select></label>
+        <label class="field">Inicio<input id="event-start" type="datetime-local"></label>
+        <label class="field">Final<input id="event-end" type="datetime-local"></label>
+        <label class="field full">Máximo de jugadores<input id="event-max" type="number" min="2" max="512" value="16"></label>
+        <label class="field full">Descripción<textarea id="event-description" maxlength="1200" placeholder="Información visible para los jugadores"></textarea></label>
+      </div>
+      <div class="modal-actions"><button class="secondary-button" type="button" data-close-event>Cancelar</button><button class="primary-button" type="submit">Crear evento</button></div>
+    </form>
+  </div>
 
-      if (!payload.title) {
-        setMessage('Titulo requerido.', 'error');
-        return;
-      }
-
-      try {
-        await api('/api/admin/events', {
-          method: 'POST',
-          body: JSON.stringify(payload),
-        });
-        document.getElementById('event-title').value = '';
-        document.getElementById('event-description').value = '';
-        setMessage('Evento creado.', 'success');
-        await loadAdmin();
-      } catch (err) {
-        setMessage(err.message, 'error');
-      }
-    }
-
-    loadAdmin().catch((err) => {
-      document.getElementById('admin-status').textContent = err.message || 'Acceso denegado';
-      document.getElementById('admin-app').classList.add('hidden');
-      document.getElementById('locked').classList.remove('hidden');
-    });
-  </script>
+  <div class="modal" id="pgn-modal" role="dialog" aria-modal="true" aria-labelledby="pgn-modal-title" hidden>
+    <div class="modal-dialog">
+      <div class="modal-head"><h2 class="modal-title" id="pgn-modal-title">Registro PGN</h2><button class="icon-button" type="button" data-close-pgn aria-label="Cerrar">×</button></div>
+      <div class="modal-body"><pre class="pgn-view" id="pgn-content"></pre></div>
+      <div class="modal-actions"><button class="secondary-button" type="button" data-close-pgn>Cerrar</button></div>
+    </div>
+  </div>
 </body>
 </html>
