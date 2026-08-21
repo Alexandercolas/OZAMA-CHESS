@@ -11,11 +11,16 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 
 test('PWA manifest exposes installable application assets', () => {
   const manifest = JSON.parse(read('public/manifest.webmanifest'));
+  const pwa = read('public/pwa.js');
   assert.equal(manifest.name, 'OZAMA CHESS');
   assert.equal(manifest.display, 'standalone');
   assert.equal(manifest.start_url, '/');
   assert.ok(manifest.icons.some((icon) => icon.sizes === '192x192'));
   assert.ok(manifest.icons.some((icon) => icon.sizes === '512x512'));
+  assert.match(pwa, /beforeinstallprompt/);
+  assert.match(pwa, /appinstalled/);
+  assert.match(pwa, /Agregar a pantalla de inicio/);
+  assert.match(pwa, /OZAMA_RUNTIME\?\.native/);
 });
 
 test('service worker never handles private API or Socket.IO traffic', () => {
