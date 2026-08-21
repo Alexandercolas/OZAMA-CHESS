@@ -65,6 +65,7 @@ Cuando exista la clave de subida privada, el comando `npm run android:build:sign
 Estado verificado el 12 de agosto de 2026:
 
 - APK debug compilado y firmado con certificado de desarrollo.
+- Instalacion y arranque confirmados en un telefono Android real el 21 de agosto de 2026.
 - AAB release compilado y pendiente de firma de produccion.
 - Paquete `com.ozamachess.app`, minimo Android 7.0 (API 24) y objetivo API 36.
 - Permisos: Internet y un permiso interno no exportado generado por AndroidX.

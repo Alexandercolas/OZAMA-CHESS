@@ -71,7 +71,8 @@ Estado actual:
 - API, JWT y Socket.IO quedan fuera del cache local.
 - Politica de privacidad, terminos, soporte y eliminacion de cuenta completados.
 - Base Android Capacitor completada con iconos, splash, HTTPS obligatorio y frontend empaquetado.
-- Pendiente manual: validar instalacion desde produccion y configurar Google Search Console.
+- Instalacion y arranque del APK confirmados en un telefono Android real.
+- Pendiente manual: completar la matriz funcional movil y configurar Google Search Console.
 - Base local instalada: JDK 21 LTS, Android SDK 36 y Build Tools 36.
 - APK debug y AAB release compilados; el AAB aun requiere la firma privada definitiva.
 - Ficha inicial de Google Play, borrador de seguridad de datos y flujo de firma privada preparados.

@@ -112,10 +112,11 @@ El bundle resultante queda en `android/app/build/outputs/bundle/release/app-rele
 
 ## Orden De Publicacion
 
-1. Probar el APK debug en uno o mas telefonos reales.
-2. Crear y respaldar la clave privada de subida.
-3. Compilar y verificar el AAB firmado.
-4. Crear la aplicacion en Play Console con `com.ozamachess.app`.
-5. Completar ficha, privacidad, eliminacion, clasificacion y seguridad de datos.
-6. Subir el AAB a prueba interna y luego a prueba cerrada.
-7. Invitar probadores y documentar errores antes de solicitar produccion.
+1. Instalacion y arranque del APK debug confirmados en un telefono Android real.
+2. Completar las pruebas funcionales de cuenta, partida online, reconexion y responsive movil.
+3. Crear y respaldar la clave privada de subida.
+4. Compilar y verificar el AAB firmado.
+5. Crear la aplicacion en Play Console con `com.ozamachess.app`.
+6. Completar ficha, privacidad, eliminacion, clasificacion y seguridad de datos.
+7. Subir el AAB a prueba interna y luego a prueba cerrada.
+8. Invitar probadores y documentar errores antes de solicitar produccion.
