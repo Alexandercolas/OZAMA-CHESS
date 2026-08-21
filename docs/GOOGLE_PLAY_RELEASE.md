@@ -120,3 +120,24 @@ El bundle resultante queda en `android/app/build/outputs/bundle/release/app-rele
 6. Completar ficha, privacidad, eliminacion, clasificacion y seguridad de datos.
 7. Subir el AAB a prueba interna y luego a prueba cerrada.
 8. Invitar probadores y documentar errores antes de solicitar produccion.
+
+## Comportamiento Nativo Android
+
+La base movil incluye estas protecciones de experiencia:
+
+- Areas seguras para camara, notch y barra de gestos mediante `safe-area-inset-*`.
+- Barra de estado y navegacion en carbon con iconos claros.
+- Teclado con `adjustResize`, altura visual dinamica y desplazamiento del campo enfocado.
+- Boton Atras dentro de la partida conectado a la advertencia de salida y regreso al lobby.
+- Reconexion y resincronizacion de Socket.IO al volver desde segundo plano.
+- Tablero sin seleccion de texto, menu contextual, arrastre ni zoom accidental sobre las casillas.
+- Icono y splash de marca con el caballo dorado.
+- La sincronizacion movil materializa automaticamente los assets que OneDrive marca como archivos especiales antes de invocar Gradle.
+
+Antes de cada AAB, probar en al menos un Android con gestos y otro con botones:
+
+1. Abrir login y chat, mostrar el teclado y confirmar que el campo activo permanece visible.
+2. Entrar a una partida online, minimizar la app durante 15 segundos y regresar.
+3. Confirmar que tablero, turno y relojes coinciden en ambos telefonos.
+4. Pulsar Atras durante la partida, cancelar una vez y luego confirmar la salida al lobby.
+5. Mantener pulsada una pieza y hacer gesto de pellizco sobre el tablero; no debe aparecer seleccion ni cambiar el zoom.

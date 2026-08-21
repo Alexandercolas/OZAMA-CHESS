@@ -1146,12 +1146,20 @@
     }[char]));
   }
 
-  socket.on('connect', () => {
+  function announcePlayerOnline() {
     socket.emit('player-online', {
       username: user?.username,
       elo: user?.elo || 1200,
       country: user?.country || 'DO',
     });
+  }
+
+  socket.on('connect', announcePlayerOnline);
+
+  window.addEventListener('ozama:resume', () => {
+    validateLobbySession();
+    if (socket.disconnected) socket.connect();
+    else announcePlayerOnline();
   });
 
   // ── Helpers ──

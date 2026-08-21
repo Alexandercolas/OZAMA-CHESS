@@ -1168,6 +1168,18 @@ function setupOnlineSocket() {
     });
   }
 
+  let lastResumeSyncAt = 0;
+  function resumeOnlineSession() {
+    const now = Date.now();
+    if (now - lastResumeSyncAt < 750) return;
+    lastResumeSyncAt = now;
+
+    if (socket.disconnected) socket.connect();
+    else rejoin();
+  }
+
+  window.addEventListener('ozama:resume', resumeOnlineSession);
+
   socket.on('opponent-resigned', ({ playerName } = {}) => {
     CLOCK.stop();
     playSound('gameover');

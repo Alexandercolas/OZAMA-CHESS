@@ -154,12 +154,20 @@ test('public leaderboard stays finite and excludes known test accounts', () => {
 test('native runtime sends only API and socket traffic to production', () => {
   const config = JSON.parse(read('capacitor.config.json'));
   const runtime = read('public/mobile-runtime.js');
+  const game = read('public/game.html');
+  const gameScript = read('public/script.js');
   const server = read('server.js');
   assert.equal(config.appId, 'com.ozamachess.app');
   assert.equal(config.webDir, 'public');
   assert.equal(config.server.cleartext, false);
   assert.match(runtime, /pathname\.startsWith\('\/api\/'\)/);
   assert.match(runtime, /socketOrigin: native \? productionOrigin : undefined/);
+  assert.match(runtime, /safe-area-inset-top/);
+  assert.match(runtime, /appStateChange/);
+  assert.match(runtime, /backButton/);
+  assert.match(runtime, /CustomEvent\('ozama:resume'/);
+  assert.match(game, /OZAMA_HANDLE_NATIVE_BACK/);
+  assert.match(gameScript, /addEventListener\('ozama:resume', resumeOnlineSession\)/);
   assert.doesNotMatch(runtime, /MONGODB_URI|JWT_SECRET/);
   assert.match(server, /'https:\/\/localhost'/);
   assert.match(server, /appOriginAllowed/);
@@ -170,6 +178,7 @@ test('Android release base blocks backups and cleartext traffic', () => {
   const gradle = read('android/app/build.gradle');
   const buildScript = read('scripts/android-build.js');
   const installScript = read('scripts/android-install.js');
+  const styles = read('android/app/src/main/res/values/styles.xml');
   const gitignore = read('.gitignore');
   assert.match(manifest, /android:allowBackup="false"/);
   assert.match(manifest, /android:usesCleartextTraffic="false"/);
@@ -182,6 +191,9 @@ test('Android release base blocks backups and cleartext traffic', () => {
   assert.match(gradle, /signingConfig signingConfigs\.release/);
   assert.match(installScript, /adb\.exe/);
   assert.match(installScript, /Depuracion USB/);
+  assert.match(styles, /android:statusBarColor">#0D0B08/);
+  assert.match(styles, /android:navigationBarColor">#0D0B08/);
+  assert.match(styles, /android:windowLightStatusBar">false/);
   assert.match(gitignore, /^\.tools\/$/m);
   assert.match(gitignore, /^\*\.jks$/m);
   assert.ok(fs.statSync(path.join(root, 'public/vendor/socket.io.min.js')).size > 10_000);
