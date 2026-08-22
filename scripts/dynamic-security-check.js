@@ -38,12 +38,25 @@ async function postJson(path, body) {
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
-  return { status: res.status, data };
+  return { status: res.status, data, setCookie: res.headers.get('set-cookie') || '' };
 }
 
 function connectSocket(token, label) {
   const socket = io(baseUrl, {
     auth: { token },
+    reconnection: false,
+    timeout: 5_000,
+  });
+  socket.on('connect_error', (err) => {
+    console.log(`[${label}] connect_error: ${err.message}`);
+  });
+  return socket;
+}
+
+function connectSocketCookie(cookie, label) {
+  const socket = io(baseUrl, {
+    auth: {},
+    extraHeaders: { Cookie: cookie },
     reconnection: false,
     timeout: 5_000,
   });
@@ -100,7 +113,7 @@ async function register(username) {
     country: 'DO',
   });
   if (res.status !== 201) throw new Error(`register ${username} failed: ${res.status} ${JSON.stringify(res.data)}`);
-  return res.data;
+  return { ...res.data, sessionCookie: res.setCookie.split(';')[0], rawSetCookie: res.setCookie };
 }
 
 async function main() {
@@ -136,6 +149,45 @@ async function main() {
     const userB = await register(`secB_${suffix}`);
     console.log(`REGISTER_A=${userA.user.username}`);
     console.log(`REGISTER_B=${userB.user.username}`);
+    if (!/HttpOnly/i.test(userA.rawSetCookie) || !/SameSite=Lax/i.test(userA.rawSetCookie)) {
+      throw new Error('session cookie is missing HttpOnly or SameSite=Lax');
+    }
+
+    const cookieProfile = await fetch(`${baseUrl}/api/user/me`, {
+      headers: { Cookie: userA.sessionCookie },
+    });
+    console.log(`COOKIE_PROFILE_STATUS=${cookieProfile.status}`);
+    if (cookieProfile.status !== 200) throw new Error(`cookie profile failed with ${cookieProfile.status}`);
+
+    const csrfBlocked = await fetch(`${baseUrl}/api/user/me`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: userA.sessionCookie,
+        Origin: 'https://attacker.example',
+      },
+      body: JSON.stringify({ country: 'DO' }),
+    });
+    console.log(`COOKIE_CSRF_BLOCKED_STATUS=${csrfBlocked.status}`);
+    if (csrfBlocked.status !== 403) throw new Error(`cross-origin cookie write was not blocked: ${csrfBlocked.status}`);
+
+    const csrfAllowed = await fetch(`${baseUrl}/api/user/me`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: userA.sessionCookie,
+        Origin: baseUrl,
+      },
+      body: JSON.stringify({ country: 'DO' }),
+    });
+    console.log(`COOKIE_SAME_ORIGIN_STATUS=${csrfAllowed.status}`);
+    if (csrfAllowed.status !== 200) throw new Error(`same-origin cookie write failed: ${csrfAllowed.status}`);
+
+    const cookieSocket = connectSocketCookie(userA.sessionCookie, 'COOKIE');
+    sockets.push(cookieSocket);
+    await once(cookieSocket, 'connect');
+    console.log('COOKIE_SOCKET_CONNECTED=true');
+    cookieSocket.disconnect();
 
     const malicious = await postJson('/api/auth/register', {
       username: '<img src=x onerror=alert(1)>',

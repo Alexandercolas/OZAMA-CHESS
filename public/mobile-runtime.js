@@ -148,7 +148,7 @@
     setupNativeLifecycle();
   }
 
-  if (!native || typeof window.fetch !== 'function') return;
+  if (typeof window.fetch !== 'function') return;
 
   const originalFetch = window.fetch.bind(window);
   const localOrigin = window.location.origin;
@@ -156,20 +156,55 @@
   function apiUrl(value) {
     const url = new URL(value, localOrigin);
     if (url.origin !== localOrigin || !url.pathname.startsWith('/api/')) return null;
-    return `${productionOrigin}${url.pathname}${url.search}${url.hash}`;
+    return native ? `${productionOrigin}${url.pathname}${url.search}${url.hash}` : url.href;
   }
 
-  window.fetch = function ozamaFetch(input, init) {
+  window.fetch = function ozamaFetch(input, init = {}) {
     if (typeof input === 'string' || input instanceof URL) {
-      const remoteUrl = apiUrl(String(input));
-      return originalFetch(remoteUrl || input, init);
+      const targetUrl = apiUrl(String(input));
+      if (!targetUrl) return originalFetch(input, init);
+      return originalFetch(targetUrl, { ...init, credentials: 'include' });
     }
 
     if (input instanceof Request) {
-      const remoteUrl = apiUrl(input.url);
-      if (remoteUrl) return originalFetch(new Request(remoteUrl, input), init);
+      const targetUrl = apiUrl(input.url);
+      if (targetUrl) {
+        const request = new Request(targetUrl, input);
+        return originalFetch(request, { ...init, credentials: 'include' });
+      }
     }
 
     return originalFetch(input, init);
   };
+
+  async function migrateLegacyWebSession() {
+    if (native) return;
+    let user = null;
+    try { user = JSON.parse(localStorage.getItem('ozama-user') || 'null'); }
+    catch (_) {}
+    const token = localStorage.getItem('ozama-token')
+      || user?.token
+      || user?.jwt
+      || user?.accessToken
+      || '';
+    if (!token) return;
+
+    try {
+      const response = await window.fetch('/api/auth/migrate-session', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) return;
+      localStorage.removeItem('ozama-token');
+      if (user) {
+        delete user.token;
+        delete user.jwt;
+        delete user.accessToken;
+        localStorage.setItem('ozama-user', JSON.stringify(user));
+      }
+      window.dispatchEvent(new CustomEvent('ozama:session-migrated'));
+    } catch (_) { /* conserva el bearer hasta poder migrarlo */ }
+  }
+
+  migrateLegacyWebSession();
 })();

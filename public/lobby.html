@@ -1074,7 +1074,7 @@
 
   const user = readSessionUser();
   const _token = localStorage.getItem('ozama-token') || user?.token || user?.jwt || user?.accessToken || '';
-  if (!user || !_token) {
+  if (!user || (window.OZAMA_RUNTIME?.native && !_token)) {
     localStorage.removeItem('ozama-user');
     localStorage.removeItem('ozama-token');
     sessionStorage.clear();
@@ -1087,7 +1087,7 @@
     _validatingSession = true;
     try {
       const response = await fetch('/api/user/me', {
-        headers: { Authorization: `Bearer ${_token}` },
+        headers: _token ? { Authorization: `Bearer ${_token}` } : {},
         cache: 'no-store',
       });
       if (!response.ok) throw new Error('INVALID_SESSION');
@@ -1128,7 +1128,17 @@
   renderLobbyUser();
 
   // ── Logout ──
-  function doLogout() {
+  async function doLogout(event) {
+    event?.preventDefault?.();
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+        keepalive: true,
+        headers: _token ? { Authorization: `Bearer ${_token}` } : {}
+      });
+    }
+    catch (_) {}
     localStorage.removeItem('ozama-user');
     localStorage.removeItem('ozama-token');
     sessionStorage.clear();
@@ -1138,7 +1148,10 @@
   document.getElementById('logout-sb')?.addEventListener('click', doLogout);
 
   // ── Socket ──
-  const socket = io(window.OZAMA_RUNTIME?.socketOrigin, { auth: { token: _token } });
+  const socket = io(window.OZAMA_RUNTIME?.socketOrigin, {
+    auth: { token: _token },
+    withCredentials: true,
+  });
   let _challengerSocketId = null;
 
   socket.on('auth-error', () => {

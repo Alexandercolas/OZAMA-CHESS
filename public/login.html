@@ -739,7 +739,8 @@
     }
 
     function saveSession(token, user) {
-      localStorage.setItem('ozama-token', token);
+      if (window.OZAMA_RUNTIME?.native && token) localStorage.setItem('ozama-token', token);
+      else localStorage.removeItem('ozama-token');
       localStorage.setItem('ozama-user', JSON.stringify(user));
     }
 
@@ -773,7 +774,17 @@
       }
     }
 
-    function logout() {
+    async function logout() {
+      const token = getSession().token;
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          credentials: 'include',
+          keepalive: true,
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+      }
+      catch (_) {}
       clearSession();
       revealLogin();
       clearMsg();
@@ -785,22 +796,25 @@
 
     function checkExistingSession() {
       const { token } = getSession();
-      if (!token) {
+      if (!token && window.OZAMA_RUNTIME?.native) {
         revealLogin();
         return;
       }
 
-      if (isJwtExpired(token)) {
+      if (token && isJwtExpired(token)) {
         clearSession();
         revealLogin();
         return;
       }
 
       fetch('/api/user/me', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
       })
       .then(r => r.ok ? r.json() : Promise.reject())
-      .then(() => window.location.replace('/lobby.html'))
+      .then((data) => {
+        if (data?.user) localStorage.setItem('ozama-user', JSON.stringify(data.user));
+        window.location.replace('/lobby.html');
+      })
       .catch(() => {
         clearSession();
         revealLogin();

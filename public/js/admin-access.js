@@ -12,13 +12,13 @@
     || user?.jwt
     || user?.accessToken
     || '';
-  if (!token) return;
+  if (!user || (window.OZAMA_RUNTIME?.native && !token)) return;
 
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 8000);
 
   fetch('/api/admin/verify', {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
     cache: 'no-store',
     signal: controller.signal,
   })

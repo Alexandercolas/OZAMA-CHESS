@@ -21,6 +21,13 @@ Este documento resume las reglas minimas de seguridad para operar OZAMA CHESS co
 - Login, registro y recuperacion tienen rate limit.
 - Cada codigo de recuperacion se invalida despues de usarlo y se reemplaza por uno nuevo.
 - Los mensajes de error de login/reset no deben revelar si el usuario existe.
+- En navegador, el JWT se conserva en `ozama_session` con `HttpOnly`, `SameSite=Lax`,
+  `Secure` en hosting HTTPS y respuestas `no-store`.
+- Las escrituras autenticadas por cookie exigen origen same-origin para bloquear CSRF.
+- Los bearer antiguos del navegador se migran una vez a cookie y se eliminan de
+  `localStorage` sin cerrar la sesion.
+- Capacitor mantiene bearer como compatibilidad transitoria; la siguiente fase movil
+  debe llevarlo a almacenamiento cifrado respaldado por Keychain/Keystore.
 
 ## Datos De Usuario
 

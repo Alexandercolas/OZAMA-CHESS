@@ -36,7 +36,7 @@
       cache: 'no-store',
       headers: {
         ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-        Authorization: `Bearer ${token}`,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(options.headers || {}),
       },
     });
@@ -585,7 +585,7 @@
   }
 
   async function start() {
-    if (!token) {
+    if (!token && window.OZAMA_RUNTIME?.native) {
       redirectUnauthorized('Inicia sesión con tu cuenta administradora para continuar.');
       return;
     }

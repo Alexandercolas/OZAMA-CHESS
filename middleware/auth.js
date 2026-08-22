@@ -2,6 +2,7 @@
 
 const jwt  = require('jsonwebtoken');
 const User = require('../models/User');
+const { requestToken } = require('./session');
 
 function adminEmails() {
   return String(process.env.ADMIN_EMAILS || '')
@@ -18,8 +19,7 @@ function userIsAdmin(user) {
 // Required auth middleware
 async function requireAuth(req, res, next) {
   try {
-    const header = req.headers.authorization || '';
-    const token  = header.startsWith('Bearer ') ? header.slice(7) : null;
+    const token = requestToken(req);
 
     if (!token) {
       return res.status(401).json({ error: 'Token requerido.' });
@@ -45,8 +45,7 @@ async function requireAuth(req, res, next) {
 // Optional auth middleware. It does not block anonymous requests.
 async function optionalAuth(req, res, next) {
   try {
-    const header = req.headers.authorization || '';
-    const token  = header.startsWith('Bearer ') ? header.slice(7) : null;
+    const token = requestToken(req);
     if (token) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
       const user = await User.findById(decoded.id).select('+tokenVersion');

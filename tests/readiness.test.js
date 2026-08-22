@@ -91,6 +91,31 @@ test('JWT and password recovery remain hardened', () => {
   assert.match(auth, /limitReset/);
 });
 
+test('web sessions use hardened HttpOnly cookies with a native Bearer fallback', () => {
+  const session = read('middleware/session.js');
+  const middleware = read('middleware/auth.js');
+  const auth = read('routes/auth.js');
+  const server = read('server.js');
+  const runtime = read('public/mobile-runtime.js');
+  const login = read('public/login.html');
+
+  assert.match(session, /httpOnly: true/);
+  assert.match(session, /secure: hostedOverHttps/);
+  assert.match(session, /sameSite: 'lax'/);
+  assert.match(session, /protectCookieWrites/);
+  assert.match(session, /origin === requestOrigin\(req\)/);
+  assert.match(middleware, /requestToken\(req\)/);
+  assert.match(auth, /setSessionCookie\(res, token\)/);
+  assert.match(auth, /router\.post\('\/logout'/);
+  assert.match(auth, /router\.post\('\/migrate-session', requireAuth/);
+  assert.match(server, /app\.use\('\/api', protectCookieWrites\)/);
+  assert.match(server, /const token = socketToken\(socket\)/);
+  assert.match(server, /credentials: true/);
+  assert.match(runtime, /migrateLegacyWebSession/);
+  assert.match(runtime, /localStorage\.removeItem\('ozama-token'\)/);
+  assert.match(login, /OZAMA_RUNTIME\?\.native && token/);
+});
+
 test('admin control plane is allowlisted, rate limited, and server-authorized', () => {
   const middleware = read('middleware/auth.js');
   const admin = read('routes/admin.js');

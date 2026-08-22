@@ -5,6 +5,8 @@ const bcrypt  = require('bcryptjs');
 const crypto  = require('crypto');
 const jwt     = require('jsonwebtoken');
 const User    = require('../models/User');
+const { requireAuth } = require('../middleware/auth');
+const { requestToken, setSessionCookie, clearSessionCookie } = require('../middleware/session');
 
 const router  = express.Router();
 const authAttempts = new Map();
@@ -147,6 +149,7 @@ router.post('/register', limitRegister, async (req, res) => {
       recoveryCodeHash,
     });
     const token = signToken(user);
+    setSessionCookie(res, token);
 
     return res.status(201).json({
       token,
@@ -182,7 +185,7 @@ router.post('/login', limitLogin, async (req, res) => {
       ],
     }).select('+password +tokenVersion');
 
-    if (!user) {
+    if (!user || !user.isActive) {
       return res.status(401).json({ error: 'Credenciales incorrectas.' });
     }
 
@@ -195,6 +198,7 @@ router.post('/login', limitLogin, async (req, res) => {
     await user.save({ validateModifiedOnly: true });
 
     const token = signToken(user);
+    setSessionCookie(res, token);
 
     return res.json({
       token,
@@ -243,6 +247,7 @@ router.post('/reset-password', limitReset, async (req, res) => {
     user.recoveryCodeHash = await bcrypt.hash(nextRecoveryCode, 12);
     user.tokenVersion = Number(user.tokenVersion || 0) + 1;
     await user.save();
+    clearSessionCookie(res);
 
     return res.json({
       message: 'Contrasena actualizada. Guarda tu nuevo codigo de recuperacion.',
@@ -252,6 +257,18 @@ router.post('/reset-password', limitReset, async (req, res) => {
     console.error('[Auth] Reset password error:', err.message);
     return res.status(500).json({ error: 'Error interno del servidor.' });
   }
+});
+
+router.post('/logout', (req, res) => {
+  clearSessionCookie(res);
+  res.set('Cache-Control', 'no-store');
+  return res.json({ ok: true });
+});
+
+router.post('/migrate-session', requireAuth, (req, res) => {
+  setSessionCookie(res, requestToken(req));
+  res.set('Cache-Control', 'no-store');
+  return res.json({ ok: true });
 });
 
 module.exports = router;

@@ -474,7 +474,7 @@
     })();
     const storedToken = localStorage.getItem('ozama-token') || storedUser?.token || storedUser?.jwt || storedUser?.accessToken || '';
 
-    if (storedUser && storedToken) {
+    if (storedUser && (storedToken || !window.OZAMA_RUNTIME?.native)) {
       document.getElementById('nav-lobby')?.setAttribute('href', '/lobby.html');
       document.getElementById('nav-profile')?.setAttribute('href', '/profile.html');
       document.getElementById('rank-play')?.setAttribute('href', '/lobby.html');

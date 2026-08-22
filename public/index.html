@@ -1539,7 +1539,7 @@
 
     const storedToken = storedUser?.token || storedUser?.jwt || storedUser?.accessToken || localStorage.getItem('ozama-token') || '';
 
-    if (storedUser && storedToken) {
+    if (storedUser && (storedToken || !window.OZAMA_RUNTIME?.native)) {
       const navProfile = document.getElementById('nav-profile');
       const navCta = document.getElementById('nav-cta');
       const ctaPlay = document.getElementById('cta-play');

@@ -171,7 +171,7 @@ function readStoredUser() {
 }
 const STORED_USER = readStoredUser();
 const STORED_TOKEN = localStorage.getItem('ozama-token') || STORED_USER?.token || STORED_USER?.jwt || STORED_USER?.accessToken || '';
-if (!STORED_USER || !STORED_TOKEN) {
+if (!STORED_USER || (window.OZAMA_RUNTIME?.native && !STORED_TOKEN)) {
   sessionStorage.clear();
   window.location.replace('/login.html');
   throw new Error('AUTH_REQUIRED');
@@ -180,7 +180,7 @@ if (!STORED_USER || !STORED_TOKEN) {
 async function validateStoredSession() {
   try {
     const response = await fetch('/api/user/me', {
-      headers: { Authorization: `Bearer ${STORED_TOKEN}` },
+      headers: STORED_TOKEN ? { Authorization: `Bearer ${STORED_TOKEN}` } : {},
       cache: 'no-store',
     });
     if (!response.ok) throw new Error('INVALID_SESSION');
@@ -1156,7 +1156,8 @@ function setupControls() {
 function setupOnlineSocket() {
   if (!IS_ONLINE || typeof io !== 'function') return;
   socket = io(window.OZAMA_RUNTIME?.socketOrigin, {
-    auth: { token: sessionStorage.getItem('ozama-token') || STORED_TOKEN || '' }
+    auth: { token: sessionStorage.getItem('ozama-token') || STORED_TOKEN || '' },
+    withCredentials: true,
   });
 
   function rejoin() {

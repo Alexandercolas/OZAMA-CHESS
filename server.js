@@ -15,6 +15,7 @@ const jwt             = require('jsonwebtoken');
 const crypto          = require('crypto');
 const { z }           = require('zod');
 const { RateLimiterMemory } = require('rate-limiter-flexible');
+const { protectCookieWrites, socketToken } = require('./middleware/session');
 
 const connectDatabase = require('./config/database');
 const Match           = require('./models/Match');
@@ -76,6 +77,7 @@ const io     = new Server(server, {
     },
     methods: ['GET', 'POST'],
     allowedHeaders: ['Authorization', 'Content-Type'],
+    credentials: true,
   },
 });
 
@@ -89,6 +91,7 @@ app.use((req, res, next) => {
     res.vary('Origin');
     res.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
     res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.set('Access-Control-Allow-Credentials', 'true');
   }
   if (req.method === 'OPTIONS') {
     return appOriginAllowed(origin) ? res.sendStatus(204) : res.sendStatus(403);
@@ -122,6 +125,7 @@ app.use((req, res, next) => {
   }
   next();
 });
+app.use('/api', protectCookieWrites);
 app.use((req, res, next) => {
   if (req.path === '/' || req.path.endsWith('.html')) {
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -874,7 +878,7 @@ async function applyEloForRoom(room, result, code) {
 
 // ── Socket JWT middleware ──────────────────────────────────────────
 io.use(async (socket, next) => {
-  const token = socket.handshake.auth.token;
+  const token = socketToken(socket);
   if (!token) return next(new Error('Debes iniciar sesion.'));
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });

@@ -668,7 +668,16 @@
       if (photoStatus) photoStatus.textContent = 'Foto quitada. Toca Guardar.';
     }
 
-    function logout() {
+    async function logout() {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          credentials: 'include',
+          keepalive: true,
+          headers: _token ? { Authorization: `Bearer ${_token}` } : {}
+        });
+      }
+      catch (_) {}
       localStorage.removeItem('ozama-token');
       localStorage.removeItem('ozama-user');
       sessionStorage.clear();
@@ -1061,7 +1070,7 @@
 
     // Init
     async function init() {
-      if (!_token || !_user) { renderNotLogged(); return; }
+      if (!_user || (window.OZAMA_RUNTIME?.native && !_token)) { renderNotLogged(); return; }
 
       // Mostrar loading
       document.getElementById('main-content').innerHTML = `
