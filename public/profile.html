@@ -564,8 +564,10 @@
   <div id="main-content"></div>
 
   <script>
+    (async () => {
+    await window.OZAMA_RUNTIME?.ready;
     const _user  = JSON.parse(localStorage.getItem('ozama-user') || 'null');
-    const _token = localStorage.getItem('ozama-token') || _user?.token || _user?.jwt || _user?.accessToken || '';
+    const _token = window.OZAMA_RUNTIME?.getAuthToken?.() || '';
     let currentHistoryPage = 1;
     let profileRefreshBusy = false;
     let profileInitialized = false;
@@ -678,7 +680,7 @@
         });
       }
       catch (_) {}
-      localStorage.removeItem('ozama-token');
+      await window.OZAMA_RUNTIME?.clearAuthToken?.().catch(() => {});
       localStorage.removeItem('ozama-user');
       sessionStorage.clear();
       window.location.replace('/login.html');
@@ -1048,7 +1050,7 @@
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || 'No se pudo eliminar la cuenta.');
 
-        localStorage.removeItem('ozama-token');
+        await window.OZAMA_RUNTIME?.clearAuthToken?.().catch(() => {});
         localStorage.removeItem('ozama-user');
         sessionStorage.clear();
         window.location.replace('/account-deletion.html?deleted=1');
@@ -1114,6 +1116,18 @@
     document.addEventListener('visibilitychange', refreshVisibleProfile);
     window.addEventListener('focus', refreshVisibleProfile);
     window.setInterval(refreshVisibleProfile, 30_000);
+    Object.assign(window, {
+      logout,
+      selectAvatar,
+      handleAvatarImage,
+      clearAvatarImage,
+      loadPage,
+      saveProfile,
+      addFriend,
+      removeFriend,
+      deleteAccount,
+    });
+    })();
   </script>
 </body>
 </html>

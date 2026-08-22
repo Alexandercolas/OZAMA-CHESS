@@ -1,17 +1,14 @@
 'use strict';
 
-(() => {
+(async () => {
+  await window.OZAMA_RUNTIME?.ready;
   const accessLinks = [...document.querySelectorAll('[data-admin-access]')];
   if (!accessLinks.length) return;
 
   let user = null;
   try { user = JSON.parse(localStorage.getItem('ozama-user') || 'null'); }
   catch (_) {}
-  const token = localStorage.getItem('ozama-token')
-    || user?.token
-    || user?.jwt
-    || user?.accessToken
-    || '';
+  const token = window.OZAMA_RUNTIME?.getAuthToken?.() || '';
   if (!user || (window.OZAMA_RUNTIME?.native && !token)) return;
 
   const controller = new AbortController();
@@ -24,7 +21,7 @@
   })
     .then((response) => {
       if (response.status === 401) {
-        localStorage.removeItem('ozama-token');
+        window.OZAMA_RUNTIME?.clearAuthToken?.().catch(() => {});
         localStorage.removeItem('ozama-user');
       }
       if (!response.ok) throw new Error('ADMIN_DENIED');

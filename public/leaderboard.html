@@ -468,11 +468,13 @@
   </main>
 
   <script>
+    (async () => {
+    await window.OZAMA_RUNTIME?.ready;
     const storedUser = (() => {
       try { return JSON.parse(localStorage.getItem('ozama-user') || 'null'); }
       catch (_) { return null; }
     })();
-    const storedToken = localStorage.getItem('ozama-token') || storedUser?.token || storedUser?.jwt || storedUser?.accessToken || '';
+    const storedToken = window.OZAMA_RUNTIME?.getAuthToken?.() || '';
 
     if (storedUser && (storedToken || !window.OZAMA_RUNTIME?.native)) {
       document.getElementById('nav-lobby')?.setAttribute('href', '/lobby.html');
@@ -584,6 +586,7 @@
     window.setInterval(() => {
       if (document.visibilityState === 'visible') load();
     }, 30_000);
+    })();
   </script>
 </body>
 </html>

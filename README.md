@@ -131,8 +131,9 @@ Permite:
 La carcasa de `/admin.html` no contiene datos sensibles. Todas las lecturas y operaciones viven bajo `/api/admin/*`, requieren JWT vigente, cuenta activa, correo autorizado y limites de solicitudes.
 
 En la web, la sesion se entrega mediante una cookie `HttpOnly` segura. Los JWT web
-anteriores se migran automaticamente y se eliminan de `localStorage`. La APK conserva
-el bearer durante esta etapa para mantener compatibilidad con Capacitor y Socket.IO.
+anteriores se migran automaticamente y se eliminan de `localStorage`. En Android, la
+APK cifra el bearer con AES-256-GCM y protege la clave con `AndroidKeyStore`; Socket.IO
+solo recibe una copia temporal en memoria durante la ejecucion.
 
 ## Deploy
 

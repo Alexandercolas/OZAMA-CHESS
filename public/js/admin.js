@@ -5,11 +5,7 @@
     try { return JSON.parse(localStorage.getItem('ozama-user') || 'null'); }
     catch (_) { return null; }
   })();
-  const token = localStorage.getItem('ozama-token')
-    || storedUser?.token
-    || storedUser?.jwt
-    || storedUser?.accessToken
-    || '';
+  let token = '';
 
   const state = {
     admin: null,
@@ -43,7 +39,7 @@
     const data = await response.json().catch(() => ({}));
     if (response.status === 401 || response.status === 403) {
       if (response.status === 401) {
-        localStorage.removeItem('ozama-token');
+        await window.OZAMA_RUNTIME?.clearAuthToken?.().catch(() => {});
         localStorage.removeItem('ozama-user');
       }
       throw Object.assign(new Error(data.error || 'Acceso no autorizado.'), { authFailure: true });
@@ -585,6 +581,8 @@
   }
 
   async function start() {
+    await window.OZAMA_RUNTIME?.ready;
+    token = window.OZAMA_RUNTIME?.getAuthToken?.() || '';
     if (!token && window.OZAMA_RUNTIME?.native) {
       redirectUnauthorized('Inicia sesión con tu cuenta administradora para continuar.');
       return;

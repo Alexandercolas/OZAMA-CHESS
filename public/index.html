@@ -1507,6 +1507,8 @@
   </div>
 
   <script>
+    (async () => {
+    await window.OZAMA_RUNTIME?.ready;
     // Entrance trigger and one-shot scroll reveal.
     (function(){
       try {
@@ -1537,7 +1539,7 @@
       catch (_) { return null; }
     })();
 
-    const storedToken = storedUser?.token || storedUser?.jwt || storedUser?.accessToken || localStorage.getItem('ozama-token') || '';
+    const storedToken = window.OZAMA_RUNTIME?.getAuthToken?.() || '';
 
     if (storedUser && (storedToken || !window.OZAMA_RUNTIME?.native)) {
       const navProfile = document.getElementById('nav-profile');
@@ -1655,6 +1657,7 @@
     }
 
     loadLeaderboard();
+    })();
   </script>
 </body>
 </html>

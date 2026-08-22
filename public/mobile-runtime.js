@@ -5,6 +5,7 @@
   const capacitor = window.Capacitor;
   const native = Boolean(capacitor && typeof capacitor.isNativePlatform === 'function' && capacitor.isNativePlatform());
   const root = document.documentElement;
+  let authToken = '';
 
   root.classList.toggle('ozama-native', native);
 
@@ -50,12 +51,6 @@
     `;
     document.head.appendChild(mobileStyles);
   }
-
-  window.OZAMA_RUNTIME = Object.freeze({
-    native,
-    apiOrigin: native ? productionOrigin : '',
-    socketOrigin: native ? productionOrigin : undefined,
-  });
 
   let lastResumeAt = 0;
 
@@ -177,16 +172,57 @@
     return originalFetch(input, init);
   };
 
-  async function migrateLegacyWebSession() {
-    if (native) return;
+  function storedUser() {
     let user = null;
     try { user = JSON.parse(localStorage.getItem('ozama-user') || 'null'); }
     catch (_) {}
-    const token = localStorage.getItem('ozama-token')
+    return user;
+  }
+
+  function legacyToken(user = storedUser()) {
+    return localStorage.getItem('ozama-token')
       || user?.token
       || user?.jwt
       || user?.accessToken
       || '';
+  }
+
+  function removeLegacyToken(user = storedUser()) {
+    localStorage.removeItem('ozama-token');
+    if (!user) return;
+    delete user.token;
+    delete user.jwt;
+    delete user.accessToken;
+    localStorage.setItem('ozama-user', JSON.stringify(user));
+  }
+
+  function nativeStorage() {
+    return capacitor?.Plugins?.OzamaSecureStorage;
+  }
+
+  async function initializeNativeSession() {
+    const storage = nativeStorage();
+    if (!storage?.readToken || !storage?.writeToken) {
+      throw new Error('Almacenamiento seguro nativo no disponible.');
+    }
+
+    const user = storedUser();
+    const legacy = legacyToken(user);
+    if (legacy) {
+      await storage.writeToken({ value: legacy });
+      authToken = legacy;
+      removeLegacyToken(user);
+      return;
+    }
+
+    const result = await storage.readToken();
+    authToken = String(result?.value || '');
+    removeLegacyToken(user);
+  }
+
+  async function migrateLegacyWebSession() {
+    const user = storedUser();
+    const token = legacyToken(user);
     if (!token) return;
 
     try {
@@ -194,17 +230,44 @@
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!response.ok) return;
-      localStorage.removeItem('ozama-token');
-      if (user) {
-        delete user.token;
-        delete user.jwt;
-        delete user.accessToken;
-        localStorage.setItem('ozama-user', JSON.stringify(user));
-      }
+      if (!response.ok) throw new Error('No se pudo migrar la sesion web.');
+      removeLegacyToken(user);
       window.dispatchEvent(new CustomEvent('ozama:session-migrated'));
-    } catch (_) { /* conserva el bearer hasta poder migrarlo */ }
+    } catch (_) {
+      authToken = token;
+    }
   }
 
-  migrateLegacyWebSession();
+  async function storeAuthToken(token) {
+    const value = String(token || '').trim();
+    if (!value) throw new Error('Token requerido.');
+    if (native) {
+      const storage = nativeStorage();
+      if (!storage?.writeToken) throw new Error('Almacenamiento seguro nativo no disponible.');
+      await storage.writeToken({ value });
+      authToken = value;
+    }
+    removeLegacyToken();
+  }
+
+  async function clearAuthToken() {
+    authToken = '';
+    removeLegacyToken();
+    if (!native) return;
+    const storage = nativeStorage();
+    if (storage?.removeToken) await storage.removeToken();
+  }
+
+  const ready = (native ? initializeNativeSession() : migrateLegacyWebSession())
+    .catch((error) => console.warn('[OZAMA] Sesion segura no disponible:', error?.message || error));
+
+  window.OZAMA_RUNTIME = Object.freeze({
+    native,
+    apiOrigin: native ? productionOrigin : '',
+    socketOrigin: native ? productionOrigin : undefined,
+    ready,
+    getAuthToken: () => authToken,
+    storeAuthToken,
+    clearAuthToken,
+  });
 })();

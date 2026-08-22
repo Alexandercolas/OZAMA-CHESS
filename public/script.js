@@ -169,13 +169,8 @@ function readStoredUser() {
   try { return JSON.parse(localStorage.getItem('ozama-user') || 'null'); }
   catch { return null; }
 }
-const STORED_USER = readStoredUser();
-const STORED_TOKEN = localStorage.getItem('ozama-token') || STORED_USER?.token || STORED_USER?.jwt || STORED_USER?.accessToken || '';
-if (!STORED_USER || (window.OZAMA_RUNTIME?.native && !STORED_TOKEN)) {
-  sessionStorage.clear();
-  window.location.replace('/login.html');
-  throw new Error('AUTH_REQUIRED');
-}
+let STORED_USER = null;
+let STORED_TOKEN = '';
 
 async function validateStoredSession() {
   try {
@@ -191,7 +186,7 @@ async function validateStoredSession() {
     return true;
   } catch (_) {
     localStorage.removeItem('ozama-user');
-    localStorage.removeItem('ozama-token');
+    await window.OZAMA_RUNTIME?.clearAuthToken?.().catch(() => {});
     sessionStorage.clear();
     window.location.replace('/login.html');
     return false;
@@ -1156,7 +1151,7 @@ function setupControls() {
 function setupOnlineSocket() {
   if (!IS_ONLINE || typeof io !== 'function') return;
   socket = io(window.OZAMA_RUNTIME?.socketOrigin, {
-    auth: { token: sessionStorage.getItem('ozama-token') || STORED_TOKEN || '' },
+    auth: { token: STORED_TOKEN || '' },
     withCredentials: true,
   });
 
@@ -1338,7 +1333,7 @@ function setupOnlineSocket() {
   socket.on('auth-error', (message) => {
     console.warn('[OZAMA] Auth socket:', message);
     localStorage.removeItem('ozama-user');
-    localStorage.removeItem('ozama-token');
+    window.OZAMA_RUNTIME?.clearAuthToken?.().catch(() => {});
     clearOnlineSession();
     window.location.href = '/login.html';
   });
@@ -1349,6 +1344,16 @@ function setupOnlineSocket() {
 
 // Iniciar juego al cargar la página
 window.addEventListener('DOMContentLoaded', async () => {
+  await window.OZAMA_RUNTIME?.ready;
+  STORED_USER = readStoredUser();
+  STORED_TOKEN = window.OZAMA_RUNTIME?.getAuthToken?.() || '';
+  if (!STORED_USER || (window.OZAMA_RUNTIME?.native && !STORED_TOKEN)) {
+    await window.OZAMA_RUNTIME?.clearAuthToken?.().catch(() => {});
+    localStorage.removeItem('ozama-user');
+    sessionStorage.clear();
+    window.location.replace('/login.html');
+    return;
+  }
   if (!(await validateStoredSession())) return;
   document.body.classList.remove('auth-checking');
   updateSoundButton();

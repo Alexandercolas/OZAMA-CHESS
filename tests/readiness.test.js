@@ -113,7 +113,7 @@ test('web sessions use hardened HttpOnly cookies with a native Bearer fallback',
   assert.match(server, /credentials: true/);
   assert.match(runtime, /migrateLegacyWebSession/);
   assert.match(runtime, /localStorage\.removeItem\('ozama-token'\)/);
-  assert.match(login, /OZAMA_RUNTIME\?\.native && token/);
+  assert.match(login, /await window\.OZAMA_RUNTIME\?\.ready/);
 });
 
 test('admin control plane is allowlisted, rate limited, and server-authorized', () => {
@@ -230,6 +230,40 @@ test('native runtime sends only API and socket traffic to production', () => {
   assert.doesNotMatch(runtime, /MONGODB_URI|JWT_SECRET/);
   assert.match(server, /'https:\/\/localhost'/);
   assert.match(server, /appOriginAllowed/);
+});
+
+test('Android stores the native session with a non-exportable Keystore key', () => {
+  const plugin = read('android/app/src/main/java/com/ozamachess/app/OzamaSecureStoragePlugin.java');
+  const activity = read('android/app/src/main/java/com/ozamachess/app/MainActivity.java');
+  const runtime = read('public/mobile-runtime.js');
+  const login = read('public/login.html');
+
+  assert.match(activity, /registerPlugin\(OzamaSecureStoragePlugin\.class\)/);
+  assert.match(plugin, /@CapacitorPlugin\(name = "OzamaSecureStorage"\)/);
+  assert.match(plugin, /AndroidKeyStore/);
+  assert.match(plugin, /AES\/GCM\/NoPadding/);
+  assert.match(plugin, /setKeySize\(256\)/);
+  assert.match(plugin, /setRandomizedEncryptionRequired\(true\)/);
+  assert.match(plugin, /cipher\.updateAAD\(AAD\)/);
+  assert.match(runtime, /initializeNativeSession/);
+  assert.match(runtime, /storage\.writeToken\(\{ value: legacy \}\)/);
+  assert.match(runtime, /getAuthToken: \(\) => authToken/);
+  assert.match(runtime, /storeAuthToken/);
+  assert.match(runtime, /clearAuthToken/);
+  assert.match(login, /await window\.OZAMA_RUNTIME\?\.storeAuthToken/);
+
+  for (const file of [
+    'public/index.html',
+    'public/leaderboard.html',
+    'public/lobby.html',
+    'public/login.html',
+    'public/profile.html',
+    'public/script.js',
+    'public/js/admin.js',
+    'public/js/admin-access.js',
+  ]) {
+    assert.doesNotMatch(read(file), /localStorage\.(?:getItem|setItem)\('ozama-token'/);
+  }
 });
 
 test('Android release base blocks backups and cleartext traffic', () => {

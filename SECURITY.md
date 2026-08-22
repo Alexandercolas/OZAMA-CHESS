@@ -26,8 +26,11 @@ Este documento resume las reglas minimas de seguridad para operar OZAMA CHESS co
 - Las escrituras autenticadas por cookie exigen origen same-origin para bloquear CSRF.
 - Los bearer antiguos del navegador se migran una vez a cookie y se eliminan de
   `localStorage` sin cerrar la sesion.
-- Capacitor mantiene bearer como compatibilidad transitoria; la siguiente fase movil
-  debe llevarlo a almacenamiento cifrado respaldado por Keychain/Keystore.
+- Android cifra el bearer con AES-256-GCM y mantiene la clave no exportable en
+  `AndroidKeyStore`; JavaScript solo conserva el token en memoria mientras la vista
+  actual esta abierta.
+- La migracion elimina automaticamente el bearer antiguo de `localStorage` despues
+  de confirmar su escritura cifrada. iOS debera usar Keychain al crear ese proyecto.
 
 ## Datos De Usuario
 

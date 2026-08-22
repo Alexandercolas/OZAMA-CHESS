@@ -738,14 +738,13 @@
       document.getElementById('form-reset').classList.remove('hidden');
     }
 
-    function saveSession(token, user) {
-      if (window.OZAMA_RUNTIME?.native && token) localStorage.setItem('ozama-token', token);
-      else localStorage.removeItem('ozama-token');
+    async function saveSession(token, user) {
+      await window.OZAMA_RUNTIME?.storeAuthToken?.(token);
       localStorage.setItem('ozama-user', JSON.stringify(user));
     }
 
     function getSession() {
-      const token = localStorage.getItem('ozama-token');
+      const token = window.OZAMA_RUNTIME?.getAuthToken?.() || '';
       let user = null;
       try { user = JSON.parse(localStorage.getItem('ozama-user') || 'null'); }
       catch (_) { user = null; }
@@ -756,8 +755,8 @@
       document.body.classList.remove('session-checking');
     }
 
-    function clearSession() {
-      localStorage.removeItem('ozama-token');
+    async function clearSession() {
+      await window.OZAMA_RUNTIME?.clearAuthToken?.().catch(() => {});
       localStorage.removeItem('ozama-user');
       sessionStorage.clear();
     }
@@ -785,7 +784,7 @@
         });
       }
       catch (_) {}
-      clearSession();
+      await clearSession();
       revealLogin();
       clearMsg();
     }
@@ -794,7 +793,8 @@
       window.location.replace('/lobby.html');
     }
 
-    function checkExistingSession() {
+    async function checkExistingSession() {
+      await window.OZAMA_RUNTIME?.ready;
       const { token } = getSession();
       if (!token && window.OZAMA_RUNTIME?.native) {
         revealLogin();
@@ -802,7 +802,7 @@
       }
 
       if (token && isJwtExpired(token)) {
-        clearSession();
+        await clearSession();
         revealLogin();
         return;
       }
@@ -845,7 +845,7 @@
           return;
         }
 
-        saveSession(data.token, data.user);
+        await saveSession(data.token, data.user);
         showMsg('Bienvenido de vuelta.', 'success');
         setTimeout(goToLobby, 500);
       } catch (err) {
@@ -889,7 +889,7 @@
           return;
         }
 
-        saveSession(data.token, data.user);
+        await saveSession(data.token, data.user);
         const recoveryBox = document.getElementById('recovery-box');
         if (data.recoveryCode && recoveryBox) {
           recoveryBox.textContent = 'Guarda este codigo. Lo necesitaras si olvidas tu contrasena.';
