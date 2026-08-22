@@ -89,26 +89,35 @@ Este cuadro es un borrador tecnico, no una certificacion legal. La declaracion f
 
 Crear una clave de subida una sola vez y guardar dos copias privadas fuera del repositorio. No compartir el archivo ni sus contrasenas por chat, correo o GitHub.
 
-Variables requeridas durante la compilacion firmada:
-
-```text
-OZAMA_UPLOAD_STORE_FILE
-OZAMA_UPLOAD_STORE_PASSWORD
-OZAMA_UPLOAD_KEY_ALIAS
-OZAMA_UPLOAD_KEY_PASSWORD
-```
-
-Ejemplo de una sesion local de PowerShell, sustituyendo los valores de forma privada:
+La llave oficial se crea desde la terminal local con:
 
 ```powershell
-$env:OZAMA_UPLOAD_STORE_FILE = 'C:\ruta-privada\ozama-upload.jks'
-$env:OZAMA_UPLOAD_STORE_PASSWORD = 'CONTRASENA_PRIVADA'
-$env:OZAMA_UPLOAD_KEY_ALIAS = 'ozama-upload'
-$env:OZAMA_UPLOAD_KEY_PASSWORD = 'CONTRASENA_PRIVADA'
-npm run android:build:signed
+.\scripts\create-android-upload-key.cmd
 ```
 
-El bundle resultante queda en `android/app/build/outputs/bundle/release/app-release.aab`. El comando verifica la firma y muestra el hash SHA-256 que se debe conservar junto al registro de la version subida.
+El asistente guarda la llave en `%USERPROFILE%\OZAMA-PRIVATE\ozama-upload.jks`, fuera del repositorio y de OneDrive. Para generar el bundle firmado:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\build-android-signed.ps1
+```
+
+La contrasena se solicita de forma oculta, permanece solo en la memoria del proceso y se elimina al terminar. El bundle resultante queda en `android/app/build/outputs/bundle/release/app-release.aab`. El comando verifica la firma y muestra el hash SHA-256 que se debe conservar junto al registro de la version subida.
+
+Antes de publicar, conservar dos copias privadas de la llave en ubicaciones separadas. Perder la llave de subida o su contrasena impide firmar nuevas versiones hasta completar el proceso de restablecimiento de Google Play.
+
+### Primer Candidato Firmado
+
+- Generado: `2026-08-21 22:36 AST`
+- Archivo local: `android/app/build/outputs/bundle/release/app-release.aab`
+- Tamano: `13,042,907 bytes`
+- SHA-256 del AAB: `4A37ACF905FDD945AA164AAFA13F3C00A426D12EB93CD1AA6D12CA22EFD3FE00`
+- Alias de subida: `ozama-upload`
+- Certificado: `RSA 4096 bits`, `SHA384withRSA`, valido hasta `2054-01-06`
+- SHA-1 del certificado: `42:A8:15:13:D4:69:E2:A4:B7:D4:03:32:FE:98:6F:CF:03:51:7B:52`
+- SHA-256 del certificado: `5C:89:8C:3E:47:44:7B:0C:65:01:73:B3:57:A8:85:0E:6B:88:C7:DC:7A:45:41:66:E8:8C:5D:B2:59:22:61:01`
+- Verificacion local: `jar verified`
+
+El hash del AAB cambia al volver a compilar. Las huellas del certificado deben permanecer iguales en todas las versiones firmadas con esta llave de subida.
 
 ## Orden De Publicacion
 

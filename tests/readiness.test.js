@@ -173,12 +173,20 @@ test('Socket.IO gameplay events are bound to auth, validation, room tokens, and 
 
 test('repository ignores local secrets and documents production variables', () => {
   assert.match(read('.gitignore'), /^\.env$/m);
+  assert.match(read('.gitignore'), /^\*\.jks$/m);
+  assert.match(read('.gitignore'), /^\*\.keystore$/m);
   const example = read('.env.example');
   assert.match(example, /^MONGODB_URI=$/m);
   assert.match(example, /^MONGODB_DB_NAME=ozama-chess$/m);
   assert.match(example, /^JWT_SECRET=/m);
   assert.match(example, /^ADMIN_EMAILS=$/m);
   assert.doesNotMatch(example, /mongodb\+srv:\/\//i);
+
+  const signedBuild = read('scripts/build-android-signed.ps1');
+  assert.match(signedBuild, /Read-Host 'Contrasena de la llave de subida' -AsSecureString/);
+  assert.match(signedBuild, /ZeroFreeBSTR/);
+  assert.match(signedBuild, /Remove-Item Env:OZAMA_UPLOAD_STORE_PASSWORD/);
+  assert.doesNotMatch(signedBuild, /CONTRASENA_PRIVADA|storePassword\s*=|keyPassword\s*=/i);
 });
 
 test('dynamic test scripts cannot target the production MongoDB database', () => {
