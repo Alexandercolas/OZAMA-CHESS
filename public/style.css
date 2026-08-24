@@ -401,7 +401,10 @@ body::after {
   width: 112%;
   height: 112%;
   isolation: isolate;
-  filter: drop-shadow(0 7px 5px rgba(0,0,0,0.68));
+  /* No filter here on purpose: .piece-white / .piece-black below carry the
+     real contrast/saturation/glow treatment for the 3D renders. Setting one
+     here used to win by specificity (.piece.piece-3d > .piece-white) and
+     silently flattened every 3D piece to a plain drop-shadow. */
 }
 
 .piece.piece-3d::before,
