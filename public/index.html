@@ -1568,6 +1568,13 @@
         navProfile.href = '/profile.html';
         navProfile.textContent = storedUser.username || 'Perfil';
       }
+      // El servidor calcula isAdmin contra ADMIN_EMAILS; este toggle es
+      // solo comodidad visual, el control real vive en requireAdmin().
+      document.querySelectorAll('[data-admin-access]').forEach((el) => {
+        el.hidden = !storedUser.isAdmin;
+        if (storedUser.isAdmin) el.removeAttribute('aria-hidden');
+        else el.setAttribute('aria-hidden', 'true');
+      });
       if (navCta) {
         navCta.textContent = 'Ir al lobby';
         navCta.href = '/lobby.html';

@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="OZAMA CHESS"/>
   <meta name="robots" content="noindex, nofollow"/>
-  <title>OZAMA CHESS - Perfil</title>
+  <title>OZAMA CHESS - Historial</title>
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/favicon.png?v=5">
   <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png?v=5">
@@ -587,8 +587,8 @@
   </nav>
 
   <div class="profile-tabs">
-    <a href="/profile.html" class=" profile-tab is-active">Perfil</a>
-    <a href="/history.html" class="profile-tab">Historial</a>
+    <a href="/profile.html" class="profile-tab">Perfil</a>
+    <a href="/history.html" class=" profile-tab is-active">Historial</a>
     <a href="/settings.html" class="profile-tab">Ajustes</a>
   </div>
 
@@ -600,7 +600,9 @@
     await window.OZAMA_RUNTIME?.ready;
     const _user  = JSON.parse(localStorage.getItem('ozama-user') || 'null');
     const _token = window.OZAMA_RUNTIME?.getAuthToken?.() || '';
-    let profileInitialized = false;
+    let currentHistoryPage = 1;
+    let historyBusy = false;
+    let historyInitialized = false;
 
         function getFlag(country) {
           if (!country || country === 'OTHER') return '<span class="country-code">--</span>';
@@ -615,9 +617,10 @@
           }[char]));
         }
 
-        function avatarClass(avatar) {
-          const index = Number.isFinite(Number(avatar)) ? Number(avatar) : 0;
-          return `avatar-${Math.abs(index) % 6}`;
+        function formatDate(d) {
+          if (!d) return '';
+          const date = new Date(d);
+          return date.toLocaleDateString('es-DO', { day:'2-digit', month:'short' });
         }
 
         async function logout() {
@@ -647,153 +650,84 @@
           `;
         }
 
-    function renderProfile(user) {
-      user.stats = user.stats || { wins: 0, losses: 0, draws: 0 };
-      const gamesPlayed = (user.stats.wins || 0) + (user.stats.losses || 0) + (user.stats.draws || 0);
-      const winRate = gamesPlayed > 0 ? Math.round((user.stats.wins || 0) / gamesPlayed * 100) : 0;
-      const avatar = Math.abs(Number(user.avatar) || 0) % 6;
-      const initial = escapeHtml((user.username || '?')[0].toUpperCase());
-      const username = escapeHtml(user.username || 'Jugador');
-      const avatarImage = user.avatarImage || '';
-      const premiumUntil = user.premiumUntil ? new Date(user.premiumUntil) : null;
-      const premiumActive = user.plan === 'premium' && (!premiumUntil || premiumUntil > new Date());
-      const planLabel = premiumActive ? 'Premium' : 'Free';
-      const heroAvatar = avatarImage
-        ? `<div class="avatar-ring" id="avatar-ring" data-initial="${initial}"><img src="${escapeHtml(avatarImage)}" alt=""></div>`
-        : `<div class="avatar-ring ${avatarClass(avatar)}" id="avatar-ring" data-initial="${initial}">${initial}</div>`;
+    function renderHistory(user, history, total, page) {
+            const matchRows = history.length === 0 ?
+               `<div class="empty-msg">Sin partidas registradas aun</div>`
+              : history.map(m => {
+                  const isWhite = m.whitePlayer.userId === user._id || m.whitePlayer.userId === user.id;
+                  const myColor = isWhite ? 'w' : 'b';
+                  const rivalPlayer = isWhite ? m.blackPlayer : m.whitePlayer;
+                  const rival   = escapeHtml(rivalPlayer.name || 'Desconocido');
+                  const result  = m.result;
+                  const movesCount = Array.isArray(m.moves) ? m.moves.length : 0;
+
+                  let won, badge, icon, eloClass, eloText, resultText;
+                  if (result === 'draw') {
+                    won = null; badge = 'badge-draw'; icon = '=';
+                    eloClass = 'elo-flat'; eloText = '+0'; resultText = 'Tablas';
+                  } else if ((result === 'white_win' && myColor === 'w') || (result === 'black_win' && myColor === 'b')) {
+                    won = true; badge = 'badge-win'; icon = 'W';
+                    const change = myColor === 'w' ? m.eloChange.white : m.eloChange.black;
+                    eloClass = 'elo-up'; eloText = change != null ? `+${change}` : '+'; resultText = 'Victoria';
+                  } else {
+                    won = false; badge = 'badge-loss'; icon = 'L';
+                    const change = myColor === 'w' ? m.eloChange.white : m.eloChange.black;
+                    eloClass = 'elo-down'; eloText = change != null ? `${change}` : '-'; resultText = result === 'abandoned' ? 'Abandono' : 'Derrota';
+                  }
+
+                  return `
+                    <div class="match-row">
+                      <div class="match-result-badge ${badge}">${icon}</div>
+                      <div class="match-info">
+                        <div class="match-vs">${getFlag(rivalPlayer.country)} vs ${rival}</div>
+                        <div class="match-detail">${resultText} · ${myColor === 'w' ? 'Blancas' : 'Negras'} · ${movesCount} movidas · Sala ${m.roomCode || ''}</div>
+                      </div>
+                      <div class="match-elo-change ${eloClass}">${eloText}</div>
+                      <div class="match-date">${formatDate(m.createdAt)}</div>
+                    </div>
+                  `;
+                }).join('');
+
+            const totalPages = Math.ceil(total / 10);
+            const paginationHtml = totalPages > 1 ? `
+              <div class="pagination">
+                <button class="page-btn" onclick="loadPage(${page - 1})" ${page <= 1 ? 'disabled' : ''}>Ant</button>
+                <button class="page-btn active">${page} / ${totalPages}</button>
+                <button class="page-btn" onclick="loadPage(${page + 1})" ${page >= totalPages ? 'disabled' : ''}>Sig</button>
+              </div>
+            ` : '';
 
       document.getElementById('main-content').innerHTML = `
-        <!-- Hero -->
-                <div class="profile-hero oz-enter" id="perfil" style="--d:0">
-                  ${heroAvatar}
-                  <div class="profile-name">${username}</div>
-                  <div class="profile-meta">
-                    <span class="profile-country">${getFlag(user.country)}</span>
-                    <span>${user.country || 'DO'}</span>
-                  </div>
-                  <div class="elo-display">ELO ${user.elo ? user.elo : 1200}</div>
-                  <div class="plan-badge ${premiumActive ? 'premium' : ''}">${planLabel}</div>
-                </div>
-
-        <div class="container">
-
-          <!-- Stats -->
-                  <div class="stats-grid" id="estadisticas">
-                    <div class="stat-card oz-card oz-enter wins" style="--d:1">
-                      <div class="stat-value">${user.stats.wins || 0}</div>
-                      <div class="stat-label">Victorias</div>
-                    </div>
-                    <div class="stat-card oz-card oz-enter losses" style="--d:2">
-                      <div class="stat-value">${user.stats.losses || 0}</div>
-                      <div class="stat-label">Derrotas</div>
-                    </div>
-                    <div class="stat-card oz-card oz-enter draws" style="--d:3">
-                      <div class="stat-value">${user.stats.draws || 0}</div>
-                      <div class="stat-label">Tablas</div>
-                    </div>
-                    <div class="stat-card oz-card oz-enter" style="--d:4">
-                      <div class="stat-value">${winRate}%</div>
-                      <div class="stat-label">% Victorias</div>
-                    </div>
-                  </div>
-
-                  <div class="friends-panel oz-card oz-enter" id="amigos" style="--d:6">
-                    <div class="section-title">Amigos</div>
-                    <div class="friends-form">
-                      <input class="friends-input" id="friend-username" maxlength="20" placeholder="Nombre de usuario">
-                      <button class="btn-save btn-primary" onclick="addFriend()">Agregar</button>
-                    </div>
-                    <div class="friends-list" id="friends-list">
-                      <div class="empty-msg">Cargando amigos...</div>
-                    </div>
-                  </div>
+        <div class="container" style="padding-top:28px;">
+                    <div class="section-title oz-enter" id="historial" style="--d:8">Historial de Partidas</div>
+                    <div class="match-list oz-enter" id="match-list" style="--d:9">${matchRows}</div>
+                    ${paginationHtml}
 
         </div>
       `;
     }
 
-    function renderFriends(friends = []) {
-      const list = document.getElementById('friends-list');
-      if (!list) return;
-      if (!friends.length) {
-        list.innerHTML = '<div class="empty-msg">Todavia no has agregado amigos.</div>';
-        return;
-      }
-      list.innerHTML = friends.map((friend) => {
-        const name = escapeHtml(friend.username || 'Jugador');
-        const initial = escapeHtml((friend.username || '?')[0].toUpperCase());
-        const img = friend.avatarImage
-          ? `<img src="${escapeHtml(friend.avatarImage)}" alt="">`
-          : initial;
-        const games = (friend.stats?.wins || 0) + (friend.stats?.losses || 0) + (friend.stats?.draws || 0);
-        return `
-          <div class="friend-row">
-            <div class="friend-avatar ${avatarClass(friend.avatar)}">${img}</div>
-            <div class="friend-main">
-              <div class="friend-name">${getFlag(friend.country)} ${name}</div>
-              <div class="friend-meta">ELO ${friend.elo || 1200} · ${games} partidas</div>
-            </div>
-            <button class="page-btn" onclick="removeFriend('${name}')">Quitar</button>
-          </div>
-        `;
-      }).join('');
-    }
-
-    async function loadFriends() {
-      const list = document.getElementById('friends-list');
-      if (!list) return;
+    async function loadPage(page = 1) {
+      if (historyBusy) return;
+      historyBusy = true;
+      currentHistoryPage = Math.max(1, Number(page) || 1);
       try {
-        const res = await fetch('/api/user/friends', {
-          headers: { Authorization: `Bearer ${_token}` }
-        });
-        if (!res.ok) throw new Error();
-        const data = await res.json();
-        renderFriends(data.friends || []);
+        const [histRes, userRes] = await Promise.all([
+          fetch(`/api/user/history?page=${currentHistoryPage}&limit=10`, { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' }),
+          fetch('/api/user/me', { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' }),
+        ]);
+        if (!histRes.ok || !userRes.ok) throw new Error();
+        const data = await histRes.json();
+        const userData = await userRes.json();
+        localStorage.setItem('ozama-user', JSON.stringify(userData.user));
+        renderHistory(userData.user, data.matches, data.total, currentHistoryPage);
+        historyInitialized = true;
       } catch (err) {
-        list.innerHTML = '<div class="empty-msg">No se pudieron cargar los amigos.</div>';
+        const list = document.getElementById('match-list');
+        if (list) list.innerHTML = '<div class="empty-msg">No se pudo cargar el historial.</div>';
+      } finally {
+        historyBusy = false;
       }
-    }
-
-    async function addFriend() {
-      const input = document.getElementById('friend-username');
-      const username = input?.value.trim();
-      if (!username) return;
-      try {
-        const res = await fetch(`/api/user/friends/${encodeURIComponent(username)}`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${_token}` }
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || 'No se pudo agregar.');
-        input.value = '';
-        await loadFriends();
-      } catch (err) {
-        alert(err.message || 'No se pudo agregar.');
-      }
-    }
-
-    async function removeFriend(username) {
-      try {
-        const res = await fetch(`/api/user/friends/${encodeURIComponent(username)}`, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${_token}` }
-        });
-        if (!res.ok) throw new Error();
-        await loadFriends();
-      } catch (err) {
-        alert('No se pudo quitar el amigo.');
-      }
-    }
-
-    async function refreshProfile() {
-      try {
-        const res = await fetch('/api/user/me', { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' });
-        if (!res.ok) return;
-        const data = await res.json();
-        localStorage.setItem('ozama-user', JSON.stringify(data.user));
-        renderProfile(data.user);
-        loadFriends();
-      } catch (_) {}
     }
 
     async function init() {
@@ -801,37 +735,23 @@
       document.getElementById('main-content').innerHTML = `
         <div class="loading">
           <div class="spinner"></div>
-          Cargando perfil...
+          Cargando historial...
         </div>
       `;
-      try {
-        const res = await fetch('/api/user/me', { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' });
-        if (!res.ok) { renderNotLogged(); return; }
-        const data = await res.json();
-        localStorage.setItem('ozama-user', JSON.stringify(data.user));
-        renderProfile(data.user);
-        profileInitialized = true;
-        loadFriends();
-      } catch (err) {
-        document.getElementById('main-content').innerHTML =
-          '<div class="loading">Error cargando el perfil. Recarga la pagina.</div>';
-      }
+      await loadPage(1);
     }
 
     init();
-    function refreshVisibleProfile() {
-      if (!profileInitialized) return;
-      const active = document.activeElement;
-      const editing = active && ['INPUT', 'SELECT', 'TEXTAREA'].includes(active.tagName);
-      if (document.visibilityState === 'visible' && !editing) refreshProfile();
+    function refreshVisibleHistory() {
+      if (!historyInitialized) return;
+      if (document.visibilityState === 'visible') loadPage(currentHistoryPage);
     }
-    document.addEventListener('visibilitychange', refreshVisibleProfile);
-    window.addEventListener('focus', refreshVisibleProfile);
-    window.setInterval(refreshVisibleProfile, 30_000);
+    document.addEventListener('visibilitychange', refreshVisibleHistory);
+    window.addEventListener('focus', refreshVisibleHistory);
+    window.setInterval(refreshVisibleHistory, 30_000);
     Object.assign(window, {
       logout,
-      addFriend,
-      removeFriend,
+      loadPage,
     });
     })();
   </script>

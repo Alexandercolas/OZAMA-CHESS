@@ -5,7 +5,7 @@ const User                 = require('../models/User');
 const Match                = require('../models/Match');
 const Room                 = require('../models/Room');
 const Event                = require('../models/Event');
-const { requireAuth }      = require('../middleware/auth');
+const { requireAuth, userIsAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -48,7 +48,10 @@ function publicLeaderboardFilter() {
 // GET /api/user/me - own profile
 router.get('/me', requireAuth, async (req, res) => {
   res.set('Cache-Control', 'no-store');
-  res.json({ user: req.user });
+  // isAdmin se calcula server-side contra ADMIN_EMAILS (env), nunca se
+  // almacena en el documento del usuario: solo el dueno del servidor
+  // puede otorgar este flag, cambiando esa variable de entorno.
+  res.json({ user: { ...req.user.toJSON(), isAdmin: userIsAdmin(req.user) } });
 });
 
 router.get('/plan', requireAuth, async (req, res) => {

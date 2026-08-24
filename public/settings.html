@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="OZAMA CHESS"/>
   <meta name="robots" content="noindex, nofollow"/>
-  <title>OZAMA CHESS - Perfil</title>
+  <title>OZAMA CHESS - Ajustes</title>
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/favicon.png?v=5">
   <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png?v=5">
@@ -587,9 +587,9 @@
   </nav>
 
   <div class="profile-tabs">
-    <a href="/profile.html" class=" profile-tab is-active">Perfil</a>
+    <a href="/profile.html" class="profile-tab">Perfil</a>
     <a href="/history.html" class="profile-tab">Historial</a>
-    <a href="/settings.html" class="profile-tab">Ajustes</a>
+    <a href="/settings.html" class=" profile-tab is-active">Ajustes</a>
   </div>
 
   <!-- Contenido principal -->
@@ -600,14 +600,6 @@
     await window.OZAMA_RUNTIME?.ready;
     const _user  = JSON.parse(localStorage.getItem('ozama-user') || 'null');
     const _token = window.OZAMA_RUNTIME?.getAuthToken?.() || '';
-    let profileInitialized = false;
-
-        function getFlag(country) {
-          if (!country || country === 'OTHER') return '<span class="country-code">--</span>';
-          const code = String(country).trim().toLowerCase();
-          if (!/^[a-z]{2}$/.test(code)) return '<span class="country-code">--</span>';
-          return `<img src="https://flagcdn.com/32x24/${code}.png" alt="${code.toUpperCase()}" style="width:28px;height:20px;border-radius:2px;object-fit:cover;vertical-align:middle;" onerror="this.outerHTML='<span class=&quot;country-code&quot;>${code.toUpperCase()}</span>'"/>`;
-        }
 
         function escapeHtml(value) {
           return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -618,6 +610,86 @@
         function avatarClass(avatar) {
           const index = Number.isFinite(Number(avatar)) ? Number(avatar) : 0;
           return `avatar-${Math.abs(index) % 6}`;
+        }
+
+        function selectAvatar(avatar) {
+          const value = Math.abs(Number(avatar) || 0) % 6;
+          const input = document.getElementById('avatar-select');
+          const ring = document.getElementById('avatar-ring');
+          const imageInput = document.getElementById('avatar-image-value');
+          const photoStatus = document.getElementById('photo-status');
+          if (input) input.value = value;
+          if (imageInput) imageInput.value = '';
+          if (photoStatus) photoStatus.textContent = '';
+          if (ring) {
+            ring.className = `avatar-ring ${avatarClass(value)}`;
+            ring.textContent = ring.dataset.initial || '';
+          }
+          document.querySelectorAll('.avatar-choice').forEach((btn) => {
+            btn.classList.toggle('active', Number(btn.dataset.avatar) === value);
+          });
+        }
+
+        function resizeAvatarImage(file) {
+          return new Promise((resolve, reject) => {
+            if (!file || !/^image\/(png|jpeg|webp)$/.test(file.type)) {
+              reject(new Error('Formato no valido.'));
+              return;
+            }
+            if (file.size > 3 * 1024 * 1024) {
+              reject(new Error('La foto debe pesar menos de 3 MB.'));
+              return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = () => {
+              const img = new Image();
+              img.onload = () => {
+                const size = 256;
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = size;
+                canvas.height = size;
+                const sourceSize = Math.min(img.width, img.height);
+                const sx = Math.max(0, (img.width - sourceSize) / 2);
+                const sy = Math.max(0, (img.height - sourceSize) / 2);
+                ctx.drawImage(img, sx, sy, sourceSize, sourceSize, 0, 0, size, size);
+                resolve(canvas.toDataURL('image/jpeg', 0.82));
+              };
+              img.onerror = () => reject(new Error('No se pudo leer la imagen.'));
+              img.src = reader.result;
+            };
+            reader.onerror = () => reject(new Error('No se pudo abrir el archivo.'));
+            reader.readAsDataURL(file);
+          });
+        }
+
+        async function handleAvatarImage(event) {
+          try {
+            const image = await resizeAvatarImage(event.target.files?.[0]);
+            const input = document.getElementById('avatar-image-value');
+            const ring = document.getElementById('avatar-ring');
+            const photoStatus = document.getElementById('photo-status');
+            if (input) input.value = image;
+            if (ring) {
+              ring.className = 'avatar-ring';
+              ring.innerHTML = `<img src="${image}" alt="">`;
+            }
+            if (photoStatus) photoStatus.textContent = 'Foto lista. Toca Guardar.';
+            document.querySelectorAll('.avatar-choice').forEach((btn) => btn.classList.remove('active'));
+          } catch (err) {
+            alert(err.message || 'No se pudo preparar la foto.');
+          } finally {
+            event.target.value = '';
+          }
+        }
+
+        function clearAvatarImage() {
+          const input = document.getElementById('avatar-image-value');
+          if (input) input.value = '';
+          selectAvatar(document.getElementById('avatar-select')?.value || 0);
+          const photoStatus = document.getElementById('photo-status');
+          if (photoStatus) photoStatus.textContent = 'Foto quitada. Toca Guardar.';
         }
 
         async function logout() {
@@ -647,153 +719,153 @@
           `;
         }
 
-    function renderProfile(user) {
-      user.stats = user.stats || { wins: 0, losses: 0, draws: 0 };
-      const gamesPlayed = (user.stats.wins || 0) + (user.stats.losses || 0) + (user.stats.draws || 0);
-      const winRate = gamesPlayed > 0 ? Math.round((user.stats.wins || 0) / gamesPlayed * 100) : 0;
+    function renderSettings(user) {
       const avatar = Math.abs(Number(user.avatar) || 0) % 6;
       const initial = escapeHtml((user.username || '?')[0].toUpperCase());
-      const username = escapeHtml(user.username || 'Jugador');
       const avatarImage = user.avatarImage || '';
       const premiumUntil = user.premiumUntil ? new Date(user.premiumUntil) : null;
       const premiumActive = user.plan === 'premium' && (!premiumUntil || premiumUntil > new Date());
       const planLabel = premiumActive ? 'Premium' : 'Free';
-      const heroAvatar = avatarImage
-        ? `<div class="avatar-ring" id="avatar-ring" data-initial="${initial}"><img src="${escapeHtml(avatarImage)}" alt=""></div>`
-        : `<div class="avatar-ring ${avatarClass(avatar)}" id="avatar-ring" data-initial="${initial}">${initial}</div>`;
+      const planNote = premiumActive
+        ? 'Premium activo: beneficios visuales, avatares exclusivos y estadisticas avanzadas cuando se activen.'
+        : 'Plan Free activo. Premium llegara despues como experiencia de confort, sin ventajas competitivas.';
 
       document.getElementById('main-content').innerHTML = `
-        <!-- Hero -->
-                <div class="profile-hero oz-enter" id="perfil" style="--d:0">
-                  ${heroAvatar}
-                  <div class="profile-name">${username}</div>
-                  <div class="profile-meta">
-                    <span class="profile-country">${getFlag(user.country)}</span>
-                    <span>${user.country || 'DO'}</span>
-                  </div>
-                  <div class="elo-display">ELO ${user.elo ? user.elo : 1200}</div>
-                  <div class="plan-badge ${premiumActive ? 'premium' : ''}">${planLabel}</div>
-                </div>
+        <div class="container" style="padding-top:28px;">
+                    <div class="edit-section oz-card oz-enter" id="ajustes" style="--d:5">
+                      <span class="edit-label">Avatar</span>
+                      <input type="hidden" id="avatar-select" value="${avatar}">
+                      <input type="hidden" id="avatar-image-value" value="${escapeHtml(avatarImage)}">
+                      <div class="avatar-picker">
+                        ${[0,1,2,3,4,5].map(i => `
+                          <button type="button" class="avatar-choice ${avatarClass(i)} ${!avatarImage && i === avatar ? 'active' : ''}" data-avatar="${i}" onclick="selectAvatar(${i})">${initial}</button>
+                        `).join('')}
+                      </div>
+                      <span class="edit-label">Foto de perfil</span>
+                      <div class="photo-tools">
+                        <label class="photo-upload">Subir foto
+                          <input type="file" accept="image/png,image/jpeg,image/webp" onchange="handleAvatarImage(event)">
+                        </label>
+                        <button class="btn-save btn-danger secondary" onclick="clearAvatarImage()">Quitar foto</button>
+                        <span class="photo-status" id="photo-status">${avatarImage ? 'Foto activa' : ''}</span>
+                        <div class="photo-hint">PNG, JPG o WebP. Se recorta en cuadrado y se guarda al tocar Guardar.</div>
+                      </div>
+                      <span class="edit-label">Pais</span>
+                      <select class="edit-select" id="country-select">
+                        <option value="DO" ${user.country==='DO' ? 'selected' : ''}>DO - Republica Dominicana</option>
+                        <option value="US" ${user.country==='US' ? 'selected' : ''}>US - Estados Unidos</option>
+                        <option value="ES" ${user.country==='ES' ? 'selected' : ''}>ES - Espana</option>
+                        <option value="MX" ${user.country==='MX' ? 'selected' : ''}>MX - Mexico</option>
+                        <option value="CO" ${user.country==='CO' ? 'selected' : ''}>CO - Colombia</option>
+                        <option value="VE" ${user.country==='VE' ? 'selected' : ''}>VE - Venezuela</option>
+                        <option value="PR" ${user.country==='PR' ? 'selected' : ''}>PR - Puerto Rico</option>
+                        <option value="CU" ${user.country==='CU' ? 'selected' : ''}>CU - Cuba</option>
+                        <option value="HT" ${user.country==='HT' ? 'selected' : ''}>HT - Haiti</option>
+                        <option value="BR" ${user.country==='BR' ? 'selected' : ''}>BR - Brasil</option>
+                        <option value="AR" ${user.country==='AR' ? 'selected' : ''}>AR - Argentina</option>
+                        <option value="OTHER" ${user.country==='OTHER' ? 'selected' : ''}>Otro</option>
+                      </select>
+                      <button class="btn-save btn-primary" onclick="saveProfile()">Guardar</button>
+                      <span class="save-msg" id="save-msg">Guardado</span>
+                      <div class="plan-note"><strong>Plan ${planLabel}</strong><br>${planNote}</div>
+                    </div>
 
-        <div class="container">
-
-          <!-- Stats -->
-                  <div class="stats-grid" id="estadisticas">
-                    <div class="stat-card oz-card oz-enter wins" style="--d:1">
-                      <div class="stat-value">${user.stats.wins || 0}</div>
-                      <div class="stat-label">Victorias</div>
+                    <div class="account-panel oz-card oz-enter" id="cuenta" style="--d:7">
+                      <div class="section-title">Cuenta y privacidad</div>
+                      <div class="account-links">
+                        <a href="/privacy.html">Privacidad</a>
+                        <a href="/terms.html">Terminos</a>
+                        <a href="/support.html">Soporte</a>
+                      </div>
+                      <details class="danger-zone">
+                        <summary>Eliminar cuenta</summary>
+                        <p class="danger-copy">Esta accion elimina tu acceso, perfil, foto y amistades. Los resultados competitivos pueden permanecer anonimizados y no se puede deshacer.</p>
+                        <div class="danger-form">
+                          <input id="delete-password" type="password" autocomplete="current-password" maxlength="128" placeholder="Contrasena actual">
+                          <input id="delete-confirm" type="text" maxlength="8" autocomplete="off" placeholder="Escribe ELIMINAR">
+                          <button class="btn-delete btn-danger" id="delete-account-btn" type="button" onclick="deleteAccount()">Eliminar cuenta</button>
+                        </div>
+                        <div class="delete-status" id="delete-account-status" role="status"></div>
+                      </details>
                     </div>
-                    <div class="stat-card oz-card oz-enter losses" style="--d:2">
-                      <div class="stat-value">${user.stats.losses || 0}</div>
-                      <div class="stat-label">Derrotas</div>
-                    </div>
-                    <div class="stat-card oz-card oz-enter draws" style="--d:3">
-                      <div class="stat-value">${user.stats.draws || 0}</div>
-                      <div class="stat-label">Tablas</div>
-                    </div>
-                    <div class="stat-card oz-card oz-enter" style="--d:4">
-                      <div class="stat-value">${winRate}%</div>
-                      <div class="stat-label">% Victorias</div>
-                    </div>
-                  </div>
-
-                  <div class="friends-panel oz-card oz-enter" id="amigos" style="--d:6">
-                    <div class="section-title">Amigos</div>
-                    <div class="friends-form">
-                      <input class="friends-input" id="friend-username" maxlength="20" placeholder="Nombre de usuario">
-                      <button class="btn-save btn-primary" onclick="addFriend()">Agregar</button>
-                    </div>
-                    <div class="friends-list" id="friends-list">
-                      <div class="empty-msg">Cargando amigos...</div>
-                    </div>
-                  </div>
 
         </div>
       `;
     }
 
-    function renderFriends(friends = []) {
-      const list = document.getElementById('friends-list');
-      if (!list) return;
-      if (!friends.length) {
-        list.innerHTML = '<div class="empty-msg">Todavia no has agregado amigos.</div>';
+    async function saveProfile() {
+      const country = document.getElementById('country-select').value;
+      const avatar = Number(document.getElementById('avatar-select').value || 0);
+      const avatarImage = document.getElementById('avatar-image-value')?.value || '';
+      try {
+        const res = await fetch('/api/user/me', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${_token}`,
+          },
+          body: JSON.stringify({ country, avatar, avatarImage }),
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+
+        const updatedUser = {
+          ..._user,
+          country: data.user.country,
+          avatar: data.user.avatar,
+          avatarImage: data.user.avatarImage,
+          plan: data.user.plan,
+          premiumUntil: data.user.premiumUntil,
+          subscriptionStatus: data.user.subscriptionStatus,
+        };
+        localStorage.setItem('ozama-user', JSON.stringify(updatedUser));
+
+        const msg = document.getElementById('save-msg');
+        if (msg) { msg.style.display = 'inline'; setTimeout(() => { msg.style.display = 'none'; }, 2000); }
+      } catch (err) {
+        alert('Error al guardar.');
+      }
+    }
+
+    async function deleteAccount() {
+      const password = document.getElementById('delete-password');
+      const confirmation = document.getElementById('delete-confirm');
+      const button = document.getElementById('delete-account-btn');
+      const status = document.getElementById('delete-account-status');
+      if (!password || !confirmation || !button || !status) return;
+
+      status.textContent = '';
+      if (!password.value || confirmation.value.trim().toUpperCase() !== 'ELIMINAR') {
+        status.textContent = 'Escribe tu contrasena y la palabra ELIMINAR.';
         return;
       }
-      list.innerHTML = friends.map((friend) => {
-        const name = escapeHtml(friend.username || 'Jugador');
-        const initial = escapeHtml((friend.username || '?')[0].toUpperCase());
-        const img = friend.avatarImage
-          ? `<img src="${escapeHtml(friend.avatarImage)}" alt="">`
-          : initial;
-        const games = (friend.stats?.wins || 0) + (friend.stats?.losses || 0) + (friend.stats?.draws || 0);
-        return `
-          <div class="friend-row">
-            <div class="friend-avatar ${avatarClass(friend.avatar)}">${img}</div>
-            <div class="friend-main">
-              <div class="friend-name">${getFlag(friend.country)} ${name}</div>
-              <div class="friend-meta">ELO ${friend.elo || 1200} · ${games} partidas</div>
-            </div>
-            <button class="page-btn" onclick="removeFriend('${name}')">Quitar</button>
-          </div>
-        `;
-      }).join('');
-    }
 
-    async function loadFriends() {
-      const list = document.getElementById('friends-list');
-      if (!list) return;
+      button.disabled = true;
+      button.textContent = 'Eliminando...';
       try {
-        const res = await fetch('/api/user/friends', {
-          headers: { Authorization: `Bearer ${_token}` }
-        });
-        if (!res.ok) throw new Error();
-        const data = await res.json();
-        renderFriends(data.friends || []);
-      } catch (err) {
-        list.innerHTML = '<div class="empty-msg">No se pudieron cargar los amigos.</div>';
-      }
-    }
-
-    async function addFriend() {
-      const input = document.getElementById('friend-username');
-      const username = input?.value.trim();
-      if (!username) return;
-      try {
-        const res = await fetch(`/api/user/friends/${encodeURIComponent(username)}`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${_token}` }
+        const res = await fetch('/api/user/me', {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            currentPassword: password.value,
+            confirmation: confirmation.value,
+          }),
         });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || 'No se pudo agregar.');
-        input.value = '';
-        await loadFriends();
-      } catch (err) {
-        alert(err.message || 'No se pudo agregar.');
-      }
-    }
+        if (!res.ok) throw new Error(data.error || 'No se pudo eliminar la cuenta.');
 
-    async function removeFriend(username) {
-      try {
-        const res = await fetch(`/api/user/friends/${encodeURIComponent(username)}`, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${_token}` }
-        });
-        if (!res.ok) throw new Error();
-        await loadFriends();
+        await window.OZAMA_RUNTIME?.clearAuthToken?.().catch(() => {});
+        localStorage.removeItem('ozama-user');
+        sessionStorage.clear();
+        window.location.replace('/account-deletion.html?deleted=1');
       } catch (err) {
-        alert('No se pudo quitar el amigo.');
+        status.textContent = err.message || 'No se pudo eliminar la cuenta.';
+        button.disabled = false;
+        button.textContent = 'Eliminar cuenta';
       }
-    }
-
-    async function refreshProfile() {
-      try {
-        const res = await fetch('/api/user/me', { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' });
-        if (!res.ok) return;
-        const data = await res.json();
-        localStorage.setItem('ozama-user', JSON.stringify(data.user));
-        renderProfile(data.user);
-        loadFriends();
-      } catch (_) {}
     }
 
     async function init() {
@@ -801,7 +873,7 @@
       document.getElementById('main-content').innerHTML = `
         <div class="loading">
           <div class="spinner"></div>
-          Cargando perfil...
+          Cargando ajustes...
         </div>
       `;
       try {
@@ -809,29 +881,21 @@
         if (!res.ok) { renderNotLogged(); return; }
         const data = await res.json();
         localStorage.setItem('ozama-user', JSON.stringify(data.user));
-        renderProfile(data.user);
-        profileInitialized = true;
-        loadFriends();
+        renderSettings(data.user);
       } catch (err) {
         document.getElementById('main-content').innerHTML =
-          '<div class="loading">Error cargando el perfil. Recarga la pagina.</div>';
+          '<div class="loading">Error cargando los ajustes. Recarga la pagina.</div>';
       }
     }
 
     init();
-    function refreshVisibleProfile() {
-      if (!profileInitialized) return;
-      const active = document.activeElement;
-      const editing = active && ['INPUT', 'SELECT', 'TEXTAREA'].includes(active.tagName);
-      if (document.visibilityState === 'visible' && !editing) refreshProfile();
-    }
-    document.addEventListener('visibilitychange', refreshVisibleProfile);
-    window.addEventListener('focus', refreshVisibleProfile);
-    window.setInterval(refreshVisibleProfile, 30_000);
     Object.assign(window, {
       logout,
-      addFriend,
-      removeFriend,
+      selectAvatar,
+      handleAvatarImage,
+      clearAvatarImage,
+      saveProfile,
+      deleteAccount,
     });
     })();
   </script>

@@ -196,6 +196,11 @@
       position: relative;
     }
 
+    /* .sb-item define su propio "display", lo que gana sobre el
+       [hidden] del navegador (mismo bug que ya arreglamos en las
+       piezas 3D): sin esto, un .sb-item con hidden sigue visible. */
+    .sb-item[hidden] { display: none; }
+
     .sb-item::before {
       content: ''; position: absolute; inset: 0; background: transparent; transition: background var(--dur-fast) var(--ease-out);
     }
@@ -877,11 +882,11 @@
         </a>
         <div class="sb-div"></div>
         <div class="sb-account-label eyebrow">Cuenta</div>
-        <a class="sb-item" href="/profile.html#perfil">
+        <a class="sb-item" href="/profile.html">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 12c4 0 8 2.2 8 5v1H4v-1c0-2.8 4-5 8-5Z"/></svg></span>
           <div class="sb-txt"><span class="sb-name">Perfil</span><span class="sb-desc">Estadísticas</span></div>
         </a>
-        <a class="sb-item" href="/profile.html#historial">
+        <a class="sb-item" href="/history.html">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 4h14v3H5V4Zm0 5h14v3H5V9Zm0 5h9v3H5v-3Zm11 0h3v3h-3v-3Z"/></svg></span>
           <div class="sb-txt"><span class="sb-name">Historial</span><span class="sb-desc">Partidas recientes</span></div>
         </a>
@@ -889,7 +894,7 @@
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 4h10v3h3v4c0 3-2 5-5 5h-1v2h3v2H7v-2h3v-2H9c-3 0-5-2-5-5V7h3V4Zm2 2v8h6V6H9Zm8 3v4c1-.4 2-1.2 2-2V9h-2ZM5 9v2c0 .8 1 1.6 2 2V9H5Z"/></svg></span>
           <div class="sb-txt"><span class="sb-name">Ranking</span><span class="sb-desc">Hall of Fame</span></div>
         </a>
-        <a class="sb-item" href="/profile.html#ajustes">
+        <a class="sb-item" href="/settings.html">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m12 2 2 3 4-.5 1.5 3.5-3 2 1 4-3 2-3-2-3 2-3-2 1-4-3-2L6 4.5 10 5l2-3Zm0 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"/></svg></span>
           <div class="sb-txt"><span class="sb-name">Ajustes</span><span class="sb-desc">Perfil y país</span></div>
         </a>
@@ -1104,6 +1109,13 @@
     if (user.avatarImage) hdAvatar.innerHTML = `<img src="${escapeHtml(user.avatarImage)}" alt="">`;
     else hdAvatar.textContent = initial;
     if (qBadge) qBadge.textContent = `ELO ${user.elo || 1200}`;
+    // El servidor calcula isAdmin contra ADMIN_EMAILS; este toggle es solo
+    // comodidad visual, el control real vive en requireAdmin() del backend.
+    document.querySelectorAll('[data-admin-access]').forEach((el) => {
+      el.hidden = !user.isAdmin;
+      if (user.isAdmin) el.removeAttribute('aria-hidden');
+      else el.setAttribute('aria-hidden', 'true');
+    });
     // Pre-fill name inputs
     document.getElementById('create-username-input').value = user.username || '';
     document.getElementById('join-username-input').value   = user.username || '';
