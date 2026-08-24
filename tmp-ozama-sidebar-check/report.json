@@ -1,0 +1,9 @@
+{
+  "hasHeaderSalir": false,
+  "hasSidebarLogout": true,
+  "accountLabel": [
+    "Cuenta"
+  ],
+  "logoutIconColor": "rgba(192, 57, 43, 0.55)",
+  "sidebarBorderImage": "linear-gradient(rgba(200, 152, 60, 0.35), rgba(200, 152, 60, 0.02))"
+}

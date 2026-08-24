@@ -17,6 +17,7 @@ config/              Conexion a MongoDB
 middleware/          Autenticacion JWT y permisos admin
 models/              User, Match, Room, Event
 routes/              Auth, user, admin, events
+services/            Integraciones externas verificadas por el servidor
 public/              Frontend vanilla servido por Express
 public/assets/       SVGs y sonidos del juego
 android/             Proyecto nativo Android generado con Capacitor
@@ -53,6 +54,8 @@ MONGODB_DB_NAME=ozama-chess
 JWT_SECRET=
 ADMIN_EMAILS=
 APP_ORIGINS=https://ozama-chess.onrender.com
+GOOGLE_WEB_CLIENT_ID=
+GOOGLE_ANDROID_CLIENT_ID=
 PORT=3000
 ```
 
@@ -62,6 +65,8 @@ Notas:
 - `MONGODB_DB_NAME` debe ser `ozama-chess` en produccion. Los scripts de prueba deben usar siempre una base temporal con prefijo `ozama_dynamic_`, `ozama_test_`, `ozama_security_` u `ozama_tmp_`.
 - `ADMIN_EMAILS` acepta uno o varios correos separados por coma.
 - `APP_ORIGINS` permite agregar origenes nativos o dominios propios, separados por coma.
+- `GOOGLE_WEB_CLIENT_ID` activa el boton de Google en la web. Es un identificador publico, no un secreto.
+- `GOOGLE_ANDROID_CLIENT_ID` permite verificar tokens de la futura integracion nativa.
 - En Render, estas variables deben vivir en el panel de Environment.
 
 ## Regla De Pruebas Dinamicas
@@ -89,6 +94,12 @@ Verificacion completa antes de publicar:
 
 ```bash
 npm run check
+```
+
+Prueba dinamica aislada de cookies, sockets, colores, turnos y reconexion:
+
+```bash
+npm run test:dynamic-security
 ```
 
 URL local principal:
@@ -134,6 +145,25 @@ En la web, la sesion se entrega mediante una cookie `HttpOnly` segura. Los JWT w
 anteriores se migran automaticamente y se eliminan de `localStorage`. En Android, la
 APK cifra el bearer con AES-256-GCM y protege la clave con `AndroidKeyStore`; Socket.IO
 solo recibe una copia temporal en memoria durante la ejecucion.
+
+## Acceso Con Google
+
+El backend acepta un ID token de Google solo despues de verificar su firma, audiencia,
+emisor, vencimiento, email verificado e identificador estable `sub` con la biblioteca
+oficial. Una cuenta existente se vincula unicamente cuando Google confirma el mismo
+email.
+
+La funcion permanece desactivada si `GOOGLE_WEB_CLIENT_ID` no esta configurado; en
+ese caso el boton no se carga y el login tradicional sigue igual. Para activarla:
+
+1. Crear un cliente OAuth de tipo Web en Google Cloud.
+2. Autorizar `https://ozama-chess.onrender.com` y los origenes locales de prueba.
+3. Guardar el Client ID en Render como `GOOGLE_WEB_CLIENT_ID`.
+4. Probar registro, acceso, cierre de sesion y vinculacion con una cuenta existente.
+
+La APK no usa el popup web incrustado. Su acceso con Google se completara con
+Credential Manager y `GOOGLE_ANDROID_CLIENT_ID`; el backend ya admite esa audiencia
+sin exponer secretos.
 
 ## Deploy
 

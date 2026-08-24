@@ -1,0 +1,26 @@
+[
+  {
+    "page": "login.html",
+    "file": "C:\\Users\\alexander colas\\OneDrive\\Desktop\\OZAMA-CHESS\\tmp-ozama-design-check\\login-375.png",
+    "errors": [],
+    "metrics": {
+      "url": "/login.html",
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "bodyText": "OZAMA\nCHESS\nDOMINICAN HERITAGE EDITION\n\nTu perfil guarda ELO, historial, amigos y progreso competitivo. Entra con calma:"
+    },
+    "overflow": false
+  },
+  {
+    "page": "profile.html",
+    "file": "C:\\Users\\alexander colas\\OneDrive\\Desktop\\OZAMA-CHESS\\tmp-ozama-design-check\\profile-375.png",
+    "errors": [],
+    "metrics": {
+      "url": "/profile.html",
+      "scrollWidth": 375,
+      "clientWidth": 375,
+      "bodyText": "OZAMA CHESS\nLobby\nCerrar sesion\nOC\nACCESO REQUERIDO\n\nNecesitas una cuenta para ver tu perfil.\n\nINICIAR SESION"
+    },
+    "overflow": false
+  }
+]

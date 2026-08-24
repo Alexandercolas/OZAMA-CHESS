@@ -659,7 +659,7 @@
       width: calc(var(--sq) * 8 + var(--board-edge));
       margin-top: 0;
       border: 1px solid rgba(200,152,60,0.12); border-top: none;
-      background: linear-gradient(180deg, var(--s1), var(--carbon));
+      background: var(--s1);
       max-width: 100%;
     }
 
@@ -682,9 +682,7 @@
       width: 200px; min-width: 190px; max-width: 240px; flex-shrink: 0;
       height: calc(var(--sq) * 8 + 44px); /* board + banner */
       display: flex; flex-direction: column;
-      background:
-        linear-gradient(180deg, rgba(28,23,16,0.92), rgba(13,11,8,0.92)),
-        radial-gradient(ellipse 120% 55% at 50% 0%, rgba(200,152,60,0.07), transparent 70%);
+      background: rgba(17,14,9,0.94);
       border: 1px solid rgba(200,152,60,0.12); border-left: none;
       position: relative; z-index: 1;
       box-shadow: 18px 22px 42px rgba(0,0,0,0.36);
@@ -698,7 +696,7 @@
     .chat-hd {
       padding: 10px 12px; flex-shrink: 0;
       border-bottom: 1px solid rgba(200,152,60,0.1);
-      background: linear-gradient(180deg, rgba(28,23,16,0.96), rgba(13,11,8,0.78));
+      background: rgba(19,16,10,0.9);
       display: flex; align-items: center; justify-content: space-between;
     }
 
@@ -738,14 +736,14 @@
       line-height: 1.45; word-break: break-word;
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 8px 16px rgba(0,0,0,0.18);
     }
-    .chat-msg-me   .chat-text { background: linear-gradient(180deg, rgba(200,152,60,0.16), rgba(139,101,32,0.1)); border: 1px solid rgba(200,152,60,0.24); color: var(--text); }
+    .chat-msg-me   .chat-text { background: rgba(178,134,52,0.16); border: 1px solid rgba(200,152,60,0.24); color: var(--text); }
     .chat-msg-them .chat-text { background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); color: rgba(233,228,218,0.66); }
 
     .chat-input-row {
       display: flex; align-items: center; gap: 5px;
       padding: 8px; flex-shrink: 0;
       border-top: 1px solid rgba(200,152,60,0.1);
-      background: linear-gradient(180deg, rgba(19,16,8,0.96), rgba(10,8,5,0.96));
+      background: rgba(13,11,7,0.96);
     }
 
     .chat-input {
@@ -784,7 +782,7 @@
     .hidden { display: none !important; }
 
     .overlay-card {
-      background: linear-gradient(160deg, var(--s2), var(--s1));
+      background: var(--s1);
       border: 1px solid var(--amber);
       outline: 1px solid rgba(200,152,60,0.15); outline-offset: 5px;
       padding: 44px 52px; text-align: center;
@@ -801,7 +799,7 @@
     .overlay-card h2 { font-family: var(--ft); font-size: 28px; font-weight: 700; letter-spacing: 6px; color: var(--gold); margin-bottom: 10px; }
     .overlay-card p  { font-size: 11px; color: var(--dim); letter-spacing: 1.5px; margin-bottom: 26px; }
 
-    .promotion-card { background: linear-gradient(160deg, var(--s2), var(--s1)); border: 1px solid var(--amber); padding: 32px 40px; text-align: center; animation: ci 0.3s ease; }
+    .promotion-card { background: var(--s1); border: 1px solid var(--amber); padding: 32px 40px; text-align: center; animation: ci 0.3s ease; }
     .promotion-card h2 { font-family: var(--ft); font-size: 16px; font-weight: 700; letter-spacing: 4px; color: var(--gold); text-transform: uppercase; margin-bottom: 4px; }
     .promotion-options { display: flex; gap: 8px; justify-content: center; margin-top: 16px; }
     .promotion-btn { width: 66px; height: 66px; background: var(--s3); border: 1px solid var(--amber); display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 8px; transition: all 0.2s; letter-spacing: 0; text-transform: none; color: white; }

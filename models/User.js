@@ -37,6 +37,16 @@ const UserSchema = new mongoose.Schema(
       default: 0,
       select: false,
     },
+    googleSub: {
+      type: String,
+      unique: true,
+      sparse: true,
+      select: false,
+    },
+    authProviders: {
+      password: { type: Boolean, default: true },
+      google: { type: Boolean, default: false },
+    },
 
     country: {
       type: String,
@@ -108,6 +118,7 @@ UserSchema.set('toJSON', {
     delete ret.password;
     delete ret.recoveryCodeHash;
     delete ret.tokenVersion;
+    delete ret.googleSub;
     delete ret.__v;
     return ret;
   },

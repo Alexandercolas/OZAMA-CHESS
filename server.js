@@ -100,12 +100,17 @@ app.use((req, res, next) => {
 });
 app.use(express.json({ limit: '600kb' }));
 app.use((req, res, next) => {
+  const googleLoginEnabled = req.path === '/login.html'
+    && Boolean(String(process.env.GOOGLE_WEB_CLIENT_ID || '').trim());
+  const googleScript = googleLoginEnabled ? ' https://accounts.google.com/gsi/client' : '';
+  const googleParent = googleLoginEnabled ? ' https://accounts.google.com/gsi/' : '';
+  const googleStyle = googleLoginEnabled ? ' https://accounts.google.com/gsi/style' : '';
   res.set('X-Content-Type-Options', 'nosniff');
   res.set('X-Frame-Options', 'DENY');
   res.set('X-DNS-Prefetch-Control', 'off');
-  res.set('Referrer-Policy', 'no-referrer');
+  res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  res.set('Cross-Origin-Opener-Policy', 'same-origin');
+  res.set('Cross-Origin-Opener-Policy', googleLoginEnabled ? 'same-origin-allow-popups' : 'same-origin');
   res.set('Cross-Origin-Resource-Policy', 'same-origin');
   res.set('Content-Security-Policy', [
     "default-src 'self'",
@@ -113,12 +118,13 @@ app.use((req, res, next) => {
     "frame-ancestors 'none'",
     "form-action 'self'",
     "object-src 'none'",
-    "script-src 'self' 'unsafe-inline'",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    `script-src 'self' 'unsafe-inline'${googleScript}`,
+    `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com${googleStyle}`,
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https://flagcdn.com",
     "media-src 'self'",
-    "connect-src 'self' ws: wss:",
+    `frame-src 'self'${googleParent}`,
+    `connect-src 'self' ws: wss:${googleParent}`,
   ].join('; '));
   if (process.env.NODE_ENV === 'production') {
     res.set('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
@@ -273,6 +279,7 @@ async function finishRoomByServerConclusion(room, code, source = 'server') {
   io.to(code).emit('game-finished', {
     result: conclusion.result,
     winner: conclusion.winner,
+    reason: conclusion.reason,
     source,
   });
   console.log(`[G] Partida ${code} finalizada por servidor: ${conclusion.result}${conclusion.winner ? ` (${conclusion.winner})` : ''}`);
@@ -731,10 +738,10 @@ function getServerGameConclusion(game) {
   const inCheck = isInCheck(game.board, turn);
   if (inCheck && !canMove) {
     const winner = enemy(turn);
-    return { result: winner === COLOR.WHITE ? 'white_win' : 'black_win', winner };
+    return { result: winner === COLOR.WHITE ? 'white_win' : 'black_win', winner, reason: 'checkmate' };
   }
-  if (!inCheck && !canMove) return { result: 'draw', winner: null };
-  if ((game.halfMoveClock || 0) >= 100) return { result: 'draw', winner: null };
+  if (!inCheck && !canMove) return { result: 'draw', winner: null, reason: 'stalemate' };
+  if ((game.halfMoveClock || 0) >= 100) return { result: 'draw', winner: null, reason: 'fifty_move' };
   return null;
 }
 

@@ -306,20 +306,14 @@
     /* Colonial Card */
     .card {
       min-height: 260px;
-      background:
-        linear-gradient(160deg, rgba(255,255,255,0.035), transparent 28%),
-        radial-gradient(ellipse at 50% 0%, rgba(200,152,60,0.10), transparent 58%),
-        linear-gradient(160deg, #1A1510, #0E0C08 74%);
+      background: var(--s2);
       border: 1px solid rgba(200,152,60,0.30);
       padding: 30px 24px 22px;
       position: relative;
       transition: transform 0.25s, border-color 0.3s, box-shadow 0.3s;
       display: flex; flex-direction: column; align-items: center;
       gap: 14px;
-      box-shadow:
-        inset 0 0 0 1px rgba(255,255,255,0.03),
-        inset 0 18px 36px rgba(200,152,60,0.035),
-        0 14px 38px rgba(0,0,0,0.42);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.40);
       overflow: hidden;
     }
 
@@ -330,11 +324,7 @@
     .card:hover {
       transform: translateY(-2px);
       border-color: rgba(200,152,60,0.68);
-      box-shadow:
-        inset 0 0 0 1px rgba(255,255,255,0.04),
-        inset 0 18px 36px rgba(200,152,60,0.055),
-        0 18px 44px rgba(0,0,0,0.54),
-        0 0 28px rgba(200,152,60,0.11);
+      box-shadow: 0 14px 30px rgba(0,0,0,0.5);
     }
 
     /* Ornamental corners */
@@ -432,27 +422,20 @@
     /* Primary button */
     .btn-primary {
       width: 100%; padding: 11px 20px;
-      background: linear-gradient(180deg, #D5A94E, #B9842C 58%, #7A5521);
+      background: var(--gold);
       border: 1px solid rgba(232,192,106,0.50); color: var(--carbon);
       font-family: var(--fb); font-size: 11px; font-weight: 700;
       letter-spacing: 3px; text-transform: uppercase;
       cursor: pointer; transition: all 0.25s;
-      position: relative; overflow: hidden;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 16px rgba(0,0,0,0.38);
-    }
-
-    .btn-primary::before {
-      content: '';
-      position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
-      transition: left 0.4s;
+      position: relative;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.35);
     }
 
     .btn-primary:hover {
+      background: var(--gold2);
       border-color: rgba(232,192,106,0.85);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.30), 0 0 0 1px rgba(200,152,60,0.18), 0 5px 24px rgba(200,152,60,0.35);
+      box-shadow: 0 0 0 1px rgba(200,152,60,0.18), 0 5px 20px rgba(0,0,0,0.4);
     }
-    .btn-primary:hover::before { left: 100%; }
     .btn-primary:active { transform: translateY(1px); }
 
     .btn-primary:disabled {
@@ -470,9 +453,7 @@
 
     /* ── CHALLENGE SECTION ── */
     .challenge-section {
-      background:
-        radial-gradient(ellipse at 14% 50%, rgba(200,152,60,0.10), transparent 36%),
-        linear-gradient(160deg, #1A1510, #0E0C08);
+      background: var(--s2);
       border: 1px solid rgba(200,152,60,0.28);
       padding: 22px 28px;
       position: relative;
@@ -528,15 +509,15 @@
 
     .challenge-btn {
       padding: 9px 20px; flex-shrink: 0;
-      background: linear-gradient(180deg, #D5A94E, #B9842C 58%, #7A5521);
+      background: var(--gold);
       border: 1px solid rgba(232,192,106,0.45); color: var(--carbon);
       font-family: var(--fb); font-size: 10px; font-weight: 700;
       letter-spacing: 2px; text-transform: uppercase;
       cursor: pointer; transition: all 0.2s;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), 0 4px 14px rgba(0,0,0,0.32);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.32);
     }
 
-    .challenge-btn:hover { box-shadow: 0 4px 20px rgba(200,152,60,0.3); }
+    .challenge-btn:hover { background: var(--gold2); box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
 
     .challenge-status {
       font-family: var(--fb); font-size: 10px; font-weight: 600;
@@ -569,7 +550,7 @@
 
     /* ── PLAYERS ONLINE SECTION ── */
     .players-section {
-      background: linear-gradient(160deg, #1A1510, #111008);
+      background: var(--s2);
       border: 1px solid rgba(200,152,60,0.15);
       padding: 20px 24px;
       position: relative;
@@ -684,7 +665,7 @@
     .modal-overlay.show { opacity: 1; pointer-events: all; }
 
     .modal-card {
-      background: linear-gradient(160deg, #1C1710, #131008);
+      background: var(--s1);
       border: 1px solid var(--amber);
       outline: 1px solid rgba(200,152,60,0.15); outline-offset: 5px;
       padding: 40px 48px; text-align: center;
@@ -707,7 +688,7 @@
 
     .btn-accept {
       padding: 10px 24px;
-      background: linear-gradient(135deg, var(--gold), var(--amber));
+      background: var(--gold);
       border: none; color: var(--carbon);
       font-family: var(--fb); font-size: 10px; font-weight: 700;
       letter-spacing: 2px; text-transform: uppercase; cursor: pointer;

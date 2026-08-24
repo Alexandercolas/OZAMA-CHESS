@@ -1,0 +1,48 @@
+[
+  {
+    "case": "active session direct /login.html",
+    "path": "/lobby.html",
+    "bodyClass": "",
+    "hasForm": false,
+    "formVisible": false,
+    "hasOldPanel": false,
+    "legalLinks": [],
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXIiLCJleHAiOjE3ODY3NjQyNTJ9.sig",
+    "user": "{\"_id\":\"test-user\",\"username\":\"Tester\",\"elo\":1420,\"country\":\"DO\",\"stats\":{\"wins\":1,\"losses\":0,\"draws\":0}}",
+    "bodyText": "♟ OZAMA CHESS\nTESTER\nT\nSALIR\nJUGAR\nBOT\nSALAS\nDESAFÍOS\nPERFIL\nHISTORIAL\nRANKING\nAJUSTES\nCERRAR SESIÓN\nOZAMA CHESS\n\nDOMINI"
+  },
+  {
+    "case": "anonymous /login.html",
+    "path": "/login.html",
+    "bodyClass": "",
+    "hasForm": true,
+    "formVisible": true,
+    "hasOldPanel": false,
+    "legalLinks": [
+      "/privacy.html",
+      "/terms.html",
+      "/support.html",
+      "/account-deletion.html"
+    ],
+    "token": null,
+    "user": null,
+    "bodyText": "OZAMA\nCHESS\nDOMINICAN HERITAGE EDITION\n\nTu perfil guarda ELO, historial, amigos y progreso competitivo. Entra con calma:"
+  },
+  {
+    "case": "profile logout then /login.html",
+    "path": "/login.html",
+    "bodyClass": "",
+    "hasForm": true,
+    "formVisible": true,
+    "hasOldPanel": false,
+    "legalLinks": [
+      "/privacy.html",
+      "/terms.html",
+      "/support.html",
+      "/account-deletion.html"
+    ],
+    "token": null,
+    "user": null,
+    "bodyText": "OZAMA\nCHESS\nDOMINICAN HERITAGE EDITION\n\nTu perfil guarda ELO, historial, amigos y progreso competitivo. Entra con calma:"
+  }
+]

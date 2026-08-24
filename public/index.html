@@ -315,18 +315,24 @@
       right: clamp(24px, 4vw, 64px);
       top: 60%;
       max-width: min(40vw, 460px);
-      transform: translateY(-50%);
       font-family: var(--title);
       font-weight: 700;
       font-size: clamp(28px, 3.6vw, 52px);
       line-height: 1.12;
       color: var(--gold-2);
-      opacity: 0.09;
+      opacity: 0;
       letter-spacing: 0.1em;
       pointer-events: none;
       z-index: 0;
       text-align: right;
       text-transform: uppercase;
+      animation: watermarkEnter 1.3s var(--ease-out) 0.45s forwards;
+      will-change: opacity, transform;
+    }
+
+    @keyframes watermarkEnter {
+      from { opacity: 0; transform: translateY(-50%) translateX(10px); }
+      to { opacity: 0.09; transform: translateY(-50%) translateX(0); }
     }
 
     .hero::before {
@@ -547,6 +553,12 @@
         transform: none;
         animation: none;
         transition: none;
+      }
+
+      .hero-watermark {
+        opacity: 0.09;
+        transform: translateY(-50%);
+        animation: none;
       }
     }
 
@@ -1273,12 +1285,12 @@
         </span>
       </a>
       <div class="nav-links">
-        <a href="#caracteristicas">Características</a>
-        <a href="/leaderboard.html">Ranking</a>
-        <a href="#como">Cómo jugar</a>
+        <a class="oz-enter" href="#caracteristicas" style="--d:0.3">Características</a>
+        <a class="oz-enter" href="/leaderboard.html" style="--d:0.6">Ranking</a>
+        <a class="oz-enter" href="#como" style="--d:0.9">Cómo jugar</a>
         <a href="/login.html" id="nav-profile" hidden>Perfil</a>
         <a href="/admin.html" id="nav-admin" data-admin-access hidden aria-hidden="true">Administración</a>
-        <a class="nav-cta oz-enter" href="/login.html" id="nav-cta" style="--d:0">Jugar ahora</a>
+        <a class="nav-cta oz-enter" href="/login.html" id="nav-cta" style="--d:1.2">Jugar ahora</a>
       </div>
     </nav>
 

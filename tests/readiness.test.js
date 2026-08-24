@@ -91,6 +91,33 @@ test('JWT and password recovery remain hardened', () => {
   assert.match(auth, /limitReset/);
 });
 
+test('Google sign-in is feature-gated and verified by the backend', () => {
+  const auth = read('routes/auth.js');
+  const google = read('services/google-auth.js');
+  const model = read('models/User.js');
+  const login = read('public/login.html');
+  const server = read('server.js');
+  const packageJson = JSON.parse(read('package.json'));
+
+  assert.ok(packageJson.dependencies['google-auth-library']);
+  assert.match(google, /googleClient\.verifyIdToken/);
+  assert.match(google, /audience/);
+  assert.match(google, /payload\.email_verified !== true/);
+  assert.match(google, /payload\?\.sub/);
+  assert.match(auth, /router\.get\('\/providers'/);
+  assert.match(auth, /router\.post\('\/google', limitGoogle/);
+  assert.match(auth, /setSessionCookie\(res, token\)/);
+  assert.match(auth, /User\.findOne\(\{ googleSub: sub \}\)/);
+  assert.match(model, /googleSub:/);
+  assert.match(model, /select: false/);
+  assert.match(login, /fetch\('\/api\/auth\/providers'/);
+  assert.match(login, /fetch\('\/api\/auth\/google'/);
+  assert.match(login, /if \(window\.OZAMA_RUNTIME\?\.native\) return/);
+  assert.doesNotMatch(login, /GOOGLE_ANDROID_CLIENT_ID|GOOGLE_CLIENT_IDS/);
+  assert.match(server, /googleLoginEnabled/);
+  assert.match(server, /same-origin-allow-popups/);
+});
+
 test('web sessions use hardened HttpOnly cookies with a native Bearer fallback', () => {
   const session = read('middleware/session.js');
   const middleware = read('middleware/auth.js');
@@ -160,6 +187,9 @@ test('Socket.IO gameplay events are bound to auth, validation, room tokens, and 
   assert.match(server, /parseSocketPayload/);
   assert.match(server, /rawSocketOn/);
   assert.match(server, /function getServerGameConclusion\(game\)/);
+  assert.match(server, /reason: 'stalemate'/);
+  assert.match(server, /reason: 'fifty_move'/);
+  assert.match(server, /reason: conclusion\.reason/);
   assert.match(server, /async function finishRoomByServerConclusion\(room, code/);
   assert.match(server, /await finishRoomByServerConclusion\(room, code, 'move'\)/);
 
@@ -169,6 +199,8 @@ test('Socket.IO gameplay events are bound to auth, validation, room tokens, and 
   assert.match(script, /token: sessionStorage\.getItem\('ozama-room-token'\)/);
   assert.match(script, /sessionStorage\.setItem\('ozama-room-token', roomToken\)/);
   assert.match(script, /socket\.on\('game-finished'/);
+  assert.match(script, /Partida empatada por rey ahogado/);
+  assert.match(script, /regla de 50 movimientos/);
 });
 
 test('repository ignores local secrets and documents production variables', () => {
@@ -180,6 +212,8 @@ test('repository ignores local secrets and documents production variables', () =
   assert.match(example, /^MONGODB_DB_NAME=ozama-chess$/m);
   assert.match(example, /^JWT_SECRET=/m);
   assert.match(example, /^ADMIN_EMAILS=$/m);
+  assert.match(example, /^GOOGLE_WEB_CLIENT_ID=$/m);
+  assert.match(example, /^GOOGLE_ANDROID_CLIENT_ID=$/m);
   assert.doesNotMatch(example, /mongodb\+srv:\/\//i);
 
   const signedBuild = read('scripts/build-android-signed.ps1');

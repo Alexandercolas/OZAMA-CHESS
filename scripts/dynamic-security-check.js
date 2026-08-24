@@ -126,6 +126,9 @@ async function main() {
       ...isolatedMongo.env,
       JWT_SECRET: process.env.JWT_SECRET || 'dynamic-security-test-secret-at-least-32-chars',
       APP_ORIGINS: `${baseUrl},http://localhost:${port}`,
+      GOOGLE_WEB_CLIENT_ID: '',
+      GOOGLE_ANDROID_CLIENT_ID: '',
+      GOOGLE_CLIENT_IDS: '',
       NODE_ENV: 'test',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -143,6 +146,21 @@ async function main() {
   try {
     await waitForServer(proc, serverLines);
     console.log(`DYNAMIC_DB=${testDbName}`);
+
+    const providersResponse = await fetch(`${baseUrl}/api/auth/providers`, { cache: 'no-store' });
+    const providers = await providersResponse.json();
+    if (providersResponse.status !== 200
+      || providers.google?.enabled !== false
+      || providers.google?.clientId !== '') {
+      throw new Error(`disabled provider config leaked or changed: ${JSON.stringify(providers)}`);
+    }
+    console.log('GOOGLE_PROVIDER_DISABLED_SAFE=true');
+
+    const disabledGoogle = await postJson('/api/auth/google', { idToken: 'not-a-token' });
+    if (disabledGoogle.status !== 503) {
+      throw new Error(`disabled Google endpoint returned ${disabledGoogle.status}`);
+    }
+    console.log('GOOGLE_DISABLED_ENDPOINT_STATUS=503');
 
     const suffix = String(Date.now()).slice(-8);
     const userA = await register(`secA_${suffix}`);
@@ -222,13 +240,70 @@ async function main() {
     });
     const attackMoveRejected = await waitEvent(socketB, 'move-rejected');
     console.log(`ATTACK_MOVE_REJECTED=${attackMoveRejected.message}`);
+
+    socketB.emit('rejoin', {
+      roomCode: created.code,
+      color: 'w',
+      token: created.roomToken,
+    });
+    const stolenTokenFailed = await waitEvent(socketB, 'rejoin-failed');
+    console.log(`STOLEN_ROOM_TOKEN_REJECTED=${stolenTokenFailed}`);
+
+    const socketAClone = connectSocket(userA.token, 'A_CLONE');
+    sockets.push(socketAClone);
+    await once(socketAClone, 'connect');
+    socketAClone.emit('join-room', { code: created.code });
+    const ownRoomRejected = await waitEvent(socketAClone, 'room-error');
+    console.log(`SAME_ACCOUNT_SECOND_COLOR_REJECTED=${ownRoomRejected}`);
+
+    const startA = waitEvent(socketA, 'game-start');
+    const startB = waitEvent(socketB, 'game-start');
     socketB.emit('join-room', { code: created.code });
-    const attackerJoin = await waitEither(socketB, ['game-start', 'room-error']);
-    if (attackerJoin.event === 'game-start') {
-      console.log(`ATTACKER_LEGIT_JOIN_AFTER_FAILED_REJOIN_COLOR=${attackerJoin.payload.color}`);
-    } else {
-      console.log(`ATTACKER_LEGIT_JOIN_AFTER_FAILED_REJOIN_ERROR=${attackerJoin.payload}`);
+    const [gameA, gameB] = await Promise.all([startA, startB]);
+    if (gameA.color !== 'w' || gameB.color !== 'b') {
+      throw new Error(`incorrect colors assigned: A=${gameA.color} B=${gameB.color}`);
     }
+    console.log(`GAME_COLORS=A:${gameA.color},B:${gameB.color}`);
+
+    socketB.emit('player-move', {
+      room: created.code,
+      from: { row: 1, col: 4 },
+      to: { row: 3, col: 4 },
+    });
+    const blackOutOfTurn = await waitEvent(socketB, 'move-rejected');
+    console.log(`BLACK_OUT_OF_TURN_REJECTED=${blackOutOfTurn.message}`);
+
+    const whiteMoveSeen = waitEvent(socketB, 'opponent-move');
+    socketA.emit('player-move', {
+      room: created.code,
+      from: { row: 6, col: 4 },
+      to: { row: 4, col: 4 },
+    });
+    const whiteMove = await whiteMoveSeen;
+    if (whiteMove.from.row !== 6 || whiteMove.to.row !== 4 || whiteMove.to.col !== 4) {
+      throw new Error(`unexpected white move payload: ${JSON.stringify(whiteMove)}`);
+    }
+    console.log('WHITE_MOVE_ACCEPTED=e2-e4');
+
+    socketA.emit('player-move', {
+      room: created.code,
+      from: { row: 6, col: 3 },
+      to: { row: 4, col: 3 },
+    });
+    const whiteSecondMove = await waitEvent(socketA, 'move-rejected');
+    console.log(`WHITE_SECOND_MOVE_REJECTED=${whiteSecondMove.message}`);
+
+    const blackMoveSeen = waitEvent(socketA, 'opponent-move');
+    socketB.emit('player-move', {
+      room: created.code,
+      from: { row: 1, col: 4 },
+      to: { row: 3, col: 4 },
+    });
+    const blackMove = await blackMoveSeen;
+    if (blackMove.from.row !== 1 || blackMove.to.row !== 3 || blackMove.to.col !== 4) {
+      throw new Error(`unexpected black move payload: ${JSON.stringify(blackMove)}`);
+    }
+    console.log('BLACK_MOVE_ACCEPTED=e7-e5');
 
     socketA.disconnect();
     await wait(300);
@@ -243,6 +318,18 @@ async function main() {
     const ok = await waitEvent(socketA2, 'rejoin-ok');
     console.log(`LEGIT_REJOIN_OK_COLOR=${ok.color}`);
     console.log(`LEGIT_REJOIN_ROOM_TOKEN_MATCH=${ok.roomToken === created.roomToken}`);
+    const restoredWhitePawn = ok.game?.board?.[4]?.[4];
+    const restoredBlackPawn = ok.game?.board?.[3]?.[4];
+    if (ok.currentTurn !== 'w'
+      || restoredWhitePawn?.type !== 'p' || restoredWhitePawn?.color !== 'w'
+      || restoredBlackPawn?.type !== 'p' || restoredBlackPawn?.color !== 'b') {
+      throw new Error(`rejoin did not preserve board/turn: ${JSON.stringify({
+        currentTurn: ok.currentTurn,
+        restoredWhitePawn,
+        restoredBlackPawn,
+      })}`);
+    }
+    console.log('REJOIN_BOARD_PRESERVED=e2-e4,e7-e5');
 
     const userC = await register(`secC_${suffix}`);
     const userD = await register(`secD_${suffix}`);

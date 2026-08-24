@@ -31,6 +31,19 @@
       --surface2: var(--s2);
     }
 
+    /* Llegada desde un enlace con ancla (#historial, #ajustes, ...):
+       marca la seccion de destino para que se sienta como una parada
+       real, no un scroll perdido en una pagina larga. */
+    .section-arrival {
+      animation: sectionArrival 1.5s ease-out;
+      border-radius: var(--radius-md, 4px);
+    }
+    @keyframes sectionArrival {
+      0%   { box-shadow: 0 0 0 1px var(--gold), 0 0 24px rgba(200,152,60,0.35); }
+      70%  { box-shadow: 0 0 0 1px var(--gold), 0 0 24px rgba(200,152,60,0.35); }
+      100% { box-shadow: 0 0 0 0 rgba(200,152,60,0); }
+    }
+
     body {
       background: var(--bg);
       color: var(--text);
@@ -1098,7 +1111,20 @@
         profileInitialized = true;
         loadFriends();
         if (window.location.hash) {
-          setTimeout(() => document.querySelector(window.location.hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+          setTimeout(() => {
+            const target = document.querySelector(window.location.hash);
+            if (!target) return;
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // El titulo de "Historial" es solo texto: marca tambien la lista
+            // de partidas justo debajo para que la llegada se sienta completa.
+            const flashEls = target.id === 'historial'
+              ? [target, document.getElementById('match-list')].filter(Boolean)
+              : [target];
+            flashEls.forEach((el) => {
+              el.classList.add('section-arrival');
+              el.addEventListener('animationend', () => el.classList.remove('section-arrival'), { once: true });
+            });
+          }, 80);
         }
       } catch (err) {
         document.getElementById('main-content').innerHTML =

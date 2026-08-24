@@ -622,7 +622,13 @@ function finishMoveExecution() {
   state.turn = enemy(state.turn);
   const status = evaluateGameStatus(state.board, state.turn, state);
   state.status = status;
-  state.endReason = null;
+  state.endReason = status === STATUS.CHECKMATE
+    ? 'checkmate'
+    : status === STATUS.STALEMATE
+      ? 'stalemate'
+      : status === STATUS.DRAW
+        ? 'fifty_move'
+        : null;
 
   if (status === STATUS.CHECKMATE) {
     state.winner = enemy(state.turn);
@@ -659,7 +665,12 @@ function showLocalGameFinished() {
     return;
   }
 
-  showGameEnd('TABLAS', state.status === STATUS.STALEMATE ? 'Partida empatada por ahogado.' : 'Partida empatada.', {
+  const drawMessage = state.endReason === 'stalemate'
+    ? 'Partida empatada por rey ahogado.'
+    : state.endReason === 'fifty_move'
+      ? 'Partida empatada por la regla de 50 movimientos.'
+      : 'Partida empatada.';
+  showGameEnd('TABLAS', drawMessage, {
     online: IS_ONLINE,
     canPlayAgain: !IS_ONLINE,
   });
@@ -941,7 +952,11 @@ function updateStatusDisplay() {
       ? `Tiempo agotado. Ganan las ${state.winner === COLOR.WHITE ? 'Blancas' : 'Negras'}.`
       : `¡Jaque Mate! Ganan las ${state.winner === COLOR.WHITE ? 'Blancas' : 'Negras'}.`;
   } else if (state.status === STATUS.STALEMATE) {
-    message = 'Tablas por ahogado.';
+    message = 'Tablas por rey ahogado.';
+  } else if (state.status === STATUS.DRAW) {
+    message = state.endReason === 'fifty_move'
+      ? 'Tablas por la regla de 50 movimientos.'
+      : 'Partida empatada.';
   } else if (state.status === STATUS.CHECK) {
     message = IS_BOT_MODE && state.turn === BOT_COLOR
       ? `Ozama Bot piensa (${BOT_LEVEL})...`
@@ -1229,20 +1244,25 @@ function setupOnlineSocket() {
     );
   });
 
-  socket.on('game-finished', ({ result, winner } = {}) => {
+  socket.on('game-finished', ({ result, winner, reason } = {}) => {
     CLOCK.stop();
     playSound('gameover');
     state.winner = winner === COLOR.WHITE || winner === COLOR.BLACK ? winner : null;
-    state.endReason = null;
+    state.endReason = reason || null;
     state.selected = null;
     state.legalMoves = [];
-    if (result === 'draw') state.status = STATUS.STALEMATE;
+    if (result === 'draw') state.status = reason === 'stalemate' ? STATUS.STALEMATE : STATUS.DRAW;
     else if (result === 'white_win' || result === 'black_win') state.status = STATUS.CHECKMATE;
     else state.status = STATUS.DRAW;
     updateStatusDisplay();
     renderBoard();
     if (result === 'draw') {
-      showGameEnd('TABLAS', 'Partida empatada por ahogado.', { online: true, canPlayAgain: false });
+      const drawMessage = reason === 'stalemate'
+        ? 'Partida empatada por rey ahogado.'
+        : reason === 'fifty_move'
+          ? 'Partida empatada por la regla de 50 movimientos.'
+          : 'Partida empatada.';
+      showGameEnd('TABLAS', drawMessage, { online: true, canPlayAgain: false });
       return;
     }
     const youWon = state.winner === PLAYER_COLOR;

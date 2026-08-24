@@ -7,6 +7,7 @@ const jwt     = require('jsonwebtoken');
 const User    = require('../models/User');
 const { requireAuth } = require('../middleware/auth');
 const { requestToken, setSessionCookie, clearSessionCookie } = require('../middleware/session');
+const { googleProviderConfig, verifyGoogleIdToken } = require('../services/google-auth');
 
 const router  = express.Router();
 const authAttempts = new Map();
@@ -50,6 +51,13 @@ const limitLogin = rateLimit({
   limit: 12,
   windowMs: 10 * 60 * 1000,
   message: 'Demasiados intentos de acceso. Intenta de nuevo en unos minutos.',
+});
+
+const limitGoogle = rateLimit({
+  bucket: 'google',
+  limit: 12,
+  windowMs: 10 * 60 * 1000,
+  message: 'Demasiados intentos con Google. Intenta de nuevo en unos minutos.',
 });
 
 const limitReset = rateLimit({
@@ -106,6 +114,106 @@ function publicUser(user) {
     subscriptionStatus: user.subscriptionStatus,
   };
 }
+
+function googleUsernameBase(name, email) {
+  const source = String(name || '').trim() || String(email || '').split('@')[0] || 'ozama';
+  let base = source
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9_]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  if (base.length < 3) base = `oz_${base || 'player'}`;
+  return base.slice(0, 20);
+}
+
+async function uniqueGoogleUsername(name, email, sub) {
+  const base = googleUsernameBase(name, email);
+  if (!(await User.exists({ username: base }))) return base;
+
+  const stableSuffix = String(sub || '').replace(/[^a-zA-Z0-9]/g, '').slice(-6) || 'google';
+  const stable = `${base.slice(0, Math.max(3, 19 - stableSuffix.length))}_${stableSuffix}`.slice(0, 20);
+  if (!(await User.exists({ username: stable }))) return stable;
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const suffix = crypto.randomInt(1000, 10_000);
+    const candidate = `${base.slice(0, 15)}_${suffix}`.slice(0, 20);
+    if (!(await User.exists({ username: candidate }))) return candidate;
+  }
+  throw new Error('No se pudo reservar un nombre de usuario.');
+}
+
+async function findGoogleUser({ sub, email, name }) {
+  let user = await User.findOne({ googleSub: sub }).select('+googleSub +tokenVersion');
+  if (user) return user;
+
+  user = await User.findOne({ email }).select('+googleSub +tokenVersion');
+  if (user) {
+    if (user.googleSub && user.googleSub !== sub) {
+      const error = new Error('Google account conflict.');
+      error.code = 'GOOGLE_ACCOUNT_CONFLICT';
+      throw error;
+    }
+    user.googleSub = sub;
+    if (!user.authProviders) user.authProviders = { password: true, google: false };
+    user.authProviders.google = true;
+    user.lastSeenAt = new Date();
+    await user.save({ validateModifiedOnly: true });
+    return user;
+  }
+
+  const username = await uniqueGoogleUsername(name, email, sub);
+  const generatedPassword = `${crypto.randomBytes(32).toString('base64url')}Aa1!`;
+  return User.create({
+    username,
+    email,
+    password: generatedPassword,
+    country: 'DO',
+    googleSub: sub,
+    authProviders: { password: false, google: true },
+    lastSeenAt: new Date(),
+  });
+}
+
+router.get('/providers', (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  return res.json({ google: googleProviderConfig() });
+});
+
+router.post('/google', limitGoogle, async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  try {
+    const identity = await verifyGoogleIdToken(req.body.idToken || req.body.credential);
+    const user = await findGoogleUser(identity);
+
+    if (!user?.isActive) {
+      return res.status(401).json({ error: 'No se pudo iniciar sesion con Google.' });
+    }
+
+    user.lastSeenAt = new Date();
+    await user.save({ validateModifiedOnly: true });
+
+    const token = signToken(user);
+    setSessionCookie(res, token);
+    return res.json({ token, user: publicUser(user) });
+  } catch (err) {
+    if (err.code === 'GOOGLE_NOT_CONFIGURED') {
+      return res.status(503).json({ error: 'El acceso con Google aun no esta configurado.' });
+    }
+    if (err.code === 'GOOGLE_ACCOUNT_CONFLICT') {
+      return res.status(409).json({ error: 'No se pudo vincular esta cuenta de Google.' });
+    }
+    if (err.code === 11000) {
+      return res.status(409).json({ error: 'La cuenta ya esta vinculada. Intenta iniciar sesion otra vez.' });
+    }
+    if (err.code === 'GOOGLE_INVALID_CREDENTIAL'
+      || err.code === 'GOOGLE_UNVERIFIED_ACCOUNT') {
+      console.warn(`[Auth] Google credential rejected: ${err.code || err.name}`);
+      return res.status(401).json({ error: 'No se pudo verificar la cuenta de Google.' });
+    }
+    console.error('[Auth] Google error:', err.name || 'UnknownError');
+    return res.status(500).json({ error: 'Error interno del servidor.' });
+  }
+});
 
 router.post('/register', limitRegister, async (req, res) => {
   try {

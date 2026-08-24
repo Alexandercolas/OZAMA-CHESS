@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://flagcdn.com; media-src 'self'; connect-src 'self' https://ozama-chess.onrender.com wss://ozama-chess.onrender.com ws: wss:">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://flagcdn.com; media-src 'self'; frame-src 'self' https://accounts.google.com/gsi/; connect-src 'self' https://ozama-chess.onrender.com https://accounts.google.com/gsi/ wss://ozama-chess.onrender.com ws: wss:">
   <script src="/mobile-runtime.js"></script>
   <meta name="theme-color" content="#0D0B08"/>
   <meta name="mobile-web-app-capable" content="yes"/>
@@ -431,6 +431,27 @@
       background: rgba(200,152,60,0.12);
     }
 
+    .google-auth {
+      display: grid;
+      gap: 13px;
+      margin-top: 18px;
+    }
+
+    .google-button {
+      min-height: 44px;
+      display: flex;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .google-auth-note {
+      color: var(--faint);
+      font-size: 10px;
+      font-weight: 650;
+      line-height: 1.5;
+      text-align: center;
+    }
+
     .guest-link {
       color: var(--muted);
       font-size: 12px;
@@ -671,6 +692,12 @@
             <button class="inline-link" type="button" onclick="switchTab('login')">Volver a iniciar sesion</button>
           </div>
         </div>
+
+        <div class="google-auth hidden" id="google-auth" data-enabled="false">
+          <div class="divider">o continua con</div>
+          <div class="google-button" id="google-button" aria-label="Continuar con Google"></div>
+          <p class="google-auth-note" id="google-auth-note">Google crea tu cuenta de OZAMA si aun no existe.</p>
+        </div>
       </div>
       <div class="page-legal-links" aria-label="Informacion legal">
         <a href="/privacy.html">Privacidad</a>
@@ -727,6 +754,8 @@
       document.getElementById('form-register').classList.toggle('hidden', tab !== 'register');
       document.getElementById('form-reset').classList.add('hidden');
       document.getElementById('recovery-box')?.classList.remove('show');
+      const googleAuth = document.getElementById('google-auth');
+      googleAuth.classList.toggle('hidden', googleAuth.dataset.enabled !== 'true');
     }
 
     function showResetForm() {
@@ -736,6 +765,76 @@
       document.getElementById('form-login').classList.add('hidden');
       document.getElementById('form-register').classList.add('hidden');
       document.getElementById('form-reset').classList.remove('hidden');
+      document.getElementById('google-auth').classList.add('hidden');
+    }
+
+    function loadGoogleIdentityScript() {
+      if (window.google?.accounts?.id) return Promise.resolve();
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://accounts.google.com/gsi/client?hl=es';
+        script.async = true;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error('Google Identity Services no disponible.'));
+        document.head.appendChild(script);
+      });
+    }
+
+    async function handleGoogleCredential(response) {
+      const idToken = String(response?.credential || '');
+      if (!idToken) {
+        showMsg('Google no devolvio una credencial valida.');
+        return;
+      }
+
+      clearMsg();
+      try {
+        const res = await fetch('/api/auth/google', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          showMsg(data.error || 'No se pudo iniciar sesion con Google.');
+          return;
+        }
+        await saveSession(data.token, data.user);
+        showMsg('Cuenta de Google verificada.', 'success');
+        setTimeout(goToLobby, 400);
+      } catch (_) {
+        showMsg('Sin conexion con el servidor.');
+      }
+    }
+
+    async function initGoogleAuth() {
+      if (window.OZAMA_RUNTIME?.native) return;
+      const res = await fetch('/api/auth/providers', { cache: 'no-store' });
+      if (!res.ok) return;
+      const providers = await res.json();
+      const clientId = String(providers?.google?.clientId || '');
+      if (!providers?.google?.enabled || !clientId) return;
+
+      await loadGoogleIdentityScript();
+      const googleAuth = document.getElementById('google-auth');
+      googleAuth.dataset.enabled = 'true';
+      googleAuth.classList.remove('hidden');
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: handleGoogleCredential,
+        auto_select: false,
+        ux_mode: 'popup',
+      });
+      window.google.accounts.id.renderButton(document.getElementById('google-button'), {
+        type: 'standard',
+        theme: 'filled_black',
+        size: 'large',
+        text: 'continue_with',
+        shape: 'rectangular',
+        logo_alignment: 'left',
+        locale: 'es',
+        width: 320,
+      });
     }
 
     async function saveSession(token, user) {
@@ -964,6 +1063,7 @@
     });
 
     checkExistingSession();
+    initGoogleAuth().catch(() => {});
   </script>
 </body>
 </html>
