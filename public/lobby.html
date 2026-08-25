@@ -123,12 +123,20 @@
     }
 
     .hd-user-av {
-      width: 32px; height: 32px;
-      border: 1.5px solid var(--amber);
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      border: 2px solid var(--gold);
+      box-shadow: 0 0 0 3px rgba(200,152,60,0.16);
       display: flex; align-items: center; justify-content: center;
-      font-family: var(--ft); font-size: 15px; font-weight: 700;
+      font-family: var(--ft); font-size: 16px; font-weight: 700;
       color: var(--text); background: var(--s3); cursor: pointer;
       overflow: hidden;
+      flex-shrink: 0;
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+    .hd-user-av:hover {
+      box-shadow: 0 0 0 4px rgba(200,152,60,0.26);
+      transform: translateY(-1px);
     }
     .hd-user-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
@@ -140,7 +148,7 @@
     }
 
     .hd-user-elo {
-      font-family: var(--fm); font-size: 10px; color: var(--ghost); letter-spacing: 1px;
+      font-family: var(--fm); font-size: 11px; font-weight: 700; color: var(--gold-2); letter-spacing: 1px;
     }
 
     /* ── BODY ── */
@@ -399,11 +407,11 @@
 
     /* Elo badge */
     .elo-badge {
-      font-family: var(--fm); font-size: 11px; font-weight: 700;
-      color: var(--ghost); letter-spacing: 1px;
-      padding: 4px 14px;
-      border: 1px solid rgba(200,152,60,0.15);
-      background: rgba(200,152,60,0.04);
+      font-family: var(--fm); font-size: 12px; font-weight: 700;
+      color: var(--gold-2); letter-spacing: 1px;
+      padding: 6px 14px;
+      border: 1px solid rgba(200,152,60,0.3);
+      background: rgba(200,152,60,0.08);
       width: 100%; text-align: center;
     }
 
@@ -605,7 +613,7 @@
     }
 
     .player-chip-elo {
-      font-family: var(--fm); font-size: 9px; color: var(--ghost);
+      font-family: var(--fm); font-size: 9px; font-weight: 700; color: var(--gold-2);
     }
 
     .player-chip-flag img { width: 16px; height: 11px; object-fit: cover; }
@@ -723,7 +731,7 @@
         gap: 12px;
       }
       .hd-logo { font-size: 15px; letter-spacing: 4px; }
-      .hd-sub, .hd-user-elo { display: none; }
+      .hd-sub { display: none; }
       .hd-user { gap: 8px; }
 
       .body {
