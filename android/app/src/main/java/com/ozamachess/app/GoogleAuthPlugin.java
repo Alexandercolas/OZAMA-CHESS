@@ -17,7 +17,6 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption;
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
-import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException;
 
 @CapacitorPlugin(name = "OzamaGoogleAuth")
 public class GoogleAuthPlugin extends Plugin {
@@ -81,7 +80,7 @@ public class GoogleAuthPlugin extends Plugin {
             JSObject result = new JSObject();
             result.put("idToken", googleIdTokenCredential.getIdToken());
             call.resolve(result);
-        } catch (GoogleIdTokenParsingException error) {
+        } catch (RuntimeException error) {
             call.reject("No se pudo interpretar la credencial de Google.", error);
         }
     }
