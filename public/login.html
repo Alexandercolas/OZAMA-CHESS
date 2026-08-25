@@ -107,6 +107,13 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
+    .form-swap { animation: formSwapIn 0.26s ease; }
+
+    @keyframes formSwapIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
     .logo-wrap {
       position: relative;
       min-height: 610px;
@@ -299,9 +306,11 @@
       border: 0;
       color: var(--faint);
       cursor: pointer;
+      transition: color 150ms ease, transform 150ms ease;
     }
     .input-toggle svg { width: 18px; height: 18px; fill: currentColor; }
     .input-toggle:hover { color: var(--gold-2); }
+    .input-toggle:active { transform: scale(0.88); }
 
     .forgot-link {
       display: flex;
@@ -396,6 +405,16 @@
       text-align: center;
     }
 
+    .msg.error,
+    .msg.success {
+      animation: msgIn 0.22s ease;
+    }
+
+    @keyframes msgIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
     .msg.error {
       display: block;
       border-color: rgba(192,57,43,0.34);
@@ -423,13 +442,15 @@
       letter-spacing: 2.4px;
       text-transform: uppercase;
       cursor: pointer;
-      transition: background 200ms ease, border-color 200ms ease;
+      transition: background 200ms ease, border-color 200ms ease, transform 150ms ease;
     }
 
     .btn-main:hover {
       background: var(--gold-2);
       border-color: rgba(226,185,96,0.88);
     }
+
+    .btn-main:active:not(:disabled) { transform: scale(0.98); }
 
     .btn-main:disabled {
       opacity: 0.55;
@@ -856,6 +877,13 @@
       }
     }
 
+    function playSwapAnim(el) {
+      if (!el) return;
+      el.classList.remove('form-swap');
+      void el.offsetWidth;
+      el.classList.add('form-swap');
+    }
+
     function switchTab(tab) {
       clearMsg();
       const registerBtn = document.getElementById('btn-register');
@@ -865,6 +893,8 @@
       document.getElementById('form-login').classList.toggle('hidden', tab !== 'login');
       document.getElementById('form-register').classList.toggle('hidden', tab !== 'register');
       document.getElementById('form-reset').classList.add('hidden');
+      playSwapAnim(document.getElementById(tab === 'login' ? 'form-login' : 'form-register'));
+      playSwapAnim(document.getElementById('form-heading-text'));
       document.getElementById('recovery-box')?.classList.remove('show');
 
       document.getElementById('form-heading-text').textContent = tab === 'login' ? 'Iniciar sesion' : 'Crear cuenta';
@@ -886,6 +916,8 @@
       document.getElementById('form-register').classList.add('hidden');
       document.getElementById('form-reset').classList.remove('hidden');
       document.getElementById('form-heading-text').textContent = 'Recuperar contrasena';
+      playSwapAnim(document.getElementById('form-reset'));
+      playSwapAnim(document.getElementById('form-heading-text'));
       document.getElementById('form-switch').classList.add('hidden');
       document.getElementById('form-switch-row').classList.add('hidden');
       document.getElementById('recovery-entry').classList.add('hidden');
