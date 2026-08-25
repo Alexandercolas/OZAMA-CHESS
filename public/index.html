@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://flagcdn.com; media-src 'self'; connect-src 'self' https://ozama-chess.onrender.com wss://ozama-chess.onrender.com ws: wss:">
   <script src="/mobile-runtime.js"></script>
+  <script>
+    // La APK no debe mostrar la landing de mercadeo: entra directo a la
+    // verificacion de sesion de login.html (que ya redirige al lobby si
+    // hay una sesion valida). Una app no muestra su propia pagina web.
+    if (window.OZAMA_RUNTIME?.native) location.replace('/login.html');
+  </script>
   <meta name="theme-color" content="#0D0B08"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
