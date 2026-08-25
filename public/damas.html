@@ -100,6 +100,22 @@
     .turn-dot.w { background: radial-gradient(circle at 35% 30%, #F2E4C4, #C8983C 70%); }
     .turn-dot.b { background: radial-gradient(circle at 35% 30%, #4a4038, #16130E 70%); }
 
+    .header-side { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+
+    .capture-tally {
+      display: flex;
+      gap: 14px;
+      font-family: var(--fm);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--dim);
+      letter-spacing: 0.5px;
+    }
+    .capture-tally span { display: inline-flex; align-items: center; gap: 5px; }
+    .capture-tally .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .capture-tally .dot.w { background: radial-gradient(circle at 35% 30%, #F2E4C4, #C8983C 70%); }
+    .capture-tally .dot.b { background: radial-gradient(circle at 35% 30%, #4a4038, #16130E 70%); }
+
     .board-wrap {
       display: flex;
       justify-content: center;
@@ -183,6 +199,18 @@
     }
     .square.selected .piece { transform: scale(1.06); }
 
+    .piece.must-move { animation: mustMovePulse 1.1s ease-in-out infinite; }
+    @keyframes mustMovePulse {
+      0%, 100% { box-shadow: 0 3px 6px rgba(0,0,0,0.5), 0 0 0 0 rgba(210,90,60,0.55); }
+      50%      { box-shadow: 0 3px 6px rgba(0,0,0,0.5), 0 0 0 5px rgba(210,90,60,0); }
+    }
+
+    .piece.landed { animation: pieceLand 0.22s cubic-bezier(0.34,1.56,0.64,1); }
+    @keyframes pieceLand {
+      from { transform: scale(0.72); }
+      to   { transform: scale(1); }
+    }
+
     .controls {
       display: flex;
       justify-content: center;
@@ -212,9 +240,12 @@
 
     <div class="header">
       <div class="title">Ozama Damas</div>
-      <div class="turn-badge" id="turn-badge">
-        <span class="turn-dot w" id="turn-dot"></span>
-        <span id="turn-text">Turno: Blancas</span>
+      <div class="header-side">
+        <div class="capture-tally" id="capture-tally"></div>
+        <div class="turn-badge" id="turn-badge">
+          <span class="turn-dot w" id="turn-dot"></span>
+          <span id="turn-text">Turno: Blancas</span>
+        </div>
       </div>
     </div>
 
@@ -257,6 +288,16 @@
         }
       }
 
+      // Piezas que tienen captura obligatoria disponible este turno --
+      // se resaltan para que la regla no sea invisible para quien no
+      // conoce Damas dominicana.
+      const mustMoveSet = new Set();
+      if (!gameOver) {
+        for (const entry of E.getAllLegalMoves(board, turn)) {
+          if (entry.sequences[0]?.[0]?.capturedR !== -1) mustMoveSet.add(`${entry.r},${entry.c}`);
+        }
+      }
+
       for (let r = 0; r < E.SIZE; r++) {
         for (let c = 0; c < E.SIZE; c++) {
           const sq = document.createElement('div');
@@ -269,7 +310,8 @@
           const piece = board[r][c];
           if (piece) {
             const el = pieceEl(piece);
-            el.addEventListener('click', () => onSquareClick(r, c));
+            if (mustMoveSet.has(`${r},${c}`)) el.classList.add('must-move');
+            if (lastMove && lastMove.toR === r && lastMove.toC === c) el.classList.add('landed');
             sq.appendChild(el);
           }
 
@@ -283,6 +325,15 @@
           boardEl.appendChild(sq);
         }
       }
+
+      let remainingW = 0, remainingB = 0;
+      for (const row of board) for (const cell of row) {
+        if (cell?.color === E.COLOR.WHITE) remainingW++;
+        if (cell?.color === E.COLOR.BLACK) remainingB++;
+      }
+      document.getElementById('capture-tally').innerHTML =
+        `<span><span class="dot b"></span>${12 - remainingB} capturadas</span>` +
+        `<span><span class="dot w"></span>${12 - remainingW} capturadas</span>`;
 
       document.getElementById('turn-dot').className = `turn-dot ${turn}`;
       document.getElementById('turn-text').textContent = gameOver
