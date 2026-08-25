@@ -268,7 +268,7 @@
     return { over: false, winner: null, reason: null };
   }
 
-  window.OzamaCheckers = {
+  const OzamaCheckers = {
     SIZE,
     COLOR,
     createInitialBoard,
@@ -280,4 +280,11 @@
     checkGameOver,
     otherColor,
   };
+
+  // Disponible en el navegador (window.OzamaCheckers) y en Node/servidor
+  // (module.exports), para que el cliente y el servidor validen las
+  // jugadas con exactamente el mismo codigo -- nunca confiar en un
+  // motor de reglas distinto en cada lado.
+  if (typeof window !== 'undefined') window.OzamaCheckers = OzamaCheckers;
+  if (typeof module !== 'undefined' && module.exports) module.exports = OzamaCheckers;
 })();
