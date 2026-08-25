@@ -13,6 +13,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/theme.css">
   <script src="/checkers-engine.js"></script>
+  <script src="/checkers-ai.js"></script>
 
   <style>
     :root {
@@ -139,7 +140,9 @@
       max-width: 100%;
       user-select: none;
       -webkit-user-select: none;
+      transition: opacity 0.15s ease;
     }
+    .board.thinking { pointer-events: none; opacity: 0.82; }
 
     .square {
       width: var(--sq);
@@ -218,6 +221,32 @@
       flex-wrap: wrap;
     }
 
+    .btn-mode {
+      padding: 11px 22px;
+      background: transparent;
+      border: 1px solid rgba(200,152,60,0.4);
+      color: var(--dim);
+      font-family: var(--fb);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-mode:hover { color: var(--gold-2); border-color: var(--gold); }
+    .btn-mode.active { color: var(--carbon); background: var(--gold); border-color: var(--gold); }
+
+    .thinking-line {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--gold-2);
+      min-height: 16px;
+    }
+
     .status-line {
       text-align: center;
       font-size: 12px;
@@ -254,21 +283,28 @@
     </div>
 
     <div class="status-line" id="status-line"></div>
+    <div class="thinking-line" id="thinking-line"></div>
 
     <div class="controls">
       <button class="btn-primary" type="button" onclick="newGame()">Nueva partida</button>
+      <button class="btn-mode" type="button" id="mode-btn" onclick="toggleMode()">Modo: Pasar y jugar</button>
     </div>
   </div>
 
   <script>
     'use strict';
     const E = window.OzamaCheckers;
+    const AI = window.OzamaCheckersAI;
+    const BOT_COLOR = E.COLOR.BLACK;
+    const BOT_DEPTH = 5;
     let board = E.createInitialBoard();
     let turn = E.COLOR.WHITE;
     let selected = null;      // { r, c }
     let legalHere = [];       // sequences for the selected square
     let lastMove = null;      // { fromR, fromC, toR, toC }
     let gameOver = null;
+    let vsBot = false;
+    let botThinking = false;
 
     function pieceEl(piece) {
       const div = document.createElement('div');
@@ -279,6 +315,7 @@
     function render() {
       const boardEl = document.getElementById('board');
       boardEl.innerHTML = '';
+      boardEl.classList.toggle('thinking', botThinking);
 
       const destSet = new Map(); // "r,c" -> hasCapture
       if (selected) {
@@ -351,7 +388,8 @@
     }
 
     function onSquareClick(r, c) {
-      if (gameOver) return;
+      if (gameOver || botThinking) return;
+      if (vsBot && turn === BOT_COLOR) return;
       const clicked = board[r][c];
 
       // Clicking a destination while something is selected.
@@ -394,6 +432,29 @@
       const status = E.checkGameOver(board, turn);
       gameOver = status.over ? status : null;
       render();
+
+      if (vsBot && !gameOver && turn === BOT_COLOR) scheduleBotMove();
+    }
+
+    function scheduleBotMove() {
+      botThinking = true;
+      document.getElementById('thinking-line').textContent = 'El bot esta pensando...';
+      document.getElementById('board').classList.add('thinking');
+      setTimeout(() => {
+        const move = AI.chooseMove(board, BOT_COLOR, BOT_DEPTH);
+        botThinking = false;
+        document.getElementById('thinking-line').textContent = '';
+        if (!move) return; // no debería pasar: checkGameOver ya lo hubiera detectado antes.
+        applyMoveAndAdvance(move.r, move.c, move.seq);
+      }, 350);
+    }
+
+    function toggleMode() {
+      vsBot = !vsBot;
+      const btn = document.getElementById('mode-btn');
+      btn.textContent = vsBot ? 'Modo: Vs Bot (negras)' : 'Modo: Pasar y jugar';
+      btn.classList.toggle('active', vsBot);
+      newGame();
     }
 
     function newGame() {
@@ -403,6 +464,8 @@
       legalHere = [];
       lastMove = null;
       gameOver = null;
+      botThinking = false;
+      document.getElementById('thinking-line').textContent = '';
       render();
     }
 
