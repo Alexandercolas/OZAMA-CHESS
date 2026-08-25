@@ -205,7 +205,32 @@ const damasSchemas = {
     seq: z.array(damasStepSchema).min(1).max(12),
   }).strict(),
   roomOnly: z.object({ room: roomCodeSchema }).strict(),
+  rejoin: z.object({ room: roomCodeSchema, color: z.enum(['w', 'b']), token: z.string().length(48) }).strict(),
 };
+
+// Grace period antes de dar por perdida una sala de Damas cuando un
+// jugador se desconecta (recarga de pagina, WiFi, cambio de app en el
+// telefono). Si reconecta con damas:rejoin antes de que esto dispare,
+// la partida sigue igual que estaba.
+function damasCancelCloseTimer(room) {
+  if (room.closeTimer) { clearTimeout(room.closeTimer); room.closeTimer = null; }
+}
+
+function damasStartCloseTimer(code) {
+  const room = damasRooms.get(code);
+  if (!room) return;
+  damasCancelCloseTimer(room);
+  room.closeTimer = setTimeout(() => {
+    if (room.status === 'playing') {
+      const survivorColor = room.white ? 'w' : room.black ? 'b' : null;
+      if (survivorColor) {
+        room.status = 'finished';
+        io.to(code).emit('damas:game-over', { winner: survivorColor, reason: 'opponent-left' });
+      }
+    }
+    damasRooms.delete(code);
+  }, 30_000);
+}
 
 // ── Cola de matchmaking ──────────────────────────────────────────
 // { socketId, playerInfo, joinedAt }
@@ -1692,6 +1717,8 @@ if (room.white && room.black && !room.clockInterval) {
       turn: OzamaCheckers.COLOR.WHITE,
       status: 'waiting',
       playerInfo: { w: pInfo, b: null },
+      tokens: { w: createRoomToken(), b: null },
+      closeTimer: null,
       createdAt: Date.now(),
     });
 
@@ -1699,7 +1726,7 @@ if (room.white && room.black && !room.clockInterval) {
     socket.data.damasRoomCode = code;
     socket.data.damasColor = 'w';
 
-    socket.emit('damas:room-created', { code, color: 'w', playerInfo: pInfo });
+    socket.emit('damas:room-created', { code, color: 'w', playerInfo: pInfo, roomToken: damasRooms.get(code).tokens.w });
     console.log(`[DAMAS] Sala ${code} creada por "${pInfo.name}"`);
   });
 
@@ -1717,6 +1744,7 @@ if (room.white && room.black && !room.clockInterval) {
     const pInfo = await getPlayerInfo(playerName, country);
     room.black = socket.id;
     room.playerInfo.b = pInfo;
+    room.tokens.b = createRoomToken();
     room.status = 'playing';
 
     socket.join(code);
@@ -1725,8 +1753,8 @@ if (room.white && room.black && !room.clockInterval) {
 
     const whiteSocket = io.sockets.sockets.get(room.white);
     const startPayload = { code, board: room.board, turn: room.turn, playerInfo: room.playerInfo };
-    whiteSocket?.emit('damas:game-start', { ...startPayload, color: 'w' });
-    socket.emit('damas:game-start', { ...startPayload, color: 'b' });
+    whiteSocket?.emit('damas:game-start', { ...startPayload, color: 'w', roomToken: room.tokens.w });
+    socket.emit('damas:game-start', { ...startPayload, color: 'b', roomToken: room.tokens.b });
     console.log(`[DAMAS] "${pInfo.name}" se unio a la sala ${code}`);
   });
 
@@ -1781,8 +1809,33 @@ if (room.white && room.black && !room.clockInterval) {
     if (!room) return;
     const myColor = socket.data.damasColor;
     if (!myColor || room.status !== 'playing') return;
+    damasCancelCloseTimer(room);
     room.status = 'finished';
     io.to(code).emit('damas:game-over', { winner: OzamaCheckers.otherColor(myColor), reason: 'resign' });
+  });
+
+  // Reconectar a una partida de Damas en curso tras perder el socket
+  // (recargar la pagina, WiFi, la app pasando a segundo plano). El
+  // token de sala es lo unico que hace falta -- no requiere sesion,
+  // igual que el resto de Damas, para que un invitado tambien pueda
+  // recuperar su partida.
+  socket.on('damas:rejoin', async (payload = {}) => {
+    const data = parseSocketPayload(damasSchemas.rejoin, payload, 'damas:rejoin-failed');
+    if (!data) return;
+    const { room: code, color, token } = data;
+    const room = damasRooms.get(code);
+    if (!room || room.status !== 'playing') { socket.emit('damas:rejoin-failed'); return; }
+    if (!room.tokens?.[color] || room.tokens[color] !== token) { socket.emit('damas:rejoin-failed'); return; }
+
+    damasCancelCloseTimer(room);
+    socket.join(code);
+    socket.data.damasRoomCode = code;
+    socket.data.damasColor = color;
+    if (color === 'w') room.white = socket.id; else room.black = socket.id;
+
+    socket.emit('damas:game-start', { code, color, board: room.board, turn: room.turn, playerInfo: room.playerInfo, roomToken: token });
+    socket.to(code).emit('damas:opponent-reconnected');
+    console.log(`[DAMAS] Reconexion en sala ${code} (${color})`);
   });
 
   socket.on('disconnect', () => {
@@ -1792,10 +1845,14 @@ if (room.white && room.black && !room.clockInterval) {
       if (damasRoom.white === socket.id) damasRoom.white = null;
       if (damasRoom.black === socket.id) damasRoom.black = null;
       if (damasRoom.status === 'playing') {
-        damasRoom.status = 'finished';
+        // No se da la partida por terminada de una vez: se avisa al
+        // rival y se le da 30s para reconectar (damas:rejoin) antes de
+        // cerrar la sala de verdad.
         socket.to(damasCode).emit('damas:opponent-disconnected');
+        damasStartCloseTimer(damasCode);
+      } else if (!damasRoom.white && !damasRoom.black) {
+        damasRooms.delete(damasCode);
       }
-      if (!damasRoom.white && !damasRoom.black) damasRooms.delete(damasCode);
     }
   });
 

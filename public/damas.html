@@ -422,9 +422,9 @@
         </div>
       </div>
       <div class="hidden" id="online-waiting">
-        <div class="online-note">Comparte este codigo con tu rival:</div>
+        <div class="online-note" id="online-waiting-title">Comparte este codigo con tu rival:</div>
         <div class="room-code-display" id="room-code-display"></div>
-        <div class="online-note">Esperando a que se una...</div>
+        <div class="online-note" id="online-waiting-note">Esperando a que se una...</div>
       </div>
     </div>
 
@@ -501,7 +501,23 @@
     let onlineColor = null;
     let onlineRoomCode = null;
     let onlineStatus = 'idle'; // 'idle' | 'waiting' | 'playing'
+    let onlineRoomToken = null;
     let selfResigned = false;
+
+    const ONLINE_SESSION_KEY = 'ozama-damas-online-session';
+
+    function saveOnlineSession() {
+      try {
+        sessionStorage.setItem(ONLINE_SESSION_KEY, JSON.stringify({ code: onlineRoomCode, color: onlineColor, token: onlineRoomToken }));
+      } catch (_) {}
+    }
+    function clearOnlineSession() {
+      try { sessionStorage.removeItem(ONLINE_SESSION_KEY); } catch (_) {}
+    }
+    function loadOnlineSession() {
+      try { return JSON.parse(sessionStorage.getItem(ONLINE_SESSION_KEY) || 'null'); }
+      catch (_) { return null; }
+    }
 
     function pieceEl(piece) {
       const div = document.createElement('div');
@@ -783,15 +799,19 @@
       socket.on('damas:room-created', (data) => {
         onlineRoomCode = data.code;
         onlineColor = data.color;
+        onlineRoomToken = data.roomToken;
         onlineStatus = 'waiting';
         document.getElementById('online-setup').classList.add('hidden');
         document.getElementById('online-waiting').classList.remove('hidden');
+        document.getElementById('online-waiting-title').textContent = 'Comparte este codigo con tu rival:';
+        document.getElementById('online-waiting-note').textContent = 'Esperando a que se una...';
         document.getElementById('room-code-display').textContent = data.code;
       });
 
       socket.on('damas:game-start', (data) => {
         onlineRoomCode = data.code;
         onlineColor = data.color;
+        onlineRoomToken = data.roomToken;
         onlineStatus = 'playing';
         selfResigned = false;
         statsRecordedForThisGame = false;
@@ -803,6 +823,7 @@
         document.getElementById('resign-btn').classList.remove('hidden');
         document.getElementById('newgame-btn').classList.add('hidden');
         document.getElementById('status-line').textContent = '';
+        saveOnlineSession();
         render();
       });
 
@@ -829,11 +850,26 @@
       });
 
       socket.on('damas:opponent-disconnected', () => {
-        gameOver = { over: true, winner: onlineColor, reason: 'opponent-left' };
-        render();
+        // No se da la partida por terminada de una vez: el servidor le
+        // da 30s al rival para reconectar (damas:rejoin) antes de
+        // cerrar la sala. Mientras tanto solo se avisa.
+        document.getElementById('status-line').textContent = 'El rival se desconecto. Esperando a que regrese (30s)...';
+      });
+
+      socket.on('damas:opponent-reconnected', () => {
+        document.getElementById('status-line').textContent = '';
+      });
+
+      // damas:rejoin solo se dispara desde attemptAutoRejoin() al cargar
+      // la pagina, asi que un fallo aqui siempre significa eso: la
+      // partida guardada ya no existe (se cerro, expiro el grace period).
+      socket.on('damas:rejoin-failed', () => {
+        clearOnlineSession();
+        setMode('local');
       });
 
       socket.on('damas:game-over', (data) => {
+        clearOnlineSession();
         gameOver = { over: true, winner: data.winner, reason: data.reason || 'resign' };
         render();
       });
@@ -911,9 +947,32 @@
       render();
     }
 
+    // Si se recargo la pagina en medio de una partida online, se intenta
+    // recuperar la sala antes de caer al modo local por defecto -- asi
+    // un refresh accidental no bota al jugador de la partida.
+    function attemptAutoRejoin() {
+      const session = loadOnlineSession();
+      if (!session?.code || !session?.color || !session?.token) {
+        setMode('local');
+        return;
+      }
+      mode = 'online';
+      document.getElementById('mode-online').classList.add('active');
+      document.getElementById('mode-local').classList.remove('active');
+      document.getElementById('bot-panel').classList.add('hidden');
+      document.getElementById('online-panel').classList.remove('hidden');
+      document.getElementById('online-setup').classList.add('hidden');
+      document.getElementById('online-waiting').classList.remove('hidden');
+      document.getElementById('online-waiting-title').textContent = 'Reconectando a tu partida...';
+      document.getElementById('online-waiting-note').textContent = '';
+      document.getElementById('room-code-display').textContent = session.code;
+      ensureSocket();
+      socket.emit('damas:rejoin', session);
+    }
+
     document.getElementById('diff-medium').classList.add('active');
     renderStats();
-    setMode('local');
+    attemptAutoRejoin();
   </script>
 </body>
 </html>
