@@ -209,12 +209,11 @@
       gap: 10px;
     }
 
-    .security-list span::before {
-      content: "";
-      width: 7px;
-      height: 7px;
-      border: 1px solid var(--gold);
-      transform: rotate(45deg);
+    .security-list svg {
+      flex-shrink: 0;
+      width: 15px;
+      height: 15px;
+      fill: var(--gold);
     }
 
     .card {
@@ -241,36 +240,95 @@
 
     .card > div { width: 100%; }
 
-    .tabs {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 4px;
-      padding: 4px;
-      margin-bottom: 24px;
-      background: rgba(0,0,0,0.24);
-      border: 1px solid rgba(200,152,60,0.18);
+    .form-heading {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 22px;
     }
 
-    .tab {
-      min-height: 40px;
-      border: 1px solid transparent;
-      background: transparent;
-      color: var(--muted);
+    .form-heading span:not(.fh-line):not(.fh-diamond) {
       font-family: var(--title);
-      font-size: 11px;
+      font-size: 15px;
       font-weight: 700;
-      letter-spacing: 1.5px;
+      letter-spacing: 3px;
       text-transform: uppercase;
+      color: var(--gold-2);
+      white-space: nowrap;
+    }
+
+    .fh-line {
+      flex: 1;
+      height: 1px;
+      background: rgba(200,152,60,0.22);
+    }
+
+    .fh-diamond {
+      color: var(--gold);
+      font-size: 8px;
+    }
+
+    .input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 14px;
+      width: 16px;
+      height: 16px;
+      fill: var(--faint);
+      pointer-events: none;
+    }
+
+    .input-wrap .form-input { padding-left: 40px; }
+
+    .form-input.has-toggle { padding-right: 42px; }
+
+    .input-toggle {
+      position: absolute;
+      right: 12px;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: 0;
+      color: var(--faint);
       cursor: pointer;
-      transition: color 220ms ease, background 220ms ease, box-shadow 220ms ease;
     }
+    .input-toggle svg { width: 18px; height: 18px; fill: currentColor; }
+    .input-toggle:hover { color: var(--gold-2); }
 
-    .tab:hover { color: var(--gold-2); }
-
-    .tab.active {
-      color: var(--carbon);
-      background: var(--gold);
+    .forgot-link {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: -4px;
     }
+    .forgot-link .inline-link { font-size: 10px; letter-spacing: 0.5px; }
+
+    .form-switch {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0 16px;
+    }
+    .fs-line { flex: 1; height: 1px; background: rgba(200,152,60,0.16); }
+    .fs-diamond { color: var(--faint); font-size: 10px; }
+
+    .form-switch-row {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .form-switch-row .inline-link { font-weight: 800; }
 
     .form {
       display: flex;
@@ -472,22 +530,37 @@
     .inline-link:hover { color: var(--gold-2); }
 
     .recovery-entry {
-      display: flex;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
       align-items: center;
-      justify-content: space-between;
       gap: 14px;
-      padding: 12px 14px;
+      padding: 14px 16px;
       border: 1px solid rgba(200,152,60,0.18);
       background: rgba(200,152,60,0.055);
     }
 
-    .recovery-entry span {
+    .recovery-entry-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--s1);
+      border: 1px solid rgba(200,152,60,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .recovery-entry-icon svg { width: 17px; height: 17px; fill: var(--gold); }
+
+    .recovery-entry span:not(.recovery-entry-icon) {
       color: var(--muted);
       font-size: 11px;
       font-weight: 700;
       line-height: 1.45;
       text-align: left;
     }
+
+    .recovery-entry-link { white-space: nowrap; }
 
     .recovery-entry .inline-link {
       flex-shrink: 0;
@@ -518,6 +591,9 @@
       border-top: 1px solid rgba(200,152,60,0.12);
     }
     .page-legal-links a {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
       color: rgba(238,229,213,0.46);
       font-size: 9px;
       font-weight: 800;
@@ -525,6 +601,7 @@
       text-decoration: none;
       text-transform: uppercase;
     }
+    .page-legal-links a svg { width: 11px; height: 11px; fill: currentColor; flex-shrink: 0; }
     .page-legal-links a:hover { color: var(--gold-2); }
 
     .recovery-box.show { display: block; }
@@ -570,7 +647,6 @@
       body { padding: 16px; align-items: flex-start; }
       .logo-wrap { min-height: 230px; padding: 24px; }
       .card { padding: 28px 18px; }
-      .tabs { grid-template-columns: 1fr; }
       .logo-title { font-size: 34px; }
     }
   </style>
@@ -595,18 +671,21 @@
       <div class="access-note">
         <p>Tu perfil guarda ELO, historial, amigos y progreso competitivo. Entra con calma: la partida empieza cuando el tablero se abre.</p>
         <div class="security-list">
-          <span>Sesion verificada</span>
-          <span>Contrasena protegida</span>
-          <span>Recuperacion por codigo</span>
+          <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5l-8-3Zm-1.2 13.6L7 11.8l1.4-1.4 2.4 2.4 4.8-4.8L17 9.4l-6.2 6.2Z"/></svg>Sesion verificada</span>
+          <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a4 4 0 0 1 4 4v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h1V6a4 4 0 0 1 4-4Zm0 2a2 2 0 0 0-2 2v3h4V6a2 2 0 0 0-2-2Zm0 9a1.5 1.5 0 0 0-.5 2.92V17.5a.5.5 0 0 0 1 0v-1.58A1.5 1.5 0 0 0 12 13Z"/></svg>Contrasena protegida</span>
+          <span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 12a5 5 0 0 1 5-5h2V5h-2a7 7 0 0 0 0 14h2v-2h-2a5 5 0 0 1-5-5Zm10-5h-2v2h2a5 5 0 0 1 0 10h-2v2h2a7 7 0 0 0 0-14ZM8 11h8v2H8v-2Z"/></svg>Recuperacion por codigo</span>
         </div>
       </div>
     </aside>
 
     <main class="card oz-enter" style="--d:0">
       <div id="auth-panel">
-        <div class="tabs oz-enter" style="--d:1">
-          <button class="tab active" id="tab-login" type="button" onclick="switchTab('login')">Iniciar sesion</button>
-          <button class="tab" id="tab-register" type="button" onclick="switchTab('register')">Registrarse</button>
+        <div class="form-heading oz-enter" style="--d:1">
+          <span class="fh-line"></span>
+          <span class="fh-diamond">&#9670;</span>
+          <span id="form-heading-text">Iniciar sesion</span>
+          <span class="fh-diamond">&#9670;</span>
+          <span class="fh-line"></span>
         </div>
 
         <div class="msg" id="msg"></div>
@@ -614,31 +693,51 @@
         <div class="form oz-enter" id="form-login" style="--d:2">
           <div class="form-group">
             <label class="form-label" for="login-identifier">Usuario o email</label>
-            <input class="form-input" id="login-identifier" type="text" placeholder="tu_usuario" autocomplete="username" maxlength="80"/>
+            <div class="input-wrap">
+              <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-4.4 0-9 2.2-9 6v2h18v-2c0-3.8-4.6-6-9-6Z"/></svg>
+              <input class="form-input" id="login-identifier" type="text" placeholder="tu_usuario" autocomplete="username" maxlength="80"/>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label" for="login-password">Contrasena</label>
-            <input class="form-input" id="login-password" type="password" placeholder="Minimo 6 caracteres" autocomplete="current-password" minlength="6" maxlength="128"/>
+            <div class="input-wrap">
+              <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a4 4 0 0 1 4 4v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h1V6a4 4 0 0 1 4-4Zm0 2a2 2 0 0 0-2 2v3h4V6a2 2 0 0 0-2-2Z"/></svg>
+              <input class="form-input has-toggle" id="login-password" type="password" placeholder="Minimo 6 caracteres" autocomplete="current-password" minlength="6" maxlength="128"/>
+              <button class="input-toggle" type="button" aria-label="Mostrar contrasena" onclick="togglePasswordField('login-password', this)">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5c-5.5 0-9.5 4.5-10.5 7 1 2.5 5 7 10.5 7s9.5-4.5 10.5-7c-1-2.5-5-7-10.5-7Zm0 11.5A4.5 4.5 0 1 1 12 7.5a4.5 4.5 0 0 1 0 9Zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="forgot-link">
+            <button class="inline-link" type="button" onclick="showResetForm()">Olvidaste tu contrasena?</button>
           </div>
           <button class="btn-main oz-enter" id="btn-login" type="button" onclick="doLogin()" style="--d:3">Entrar</button>
-          <div class="recovery-entry">
-            <span>Si olvidaste tu contrasena, usa el codigo de recuperacion de tu cuenta.</span>
-            <button class="inline-link" type="button" onclick="showResetForm()">Recuperar</button>
-          </div>
         </div>
 
         <div class="form hidden" id="form-register">
           <div class="form-group">
             <label class="form-label" for="reg-username">Nombre de usuario</label>
-            <input class="form-input" id="reg-username" type="text" placeholder="ozama_king" minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}" autocomplete="username"/>
+            <div class="input-wrap">
+              <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-4.4 0-9 2.2-9 6v2h18v-2c0-3.8-4.6-6-9-6Z"/></svg>
+              <input class="form-input" id="reg-username" type="text" placeholder="ozama_king" minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}" autocomplete="username"/>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label" for="reg-email">Email</label>
-            <input class="form-input" id="reg-email" type="email" placeholder="tu@email.com" autocomplete="email" maxlength="120"/>
+            <div class="input-wrap">
+              <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm1 2.4V17h14V7.4l-7 4.9-7-4.9ZM5.5 6l6.5 4.6L18.5 6h-13Z"/></svg>
+              <input class="form-input" id="reg-email" type="email" placeholder="tu@email.com" autocomplete="email" maxlength="120"/>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label" for="reg-password">Contrasena</label>
-            <input class="form-input" id="reg-password" type="password" placeholder="Minimo 8 caracteres" autocomplete="new-password" minlength="8" maxlength="128"/>
+            <div class="input-wrap">
+              <svg class="input-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a4 4 0 0 1 4 4v3h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h1V6a4 4 0 0 1 4-4Zm0 2a2 2 0 0 0-2 2v3h4V6a2 2 0 0 0-2-2Z"/></svg>
+              <input class="form-input has-toggle" id="reg-password" type="password" placeholder="Minimo 8 caracteres" autocomplete="new-password" minlength="8" maxlength="128"/>
+              <button class="input-toggle" type="button" aria-label="Mostrar contrasena" onclick="togglePasswordField('reg-password', this)">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5c-5.5 0-9.5 4.5-10.5 7 1 2.5 5 7 10.5 7s9.5-4.5 10.5-7c-1-2.5-5-7-10.5-7Zm0 11.5A4.5 4.5 0 1 1 12 7.5a4.5 4.5 0 0 1 0 9Zm0-2a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/></svg>
+              </button>
+            </div>
           </div>
           <div class="form-group">
             <label class="form-label" for="reg-country">Pais</label>
@@ -665,6 +764,24 @@
           </div>
           <div class="recovery-box" id="recovery-box"></div>
           <button class="btn-main" id="btn-register" type="button" onclick="doRegister()">Crear cuenta</button>
+        </div>
+
+        <div class="form-switch" id="form-switch">
+          <span class="fs-line"></span>
+          <span class="fs-diamond">O</span>
+          <span class="fs-line"></span>
+        </div>
+        <div class="form-switch-row" id="form-switch-row">
+          <span id="form-switch-text">No tienes cuenta?</span>
+          <button class="inline-link" type="button" id="form-switch-btn" onclick="switchTab('register')">Registrarse</button>
+        </div>
+
+        <div class="recovery-entry" id="recovery-entry">
+          <span class="recovery-entry-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M14 2a5 5 0 0 0-4.9 6.1L2 15.2V19h3.8l1-1h2v-2h2l1.6-1.6A5 5 0 1 0 14 2Zm2 5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Z"/></svg>
+          </span>
+          <span>Si olvidaste tu contrasena, usa el codigo de recuperacion de tu cuenta.</span>
+          <button class="inline-link recovery-entry-link" type="button" onclick="showResetForm()">Recuperar cuenta &#8250;</button>
         </div>
 
         <div class="form hidden" id="form-reset">
@@ -696,10 +813,10 @@
         </div>
       </div>
       <div class="page-legal-links" aria-label="Informacion legal">
-        <a href="/privacy.html">Privacidad</a>
-        <a href="/terms.html">Terminos</a>
-        <a href="/support.html">Soporte</a>
-        <a href="/account-deletion.html">Eliminar cuenta</a>
+        <a href="/privacy.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V5l-8-3Z"/></svg>Privacidad</a>
+        <a href="/terms.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h9l5 5v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Zm8 1.5V8h4.5L14 3.5ZM8 12h8v1.6H8V12Zm0 4h8v1.6H8V16Z"/></svg>Terminos</a>
+        <a href="/support.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a8 8 0 0 0-8 8v6a3 3 0 0 0 3 3h1v-7H6v-2a6 6 0 0 1 12 0v2h-2v7h1a3 3 0 0 0 3-3v-6a8 8 0 0 0-8-8Z"/></svg>Soporte</a>
+        <a href="/account-deletion.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 2a5 5 0 1 0 0 10A5 5 0 0 0 9 2Zm-8 18c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5v1H1v-1Zm15.4-8.4 1.4-1.4 1.6 1.6 1.6-1.6 1.4 1.4-1.6 1.6 1.6 1.6-1.4 1.4-1.6-1.6-1.6 1.6-1.4-1.4 1.6-1.6-1.6-1.6Z"/></svg>Eliminar cuenta</a>
       </div>
     </main>
   </div>
@@ -744,24 +861,43 @@
       const registerBtn = document.getElementById('btn-register');
       registerBtn.textContent = 'Crear cuenta';
       registerBtn.onclick = doRegister;
-      document.getElementById('tab-login').classList.toggle('active', tab === 'login');
-      document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+
       document.getElementById('form-login').classList.toggle('hidden', tab !== 'login');
       document.getElementById('form-register').classList.toggle('hidden', tab !== 'register');
       document.getElementById('form-reset').classList.add('hidden');
       document.getElementById('recovery-box')?.classList.remove('show');
+
+      document.getElementById('form-heading-text').textContent = tab === 'login' ? 'Iniciar sesion' : 'Crear cuenta';
+      document.getElementById('form-switch-text').textContent = tab === 'login' ? 'No tienes cuenta?' : 'Ya tienes cuenta?';
+      const switchBtn = document.getElementById('form-switch-btn');
+      switchBtn.textContent = tab === 'login' ? 'Registrarse' : 'Iniciar sesion';
+      switchBtn.onclick = () => switchTab(tab === 'login' ? 'register' : 'login');
+      document.getElementById('form-switch').classList.remove('hidden');
+      document.getElementById('form-switch-row').classList.remove('hidden');
+      document.getElementById('recovery-entry').classList.remove('hidden');
+
       const googleAuth = document.getElementById('google-auth');
       googleAuth.classList.toggle('hidden', googleAuth.dataset.enabled !== 'true');
     }
 
     function showResetForm() {
       clearMsg();
-      document.getElementById('tab-login').classList.remove('active');
-      document.getElementById('tab-register').classList.remove('active');
       document.getElementById('form-login').classList.add('hidden');
       document.getElementById('form-register').classList.add('hidden');
       document.getElementById('form-reset').classList.remove('hidden');
+      document.getElementById('form-heading-text').textContent = 'Recuperar contrasena';
+      document.getElementById('form-switch').classList.add('hidden');
+      document.getElementById('form-switch-row').classList.add('hidden');
+      document.getElementById('recovery-entry').classList.add('hidden');
       document.getElementById('google-auth').classList.add('hidden');
+    }
+
+    function togglePasswordField(inputId, btn) {
+      const input = document.getElementById(inputId);
+      const showing = input.type === 'text';
+      input.type = showing ? 'password' : 'text';
+      btn.setAttribute('aria-label', showing ? 'Mostrar contrasena' : 'Ocultar contrasena');
+      btn.classList.toggle('is-visible', !showing);
     }
 
     function loadGoogleIdentityScript() {
