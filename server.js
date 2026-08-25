@@ -27,6 +27,8 @@ const userRoutes      = require('./routes/user');
 const adminRoutes     = require('./routes/admin');
 const eventRoutes     = require('./routes/events');
 
+const OzamaCheckers   = require('./public/checkers-engine.js');
+
 function checkRuntimeConfig() {
   const isProduction = process.env.NODE_ENV === 'production';
   const missing = ['MONGODB_URI', 'JWT_SECRET'].filter((key) => !process.env[key]);
@@ -167,6 +169,9 @@ app.get('/api/matches/recent', async (_req, res) => {
 
 // ── Salas en memoria ─────────────────────────────────────────────
 const rooms = new Map();
+// Salas de Damas: namespace completamente separado de `rooms` (ajedrez).
+// Ningun handler de ajedrez lee ni escribe este Map, y viceversa.
+const damasRooms = new Map();
 const onlinePlayers = new Map();
 const pendingChallenges = new Map();
 const ROOM_CODE_PATTERN = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/;
@@ -181,6 +186,25 @@ const socketLimiters = {
   joinRoom: new RateLimiterMemory({ points: 12, duration: 60 }),
   challengeSend: new RateLimiterMemory({ points: 10, duration: 60 }),
   playerMove: new RateLimiterMemory({ points: 80, duration: 60 }),
+  damasCreateRoom: new RateLimiterMemory({ points: 5, duration: 60 }),
+  damasJoinRoom: new RateLimiterMemory({ points: 12, duration: 60 }),
+  damasMove: new RateLimiterMemory({ points: 80, duration: 60 }),
+};
+
+const damasSquareSchema = z.number().int().min(0).max(7);
+const damasStepSchema = z.object({
+  toR: damasSquareSchema, toC: damasSquareSchema,
+  capturedR: z.number().int().min(-1).max(7), capturedC: z.number().int().min(-1).max(7),
+}).strict();
+const damasSchemas = {
+  createRoom: z.object({ playerName: z.string().max(30).optional(), country: z.string().max(2).optional() }).strict().default({}),
+  joinRoom: z.object({ code: roomCodeSchema, playerName: z.string().max(30).optional(), country: z.string().max(2).optional() }).strict(),
+  move: z.object({
+    room: roomCodeSchema,
+    fromR: damasSquareSchema, fromC: damasSquareSchema,
+    seq: z.array(damasStepSchema).min(1).max(12),
+  }).strict(),
+  roomOnly: z.object({ room: roomCodeSchema }).strict(),
 };
 
 // ── Cola de matchmaking ──────────────────────────────────────────
@@ -1633,6 +1657,136 @@ if (room.white && room.black && !room.clockInterval) {
     const challengerSocket = io.sockets.sockets.get(challengerSocketId);
     if (challengerSocket) {
       challengerSocket.emit('challenge-declined', { by: socket.data.playerName || 'El jugador' });
+    }
+  });
+
+  // ── DAMAS (checkers) — namespace de eventos y estado totalmente
+  //    separado del ajedrez (damasRooms, nunca `rooms`). Ningun
+  //    handler de arriba se toca ni se modifica para esto.
+  socket.on('damas:create-room', async (payload = {}) => {
+    const data = parseSocketPayload(damasSchemas.createRoom, payload, 'damas:room-error');
+    if (!data) return;
+    if (!(await consumeSocketLimit('damasCreateRoom', 'damas:room-error'))) return;
+    if (!requireSocketAuth()) return;
+    const { playerName = 'Jugador 1', country = 'DO' } = data;
+
+    let code;
+    do { code = generateCode(); } while (rooms.has(code) || damasRooms.has(code));
+
+    const pInfo = await getPlayerInfo(playerName, country);
+
+    damasRooms.set(code, {
+      white: socket.id, black: null,
+      board: OzamaCheckers.createInitialBoard(),
+      turn: OzamaCheckers.COLOR.WHITE,
+      status: 'waiting',
+      playerInfo: { w: pInfo, b: null },
+      createdAt: Date.now(),
+    });
+
+    socket.join(code);
+    socket.data.damasRoomCode = code;
+    socket.data.damasColor = 'w';
+
+    socket.emit('damas:room-created', { code, color: 'w', playerInfo: pInfo });
+    console.log(`[DAMAS] Sala ${code} creada por "${pInfo.name}"`);
+  });
+
+  socket.on('damas:join-room', async (payload = {}) => {
+    const data = parseSocketPayload(damasSchemas.joinRoom, payload, 'damas:room-error');
+    if (!data) return;
+    if (!(await consumeSocketLimit('damasJoinRoom', 'damas:room-error'))) return;
+    if (!requireSocketAuth()) return;
+    const { code, playerName = 'Jugador 2', country = 'DO' } = data;
+
+    const room = damasRooms.get(code);
+    if (!room) { socket.emit('damas:room-error', 'La sala no existe.'); return; }
+    if (room.black) { socket.emit('damas:room-error', 'La sala ya esta llena.'); return; }
+    if (room.white === socket.id) { socket.emit('damas:room-error', 'No puedes unirte a tu propia sala.'); return; }
+
+    const pInfo = await getPlayerInfo(playerName, country);
+    room.black = socket.id;
+    room.playerInfo.b = pInfo;
+    room.status = 'playing';
+
+    socket.join(code);
+    socket.data.damasRoomCode = code;
+    socket.data.damasColor = 'b';
+
+    const whiteSocket = io.sockets.sockets.get(room.white);
+    const startPayload = { code, board: room.board, turn: room.turn, playerInfo: room.playerInfo };
+    whiteSocket?.emit('damas:game-start', { ...startPayload, color: 'w' });
+    socket.emit('damas:game-start', { ...startPayload, color: 'b' });
+    console.log(`[DAMAS] "${pInfo.name}" se unio a la sala ${code}`);
+  });
+
+  socket.on('damas:move', async (payload = {}) => {
+    const data = parseSocketPayload(damasSchemas.move, payload, 'damas:move-rejected');
+    if (!data) return;
+    if (!(await consumeSocketLimit('damasMove', 'damas:move-rejected'))) return;
+    if (!requireSocketAuth()) return;
+    const { room: code, fromR, fromC, seq } = data;
+
+    const room = damasRooms.get(code);
+    if (!room) { socket.emit('damas:move-rejected', { message: 'La sala ya no existe.' }); return; }
+    if (room.status !== 'playing') { socket.emit('damas:move-rejected', { message: 'La partida no esta activa.' }); return; }
+
+    const myColor = socket.data.damasColor;
+    const assignedSocket = myColor === 'w' ? room.white : room.black;
+    if (!myColor || assignedSocket !== socket.id) {
+      socket.emit('damas:move-rejected', { message: 'No controlas ese color.' }); return;
+    }
+    if (room.turn !== myColor) {
+      socket.emit('damas:move-rejected', { message: 'No es tu turno.' }); return;
+    }
+
+    // Nunca confiar en la secuencia del cliente: debe coincidir
+    // exactamente con una jugada que el motor considera legal ahora
+    // mismo (respeta captura obligatoria y regla de mayoria).
+    const legal = OzamaCheckers.getLegalMovesForSquare(room.board, fromR, fromC);
+    const seqJson = JSON.stringify(seq);
+    const matched = legal.find((candidate) => JSON.stringify(candidate) === seqJson);
+    if (!matched) {
+      socket.emit('damas:move-rejected', { message: 'Jugada ilegal.' }); return;
+    }
+
+    const result = OzamaCheckers.applyMove(room.board, fromR, fromC, matched);
+    room.board = result.board;
+    room.turn = OzamaCheckers.otherColor(room.turn);
+    const status = OzamaCheckers.checkGameOver(room.board, room.turn);
+    if (status.over) room.status = 'finished';
+
+    io.to(code).emit('damas:board-update', {
+      board: room.board,
+      turn: room.turn,
+      lastMove: { fromR, fromC, toR: result.to.r, toC: result.to.c },
+      gameOver: status.over ? status : null,
+    });
+  });
+
+  socket.on('damas:resign', async (payload = {}) => {
+    const data = parseSocketPayload(damasSchemas.roomOnly, payload, 'damas:room-error');
+    if (!data) return;
+    const { room: code } = data;
+    const room = damasRooms.get(code);
+    if (!room) return;
+    const myColor = socket.data.damasColor;
+    if (!myColor || room.status !== 'playing') return;
+    room.status = 'finished';
+    io.to(code).emit('damas:game-over', { winner: OzamaCheckers.otherColor(myColor), reason: 'resign' });
+  });
+
+  socket.on('disconnect', () => {
+    const damasCode = socket.data.damasRoomCode;
+    const damasRoom = damasCode ? damasRooms.get(damasCode) : null;
+    if (damasRoom) {
+      if (damasRoom.white === socket.id) damasRoom.white = null;
+      if (damasRoom.black === socket.id) damasRoom.black = null;
+      if (damasRoom.status === 'playing') {
+        damasRoom.status = 'finished';
+        socket.to(damasCode).emit('damas:opponent-disconnected');
+      }
+      if (!damasRoom.white && !damasRoom.black) damasRooms.delete(damasCode);
     }
   });
 
