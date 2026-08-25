@@ -19,7 +19,10 @@
 
   <style>
     :root {
-      --sq: 58px;
+      /* Escala fluida en vez de un salto fijo en un solo breakpoint --
+         se ajusta suave en cualquier ancho, de telefonos chicos a
+         monitores grandes, sin tener un tablero fijo "de golpe". */
+      --sq: clamp(34px, calc((100vw - 64px) / 8), 64px);
       --board-border: 3px;
       --bl: #D4B896;
       --bd: #5C3A1E;
@@ -319,10 +322,6 @@
       transition: all 0.2s ease;
     }
     .btn-resign:hover { color: #ef4444; border-color: #ef4444; }
-
-    @media (max-width: 560px) {
-      :root { --sq: clamp(30px, calc((100vw - 40px) / 8), 44px); }
-    }
   </style>
 </head>
 <body>
@@ -388,6 +387,17 @@
     </div>
   </div>
 
+  <div class="overlay hidden" id="gameover-overlay">
+    <div class="overlay-card">
+      <h2 id="gameover-title">GANASTE</h2>
+      <p id="gameover-reason"></p>
+      <div class="controls" style="justify-content:center;">
+        <button class="btn-primary" type="button" onclick="playAgain()">Jugar de nuevo</button>
+        <a class="btn-mode" href="/lobby.html" style="text-decoration:none; display:inline-flex; align-items:center;">Volver al lobby</a>
+      </div>
+    </div>
+  </div>
+
   <script>
     'use strict';
     const E = window.OzamaCheckers;
@@ -415,6 +425,7 @@
     let onlineColor = null;
     let onlineRoomCode = null;
     let onlineStatus = 'idle'; // 'idle' | 'waiting' | 'playing'
+    let selfResigned = false;
 
     function pieceEl(piece) {
       const div = document.createElement('div');
@@ -487,21 +498,54 @@
         ? 'Partida terminada'
         : `Turno: ${turn === E.COLOR.WHITE ? 'Blancas' : 'Negras'}`;
 
-      const statusEl = document.getElementById('status-line');
-      if (gameOver) {
-        const winnerLabel = gameOver.winner === E.COLOR.WHITE ? 'Blancas' : 'Negras';
-        const reasonLabels = {
-          'no-pieces': 'rival sin piezas',
-          'no-moves': 'rival sin movimientos',
-          'resign': 'el rival se rindio',
-          'opponent-left': 'el rival se desconecto',
-        };
-        const reasonLabel = reasonLabels[gameOver.reason] || 'partida terminada';
-        statusEl.textContent = `Ganaron las ${winnerLabel} (${reasonLabel}).`;
+      if (gameOver) showGameOverOverlay(); else hideGameOverOverlay();
+      // status-line no se toca aqui: puede tener un mensaje puntual
+      // (jugada rechazada, error de sala) que se limpia explicitamente
+      // en newGame()/setMode(), no en cada render().
+    }
+
+    function showGameOverOverlay() {
+      const iWon = mode === 'online' ? gameOver.winner === onlineColor
+        : mode === 'bot' ? gameOver.winner === E.COLOR.WHITE
+        : null; // modo local: partida compartida, no hay "yo"
+
+      const title = document.getElementById('gameover-title');
+      if (iWon === true) title.textContent = 'GANASTE';
+      else if (iWon === false) title.textContent = 'PERDISTE';
+      else title.textContent = gameOver.winner === E.COLOR.WHITE ? 'GANARON LAS BLANCAS' : 'GANARON LAS NEGRAS';
+
+      const reasonLabels = {
+        'no-pieces': 'el rival se quedo sin piezas',
+        'no-moves': 'el rival no tiene movimientos',
+        'resign': selfResigned ? 'te rendiste' : 'el rival se rindio',
+        'opponent-left': 'el rival se desconecto',
+      };
+      document.getElementById('gameover-reason').textContent = reasonLabels[gameOver.reason] || 'Partida terminada.';
+      document.getElementById('gameover-overlay').classList.remove('hidden');
+    }
+
+    function hideGameOverOverlay() {
+      document.getElementById('gameover-overlay').classList.add('hidden');
+    }
+
+    function playAgain() {
+      hideGameOverOverlay();
+      if (mode === 'online') {
+        onlineStatus = 'idle';
+        onlineRoomCode = null;
+        onlineColor = null;
+        selfResigned = false;
+        gameOver = null;
+        document.getElementById('board-wrap').classList.add('hidden');
+        document.getElementById('resign-btn').classList.add('hidden');
+        document.getElementById('newgame-btn').classList.remove('hidden');
+        document.getElementById('online-panel').classList.remove('hidden');
+        document.getElementById('online-setup').classList.remove('hidden');
+        document.getElementById('online-waiting').classList.add('hidden');
+        document.getElementById('status-line').textContent = '';
+      } else {
+        newGame();
       }
-      // Si no hay gameOver, no se toca status-line aqui: puede tener un
-      // mensaje puntual (jugada rechazada, error de sala) que se limpia
-      // explicitamente en newGame()/setMode(), no en cada render().
     }
 
     function onSquareClick(r, c) {
@@ -639,6 +683,7 @@
         onlineRoomCode = data.code;
         onlineColor = data.color;
         onlineStatus = 'playing';
+        selfResigned = false;
         board = data.board;
         turn = data.turn;
         selected = null; legalHere = []; lastMove = null; gameOver = null;
@@ -699,6 +744,7 @@
 
     function resignOnline() {
       if (mode !== 'online' || !onlineRoomCode) return;
+      selfResigned = true;
       socket.emit('damas:resign', { room: onlineRoomCode });
     }
 
