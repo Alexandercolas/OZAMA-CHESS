@@ -327,7 +327,7 @@
 </head>
 <body>
   <div class="page">
-    <div class="dev-banner">Vista previa de Damas &mdash; jugar online requiere haber iniciado sesion. El modo invitado en web todavia no existe.</div>
+    <div class="dev-banner">Vista previa de Damas &mdash; puedes jugar online sin registrarte. Las partidas todavia no se guardan en tu perfil.</div>
 
     <a class="back-link" href="/lobby.html">&larr; Volver al lobby</a>
 
@@ -342,9 +342,18 @@
       </div>
     </div>
 
+    <div class="controls hidden" id="bot-panel">
+      <button class="btn-mode" type="button" id="diff-easy" onclick="setBotDifficulty('easy')">Aprendiz</button>
+      <button class="btn-mode" type="button" id="diff-medium" onclick="setBotDifficulty('medium')">Centinela</button>
+      <button class="btn-mode" type="button" id="diff-hard" onclick="setBotDifficulty('hard')">Maestro</button>
+    </div>
+
     <div class="online-panel hidden" id="online-panel">
       <div id="online-setup">
         <div class="online-note">Crea una sala y comparte el codigo, o unete a la de alguien mas.</div>
+        <div class="online-row" style="margin-top:14px;">
+          <input class="online-input" id="guest-name-input" type="text" maxlength="20" placeholder="TU NOMBRE" style="text-transform:none; letter-spacing:0.5px;"/>
+        </div>
         <div class="controls" style="margin-top:14px;">
           <button class="btn-primary" type="button" onclick="createOnlineRoom()">Crear sala</button>
         </div>
@@ -384,7 +393,14 @@
     const E = window.OzamaCheckers;
     const AI = window.OzamaCheckersAI;
     const BOT_COLOR = E.COLOR.BLACK;
-    const BOT_DEPTH = 5;
+    // Mismos nombres tematicos que el bot de ajedrez (Aprendiz/Centinela/
+    // Maestro), para que se sienta parte de la misma familia de producto.
+    const BOT_LEVELS = {
+      easy:   { depth: 3, blunderChance: 0.35 },
+      medium: { depth: 5, blunderChance: 0 },
+      hard:   { depth: 8, blunderChance: 0 },
+    };
+    let botDifficulty = 'medium';
     let board = E.createInitialBoard();
     let turn = E.COLOR.WHITE;
     let selected = null;      // { r, c }
@@ -557,12 +573,30 @@
       document.getElementById('thinking-line').textContent = 'El bot esta pensando...';
       document.getElementById('board').classList.add('thinking');
       setTimeout(() => {
-        const move = AI.chooseMove(board, BOT_COLOR, BOT_DEPTH);
+        const level = BOT_LEVELS[botDifficulty] || BOT_LEVELS.medium;
+        let move;
+        if (level.blunderChance > 0 && Math.random() < level.blunderChance) {
+          // Aprendiz: a veces juega una legal cualquiera en vez de la
+          // mejor, para que se sienta vencible en vez de imbatible.
+          const allMoves = E.getAllLegalMoves(board, BOT_COLOR)
+            .flatMap((entry) => entry.sequences.map((seq) => ({ r: entry.r, c: entry.c, seq })));
+          move = allMoves[Math.floor(Math.random() * allMoves.length)];
+        } else {
+          move = AI.chooseMove(board, BOT_COLOR, level.depth);
+        }
         botThinking = false;
         document.getElementById('thinking-line').textContent = '';
         if (!move) return; // no debería pasar: checkGameOver ya lo hubiera detectado antes.
         applyMoveAndAdvance(move.r, move.c, move.seq);
       }, 350);
+    }
+
+    function setBotDifficulty(level) {
+      botDifficulty = level;
+      ['easy', 'medium', 'hard'].forEach((l) => {
+        document.getElementById(`diff-${l}`).classList.toggle('active', l === level);
+      });
+      if (mode === 'bot') newGame();
     }
 
     // ── Modo online: sala real via Socket.IO, servidor autoritativo ──
@@ -576,13 +610,20 @@
       return typeof data === 'string' ? data : (data?.message || 'Ocurrio un error.');
     }
 
+    function resolvePlayerName() {
+      const user = readStoredUser();
+      if (user?.username) return user.username;
+      const guestName = document.getElementById('guest-name-input')?.value.trim();
+      return guestName || 'Invitado';
+    }
+
     function ensureSocket() {
       if (socket) return;
       const token = window.OZAMA_RUNTIME?.getAuthToken?.() || '';
       socket = io(window.OZAMA_RUNTIME?.socketOrigin, { auth: { token }, withCredentials: true });
 
       socket.on('connect_error', () => {
-        document.getElementById('status-line').textContent = 'No se pudo conectar. Inicia sesion para jugar online.';
+        document.getElementById('status-line').textContent = 'No se pudo conectar al servidor. Intenta de nuevo.';
       });
 
       socket.on('damas:room-created', (data) => {
@@ -645,7 +686,7 @@
     function createOnlineRoom() {
       ensureSocket();
       const user = readStoredUser();
-      socket.emit('damas:create-room', { playerName: user?.username || 'Jugador', country: user?.country || 'DO' });
+      socket.emit('damas:create-room', { playerName: resolvePlayerName(), country: user?.country || 'DO' });
     }
 
     function joinOnlineRoom() {
@@ -653,7 +694,7 @@
       const code = document.getElementById('join-code-input').value.trim().toUpperCase();
       if (!code) return;
       const user = readStoredUser();
-      socket.emit('damas:join-room', { code, playerName: user?.username || 'Jugador', country: user?.country || 'DO' });
+      socket.emit('damas:join-room', { code, playerName: resolvePlayerName(), country: user?.country || 'DO' });
     }
 
     function resignOnline() {
@@ -666,9 +707,20 @@
       ['local', 'bot', 'online'].forEach((m) => {
         document.getElementById(`mode-${m}`).classList.toggle('active', m === newMode);
       });
+      document.getElementById('bot-panel').classList.toggle('hidden', newMode !== 'bot');
 
       if (newMode === 'online') {
         ensureSocket();
+        const user = readStoredUser();
+        const nameInput = document.getElementById('guest-name-input');
+        if (user?.username) {
+          nameInput.value = user.username;
+          nameInput.disabled = true;
+          nameInput.placeholder = '';
+        } else {
+          nameInput.disabled = false;
+          nameInput.placeholder = 'TU NOMBRE';
+        }
         document.getElementById('online-panel').classList.remove('hidden');
         document.getElementById('board-wrap').classList.toggle('hidden', onlineStatus !== 'playing');
         document.getElementById('resign-btn').classList.toggle('hidden', onlineStatus !== 'playing');
@@ -701,6 +753,7 @@
       render();
     }
 
+    document.getElementById('diff-medium').classList.add('active');
     setMode('local');
   </script>
 </body>

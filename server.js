@@ -908,9 +908,18 @@ async function applyEloForRoom(room, result, code) {
 }
 
 // ── Socket JWT middleware ──────────────────────────────────────────
+// Sin token: se deja pasar como invitado (socket.data.userId queda sin
+// definir). Esto NO afecta al ajedrez -- cada handler de ajedrez ya
+// exige requireSocketAuth() por su cuenta, y en la practica nunca se
+// llega a abrir el socket sin sesion porque lobby.html/game.html
+// redirigen a login.html antes de intentar conectar. Solo Damas
+// (damas:create-room / damas:join-room / damas:move) queda accesible
+// sin iniciar sesion, a proposito, para permitir jugar como invitado
+// en la web. Con token presente pero invalido/expirado, se sigue
+// rechazando la conexion igual que antes.
 io.use(async (socket, next) => {
   const token = socketToken(socket);
-  if (!token) return next(new Error('Debes iniciar sesion.'));
+  if (!token) return next();
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
     const user = await User.findById(decoded.id).select('+tokenVersion username country avatar avatarImage elo isActive').lean();
@@ -1667,7 +1676,9 @@ if (room.white && room.black && !room.clockInterval) {
     const data = parseSocketPayload(damasSchemas.createRoom, payload, 'damas:room-error');
     if (!data) return;
     if (!(await consumeSocketLimit('damasCreateRoom', 'damas:room-error'))) return;
-    if (!requireSocketAuth()) return;
+    // A proposito sin requireSocketAuth(): Damas permite jugar como
+    // invitado en la web. getPlayerInfo() ya sabe devolver un perfil de
+    // invitado (userId: null) cuando socket.data.user no existe.
     const { playerName = 'Jugador 1', country = 'DO' } = data;
 
     let code;
@@ -1696,7 +1707,6 @@ if (room.white && room.black && !room.clockInterval) {
     const data = parseSocketPayload(damasSchemas.joinRoom, payload, 'damas:room-error');
     if (!data) return;
     if (!(await consumeSocketLimit('damasJoinRoom', 'damas:room-error'))) return;
-    if (!requireSocketAuth()) return;
     const { code, playerName = 'Jugador 2', country = 'DO' } = data;
 
     const room = damasRooms.get(code);
@@ -1724,7 +1734,6 @@ if (room.white && room.black && !room.clockInterval) {
     const data = parseSocketPayload(damasSchemas.move, payload, 'damas:move-rejected');
     if (!data) return;
     if (!(await consumeSocketLimit('damasMove', 'damas:move-rejected'))) return;
-    if (!requireSocketAuth()) return;
     const { room: code, fromR, fromC, seq } = data;
 
     const room = damasRooms.get(code);
