@@ -71,12 +71,36 @@
     }
     .back-link:hover { color: var(--gold-2); }
 
-    .header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
+    .game-shell {
+      display: grid;
+      grid-template-columns: 1fr;
+      grid-template-areas: "main" "side";
+      gap: 24px;
+      align-items: start;
+    }
+    .game-side { grid-area: side; display: grid; gap: 16px; }
+    .game-main { grid-area: main; display: grid; gap: 14px; justify-items: center; }
+
+    .side-label {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin-top: 4px;
+    }
+
+    .controls.stacked {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    @media (min-width: 760px) {
+      .game-shell {
+        grid-template-columns: 200px 1fr;
+        grid-template-areas: "side main";
+      }
+      .game-side { position: sticky; top: 24px; }
     }
 
     .title {
@@ -105,8 +129,6 @@
     .turn-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
     .turn-dot.w { background: radial-gradient(circle at 35% 30%, #F2E4C4, #C8983C 70%); }
     .turn-dot.b { background: radial-gradient(circle at 35% 30%, #4a4038, #16130E 70%); }
-
-    .header-side { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 
     .capture-tally {
       display: flex;
@@ -390,60 +412,64 @@
 
     <a class="back-link" href="/lobby.html">&larr; Volver al lobby</a>
 
-    <div class="header">
-      <div class="title">Ozama Damas</div>
-      <div class="header-side">
-        <div class="capture-tally" id="capture-tally"></div>
+    <div class="title">Ozama Damas</div>
+
+    <div class="game-shell">
+      <aside class="game-side">
         <div class="turn-badge" id="turn-badge">
           <span class="turn-dot w" id="turn-dot"></span>
           <span id="turn-text">Turno: Blancas</span>
         </div>
-      </div>
-    </div>
+        <div class="capture-tally" id="capture-tally"></div>
 
-    <div class="controls hidden" id="bot-panel">
-      <button class="btn-mode" type="button" id="diff-easy" onclick="setBotDifficulty('easy')">Aprendiz</button>
-      <button class="btn-mode" type="button" id="diff-medium" onclick="setBotDifficulty('medium')">Centinela</button>
-      <button class="btn-mode" type="button" id="diff-hard" onclick="setBotDifficulty('hard')">Maestro</button>
-    </div>
-
-    <div class="online-panel hidden" id="online-panel">
-      <div id="online-setup">
-        <div class="online-note">Crea una sala y comparte el codigo, o unete a la de alguien mas.</div>
-        <div class="online-row" style="margin-top:14px;">
-          <input class="online-input" id="guest-name-input" type="text" maxlength="20" placeholder="TU NOMBRE" style="text-transform:none; letter-spacing:0.5px;"/>
+        <div class="controls stacked" id="board-controls">
+          <button class="btn-primary" type="button" id="newgame-btn" onclick="newGame()">Nueva partida</button>
+          <button class="btn-resign hidden" type="button" id="resign-btn" onclick="resignOnline()">Rendirse</button>
         </div>
-        <div class="controls" style="margin-top:14px;">
-          <button class="btn-primary" type="button" onclick="createOnlineRoom()">Crear sala</button>
+
+        <div class="side-label">Modo</div>
+        <div class="controls stacked">
+          <button class="btn-mode" type="button" id="mode-local" onclick="setMode('local')">Pasar y jugar</button>
+          <button class="btn-mode" type="button" id="mode-bot" onclick="setMode('bot')">Vs Bot</button>
+          <button class="btn-mode" type="button" id="mode-online" onclick="setMode('online')">Online</button>
         </div>
-        <div class="online-row" style="margin-top:14px;">
-          <input class="online-input" id="join-code-input" type="text" maxlength="6" placeholder="CODIGO"/>
-          <button class="btn-mode" type="button" onclick="joinOnlineRoom()">Unirse</button>
+
+        <div class="controls stacked hidden" id="bot-panel">
+          <button class="btn-mode" type="button" id="diff-easy" onclick="setBotDifficulty('easy')">Aprendiz</button>
+          <button class="btn-mode" type="button" id="diff-medium" onclick="setBotDifficulty('medium')">Centinela</button>
+          <button class="btn-mode" type="button" id="diff-hard" onclick="setBotDifficulty('hard')">Maestro</button>
         </div>
-      </div>
-      <div class="hidden" id="online-waiting">
-        <div class="online-note" id="online-waiting-title">Comparte este codigo con tu rival:</div>
-        <div class="room-code-display" id="room-code-display"></div>
-        <div class="online-note" id="online-waiting-note">Esperando a que se una...</div>
-      </div>
-    </div>
+      </aside>
 
-    <div class="board-wrap hidden" id="board-wrap">
-      <div class="board" id="board"></div>
-    </div>
+      <main class="game-main">
+        <div class="online-panel hidden" id="online-panel">
+          <div id="online-setup">
+            <div class="online-note">Crea una sala y comparte el codigo, o unete a la de alguien mas.</div>
+            <div class="online-row" style="margin-top:14px;">
+              <input class="online-input" id="guest-name-input" type="text" maxlength="20" placeholder="TU NOMBRE" style="text-transform:none; letter-spacing:0.5px;"/>
+            </div>
+            <div class="controls" style="margin-top:14px;">
+              <button class="btn-primary" type="button" onclick="createOnlineRoom()">Crear sala</button>
+            </div>
+            <div class="online-row" style="margin-top:14px;">
+              <input class="online-input" id="join-code-input" type="text" maxlength="6" placeholder="CODIGO"/>
+              <button class="btn-mode" type="button" onclick="joinOnlineRoom()">Unirse</button>
+            </div>
+          </div>
+          <div class="hidden" id="online-waiting">
+            <div class="online-note" id="online-waiting-title">Comparte este codigo con tu rival:</div>
+            <div class="room-code-display" id="room-code-display"></div>
+            <div class="online-note" id="online-waiting-note">Esperando a que se una...</div>
+          </div>
+        </div>
 
-    <div class="status-line" id="status-line"></div>
-    <div class="thinking-line" id="thinking-line"></div>
+        <div class="board-wrap hidden" id="board-wrap">
+          <div class="board" id="board"></div>
+        </div>
 
-    <div class="controls" id="board-controls">
-      <button class="btn-primary" type="button" id="newgame-btn" onclick="newGame()">Nueva partida</button>
-      <button class="btn-resign hidden" type="button" id="resign-btn" onclick="resignOnline()">Rendirse</button>
-    </div>
-
-    <div class="controls">
-      <button class="btn-mode" type="button" id="mode-local" onclick="setMode('local')">Pasar y jugar</button>
-      <button class="btn-mode" type="button" id="mode-bot" onclick="setMode('bot')">Vs Bot</button>
-      <button class="btn-mode" type="button" id="mode-online" onclick="setMode('online')">Online</button>
+        <div class="status-line" id="status-line"></div>
+        <div class="thinking-line" id="thinking-line"></div>
+      </main>
     </div>
 
     <div class="info-cards">
