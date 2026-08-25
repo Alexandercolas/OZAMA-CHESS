@@ -322,6 +322,66 @@
       transition: all 0.2s ease;
     }
     .btn-resign:hover { color: #ef4444; border-color: #ef4444; }
+
+    .info-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-top: 8px;
+    }
+
+    .rules-list {
+      list-style: none;
+      display: grid;
+      gap: 9px;
+      margin-top: 12px;
+    }
+    .rules-list li {
+      padding-left: 16px;
+      position: relative;
+      font-size: 12px;
+      color: var(--dim);
+      line-height: 1.5;
+    }
+    .rules-list li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 6px;
+      width: 6px;
+      height: 6px;
+      background: var(--gold);
+      transform: rotate(45deg);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .stat-tile {
+      text-align: center;
+      padding: 12px 6px;
+      background: rgba(200,152,60,0.06);
+      border: 1px solid rgba(200,152,60,0.16);
+    }
+    .stat-tile .stat-num {
+      display: block;
+      font-family: var(--fm);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--gold-2);
+    }
+    .stat-tile .stat-label {
+      display: block;
+      margin-top: 4px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--dim);
+    }
   </style>
 </head>
 <body>
@@ -384,6 +444,22 @@
       <button class="btn-mode" type="button" id="mode-local" onclick="setMode('local')">Pasar y jugar</button>
       <button class="btn-mode" type="button" id="mode-bot" onclick="setMode('bot')">Vs Bot</button>
       <button class="btn-mode" type="button" id="mode-online" onclick="setMode('online')">Online</button>
+    </div>
+
+    <div class="info-cards">
+      <div class="oz-card">
+        <div class="oz-card-title" style="text-align:left;">Como jugar</div>
+        <ul class="rules-list">
+          <li>Capturas obligatorias, hacia adelante y hacia atras.</li>
+          <li>Si hay mas de una captura, hay que tomar la que come mas piezas.</li>
+          <li>Llegar a la ultima fila corona tu ficha en dama (vuela en diagonal).</li>
+          <li>Ganas si el rival se queda sin piezas o sin movimientos.</li>
+        </ul>
+      </div>
+      <div class="oz-card">
+        <div class="oz-card-title" style="text-align:left;">Tus estadisticas</div>
+        <div class="stats-grid" id="stats-grid"></div>
+      </div>
     </div>
   </div>
 
@@ -504,10 +580,43 @@
       // en newGame()/setMode(), no en cada render().
     }
 
+    const STATS_KEY = 'ozama-damas-stats';
+
+    function loadStats() {
+      try {
+        const s = JSON.parse(localStorage.getItem(STATS_KEY) || 'null');
+        if (s && typeof s === 'object') return { played: s.played || 0, wins: s.wins || 0, losses: s.losses || 0 };
+      } catch (_) {}
+      return { played: 0, wins: 0, losses: 0 };
+    }
+
+    function renderStats() {
+      const s = loadStats();
+      document.getElementById('stats-grid').innerHTML =
+        `<div class="stat-tile"><span class="stat-num">${s.played}</span><span class="stat-label">Jugadas</span></div>` +
+        `<div class="stat-tile"><span class="stat-num">${s.wins}</span><span class="stat-label">Victorias</span></div>` +
+        `<div class="stat-tile"><span class="stat-num">${s.losses}</span><span class="stat-label">Derrotas</span></div>`;
+    }
+
+    function recordResult(won) {
+      const s = loadStats();
+      s.played += 1;
+      if (won) s.wins += 1; else s.losses += 1;
+      try { localStorage.setItem(STATS_KEY, JSON.stringify(s)); } catch (_) {}
+      renderStats();
+    }
+
+    let statsRecordedForThisGame = false;
+
     function showGameOverOverlay() {
       const iWon = mode === 'online' ? gameOver.winner === onlineColor
         : mode === 'bot' ? gameOver.winner === E.COLOR.WHITE
         : null; // modo local: partida compartida, no hay "yo"
+
+      if (iWon !== null && !statsRecordedForThisGame) {
+        statsRecordedForThisGame = true;
+        recordResult(iWon);
+      }
 
       const title = document.getElementById('gameover-title');
       if (iWon === true) title.textContent = 'GANASTE';
@@ -535,6 +644,7 @@
         onlineRoomCode = null;
         onlineColor = null;
         selfResigned = false;
+        statsRecordedForThisGame = false;
         gameOver = null;
         document.getElementById('board-wrap').classList.add('hidden');
         document.getElementById('resign-btn').classList.add('hidden');
@@ -684,6 +794,7 @@
         onlineColor = data.color;
         onlineStatus = 'playing';
         selfResigned = false;
+        statsRecordedForThisGame = false;
         board = data.board;
         turn = data.turn;
         selected = null; legalHere = []; lastMove = null; gameOver = null;
@@ -793,6 +904,7 @@
       legalHere = [];
       lastMove = null;
       gameOver = null;
+      statsRecordedForThisGame = false;
       botThinking = false;
       document.getElementById('thinking-line').textContent = '';
       document.getElementById('status-line').textContent = '';
@@ -800,6 +912,7 @@
     }
 
     document.getElementById('diff-medium').classList.add('active');
+    renderStats();
     setMode('local');
   </script>
 </body>
