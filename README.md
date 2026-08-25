@@ -161,9 +161,11 @@ ese caso el boton no se carga y el login tradicional sigue igual. Para activarla
 3. Guardar el Client ID en Render como `GOOGLE_WEB_CLIENT_ID`.
 4. Probar registro, acceso, cierre de sesion y vinculacion con una cuenta existente.
 
-La APK no usa el popup web incrustado. Su acceso con Google se completara con
-Credential Manager y `GOOGLE_ANDROID_CLIENT_ID`; el backend ya admite esa audiencia
-sin exponer secretos.
+La APK no usa el popup web incrustado. Usa Credential Manager de forma nativa
+(`android/app/src/main/java/com/ozamachess/app/GoogleAuthPlugin.java`), registrado
+en Google Cloud con `GOOGLE_ANDROID_CLIENT_ID` para verificar el paquete y la firma
+de la app. El token que devuelve tiene como audiencia el mismo `GOOGLE_WEB_CLIENT_ID`
+del flujo web, asi que el backend lo verifica igual sin exponer secretos.
 
 ## Deploy
 

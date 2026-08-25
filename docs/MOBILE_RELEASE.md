@@ -74,6 +74,7 @@ Estado verificado el 12 de agosto de 2026:
 Pruebas minimas en dispositivo:
 
 - Registro, login, cierre y recuperacion de contrasena.
+- Continuar con Google (Credential Manager), incluyendo cancelar el selector de cuenta.
 - Eliminacion de cuenta dentro de la app.
 - Lobby, matchmaking, sala por codigo y rejoin.
 - Colores/turnos correctos en dos dispositivos.

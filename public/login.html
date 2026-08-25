@@ -444,6 +444,25 @@
       overflow: hidden;
     }
 
+    .google-button-native {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      height: 44px;
+      background: #131314;
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 6px;
+      color: #E3E3E3;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    .google-button-native:active { background: #1b1b1c; }
+    .google-button-native:disabled { opacity: 0.6; cursor: default; }
+
     .google-auth-note {
       color: var(--faint);
       font-size: 10px;
@@ -781,7 +800,7 @@
     }
 
     async function handleGoogleCredential(response) {
-      const idToken = String(response?.credential || '');
+      const idToken = String(response?.credential || response?.idToken || '');
       if (!idToken) {
         showMsg('Google no devolvio una credencial valida.');
         return;
@@ -807,16 +826,45 @@
       }
     }
 
+    async function nativeGoogleSignIn(clientId) {
+      const plugin = window.Capacitor?.Plugins?.OzamaGoogleAuth;
+      const btn = document.getElementById('google-button');
+      if (!plugin?.signIn) {
+        showMsg('Google no esta disponible en esta version de la app.');
+        return;
+      }
+
+      clearMsg();
+      btn.disabled = true;
+      try {
+        const result = await plugin.signIn({ webClientId: clientId });
+        await handleGoogleCredential(result);
+      } catch (error) {
+        showMsg(error?.message || 'No se pudo continuar con Google.');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
     async function initGoogleAuth() {
-      if (window.OZAMA_RUNTIME?.native) return;
       const res = await fetch('/api/auth/providers', { cache: 'no-store' });
       if (!res.ok) return;
       const providers = await res.json();
       const clientId = String(providers?.google?.clientId || '');
       if (!providers?.google?.enabled || !clientId) return;
 
-      await loadGoogleIdentityScript();
       const googleAuth = document.getElementById('google-auth');
+
+      if (window.OZAMA_RUNTIME?.native) {
+        const btn = document.getElementById('google-button');
+        btn.outerHTML = '<button type="button" id="google-button" class="google-button-native">Continuar con Google</button>';
+        document.getElementById('google-button').onclick = () => nativeGoogleSignIn(clientId);
+        googleAuth.dataset.enabled = 'true';
+        googleAuth.classList.remove('hidden');
+        return;
+      }
+
+      await loadGoogleIdentityScript();
       googleAuth.dataset.enabled = 'true';
       googleAuth.classList.remove('hidden');
       window.google.accounts.id.initialize({
