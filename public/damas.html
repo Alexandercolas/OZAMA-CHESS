@@ -967,7 +967,7 @@
       document.getElementById('online-waiting-note').textContent = '';
       document.getElementById('room-code-display').textContent = session.code;
       ensureSocket();
-      socket.emit('damas:rejoin', session);
+      socket.emit('damas:rejoin', { room: session.code, color: session.color, token: session.token });
     }
 
     document.getElementById('diff-medium').classList.add('active');
