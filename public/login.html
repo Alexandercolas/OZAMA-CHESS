@@ -661,7 +661,7 @@
     .hidden { display: none !important; }
 
     @media (max-width: 840px) {
-      .container { grid-template-columns: 1fr; max-width: 500px; }
+      .container { grid-template-columns: minmax(0, 1fr); max-width: 500px; }
       .logo-wrap {
         min-height: 270px;
         padding: 30px;
