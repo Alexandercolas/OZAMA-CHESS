@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; media-src 'self'; connect-src 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; media-src 'self'; connect-src 'self' https://ozama-chess.onrender.com wss://ozama-chess.onrender.com ws: wss:">
+  <script src="/mobile-runtime.js"></script>
   <meta name="theme-color" content="#0D0B08"/>
   <meta name="robots" content="noindex, nofollow"/>
   <title>OZAMA DAMAS - Vista previa</title>
@@ -14,6 +15,7 @@
   <link rel="stylesheet" href="/theme.css">
   <script src="/checkers-engine.js"></script>
   <script src="/checkers-ai.js"></script>
+  <script src="/vendor/socket.io.min.js"></script>
 
   <style>
     :root {
@@ -256,6 +258,68 @@
       min-height: 18px;
     }
 
+    .online-panel {
+      display: grid;
+      gap: 14px;
+      max-width: 420px;
+      margin: 0 auto;
+      padding: 22px;
+      border: 1px solid rgba(200,152,60,0.3);
+      background: var(--s2);
+      border-radius: 4px;
+      text-align: center;
+    }
+
+    .online-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .online-input {
+      min-height: 42px;
+      padding: 0 14px;
+      border: 1px solid rgba(200,152,60,0.3);
+      background: rgba(0,0,0,0.28);
+      color: var(--text);
+      font-family: var(--fm);
+      font-size: 14px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      text-align: center;
+      width: 150px;
+    }
+
+    .room-code-display {
+      font-family: var(--fm);
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 8px;
+      color: var(--gold-2);
+    }
+
+    .online-note {
+      font-size: 11px;
+      color: var(--dim);
+      line-height: 1.6;
+    }
+
+    .btn-resign {
+      padding: 9px 20px;
+      background: transparent;
+      border: 1px solid rgba(210,90,60,0.5);
+      color: rgba(233,228,218,0.6);
+      font-family: var(--fb);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .btn-resign:hover { color: #ef4444; border-color: #ef4444; }
+
     @media (max-width: 560px) {
       :root { --sq: clamp(30px, calc((100vw - 40px) / 8), 44px); }
     }
@@ -263,7 +327,7 @@
 </head>
 <body>
   <div class="page">
-    <div class="dev-banner">Vista previa de Damas &mdash; pasa y juega en el mismo dispositivo. Todavia no tiene salas online ni modo invitado/login.</div>
+    <div class="dev-banner">Vista previa de Damas &mdash; jugar online requiere haber iniciado sesion. El modo invitado en web todavia no existe.</div>
 
     <a class="back-link" href="/lobby.html">&larr; Volver al lobby</a>
 
@@ -278,16 +342,40 @@
       </div>
     </div>
 
-    <div class="board-wrap">
+    <div class="online-panel hidden" id="online-panel">
+      <div id="online-setup">
+        <div class="online-note">Crea una sala y comparte el codigo, o unete a la de alguien mas.</div>
+        <div class="controls" style="margin-top:14px;">
+          <button class="btn-primary" type="button" onclick="createOnlineRoom()">Crear sala</button>
+        </div>
+        <div class="online-row" style="margin-top:14px;">
+          <input class="online-input" id="join-code-input" type="text" maxlength="6" placeholder="CODIGO"/>
+          <button class="btn-mode" type="button" onclick="joinOnlineRoom()">Unirse</button>
+        </div>
+      </div>
+      <div class="hidden" id="online-waiting">
+        <div class="online-note">Comparte este codigo con tu rival:</div>
+        <div class="room-code-display" id="room-code-display"></div>
+        <div class="online-note">Esperando a que se una...</div>
+      </div>
+    </div>
+
+    <div class="board-wrap hidden" id="board-wrap">
       <div class="board" id="board"></div>
     </div>
 
     <div class="status-line" id="status-line"></div>
     <div class="thinking-line" id="thinking-line"></div>
 
+    <div class="controls" id="board-controls">
+      <button class="btn-primary" type="button" id="newgame-btn" onclick="newGame()">Nueva partida</button>
+      <button class="btn-resign hidden" type="button" id="resign-btn" onclick="resignOnline()">Rendirse</button>
+    </div>
+
     <div class="controls">
-      <button class="btn-primary" type="button" onclick="newGame()">Nueva partida</button>
-      <button class="btn-mode" type="button" id="mode-btn" onclick="toggleMode()">Modo: Pasar y jugar</button>
+      <button class="btn-mode" type="button" id="mode-local" onclick="setMode('local')">Pasar y jugar</button>
+      <button class="btn-mode" type="button" id="mode-bot" onclick="setMode('bot')">Vs Bot</button>
+      <button class="btn-mode" type="button" id="mode-online" onclick="setMode('online')">Online</button>
     </div>
   </div>
 
@@ -303,8 +391,14 @@
     let legalHere = [];       // sequences for the selected square
     let lastMove = null;      // { fromR, fromC, toR, toC }
     let gameOver = null;
-    let vsBot = false;
+    let mode = 'local'; // 'local' | 'bot' | 'online'
     let botThinking = false;
+
+    // Estado de la sala online (namespace damas:* del servidor, ver server.js).
+    let socket = null;
+    let onlineColor = null;
+    let onlineRoomCode = null;
+    let onlineStatus = 'idle'; // 'idle' | 'waiting' | 'playing'
 
     function pieceEl(piece) {
       const div = document.createElement('div');
@@ -380,23 +474,31 @@
       const statusEl = document.getElementById('status-line');
       if (gameOver) {
         const winnerLabel = gameOver.winner === E.COLOR.WHITE ? 'Blancas' : 'Negras';
-        const reasonLabel = gameOver.reason === 'no-pieces' ? 'sin piezas' : 'sin movimientos';
-        statusEl.textContent = `Ganaron las ${winnerLabel} (rival ${reasonLabel}).`;
-      } else {
-        statusEl.textContent = '';
+        const reasonLabels = {
+          'no-pieces': 'rival sin piezas',
+          'no-moves': 'rival sin movimientos',
+          'resign': 'el rival se rindio',
+          'opponent-left': 'el rival se desconecto',
+        };
+        const reasonLabel = reasonLabels[gameOver.reason] || 'partida terminada';
+        statusEl.textContent = `Ganaron las ${winnerLabel} (${reasonLabel}).`;
       }
+      // Si no hay gameOver, no se toca status-line aqui: puede tener un
+      // mensaje puntual (jugada rechazada, error de sala) que se limpia
+      // explicitamente en newGame()/setMode(), no en cada render().
     }
 
     function onSquareClick(r, c) {
       if (gameOver || botThinking) return;
-      if (vsBot && turn === BOT_COLOR) return;
+      if (mode === 'bot' && turn === BOT_COLOR) return;
+      if (mode === 'online' && (onlineStatus !== 'playing' || turn !== onlineColor)) return;
       const clicked = board[r][c];
 
       // Clicking a destination while something is selected.
       if (selected) {
         const seq = legalHere.find((s) => s[s.length - 1].toR === r && s[s.length - 1].toC === c);
         if (seq) {
-          applyMoveAndAdvance(selected.r, selected.c, seq);
+          commitMove(selected.r, selected.c, seq);
           return;
         }
       }
@@ -421,6 +523,20 @@
       render();
     }
 
+    // Confirma una jugada: en modo online la manda al servidor y espera
+    // damas:board-update (nunca se aplica de forma optimista); en modo
+    // local/bot se aplica de una vez con el motor.
+    function commitMove(fromR, fromC, seq) {
+      if (mode === 'online') {
+        socket.emit('damas:move', { room: onlineRoomCode, fromR, fromC, seq });
+        selected = null;
+        legalHere = [];
+        render();
+        return;
+      }
+      applyMoveAndAdvance(fromR, fromC, seq);
+    }
+
     function applyMoveAndAdvance(fromR, fromC, seq) {
       const result = E.applyMove(board, fromR, fromC, seq);
       board = result.board;
@@ -433,7 +549,7 @@
       gameOver = status.over ? status : null;
       render();
 
-      if (vsBot && !gameOver && turn === BOT_COLOR) scheduleBotMove();
+      if (mode === 'bot' && !gameOver && turn === BOT_COLOR) scheduleBotMove();
     }
 
     function scheduleBotMove() {
@@ -449,15 +565,130 @@
       }, 350);
     }
 
-    function toggleMode() {
-      vsBot = !vsBot;
-      const btn = document.getElementById('mode-btn');
-      btn.textContent = vsBot ? 'Modo: Vs Bot (negras)' : 'Modo: Pasar y jugar';
-      btn.classList.toggle('active', vsBot);
-      newGame();
+    // ── Modo online: sala real via Socket.IO, servidor autoritativo ──
+
+    function readStoredUser() {
+      try { return JSON.parse(localStorage.getItem('ozama-user') || 'null'); }
+      catch (_) { return null; }
+    }
+
+    function errorMessage(data) {
+      return typeof data === 'string' ? data : (data?.message || 'Ocurrio un error.');
+    }
+
+    function ensureSocket() {
+      if (socket) return;
+      const token = window.OZAMA_RUNTIME?.getAuthToken?.() || '';
+      socket = io(window.OZAMA_RUNTIME?.socketOrigin, { auth: { token }, withCredentials: true });
+
+      socket.on('connect_error', () => {
+        document.getElementById('status-line').textContent = 'No se pudo conectar. Inicia sesion para jugar online.';
+      });
+
+      socket.on('damas:room-created', (data) => {
+        onlineRoomCode = data.code;
+        onlineColor = data.color;
+        onlineStatus = 'waiting';
+        document.getElementById('online-setup').classList.add('hidden');
+        document.getElementById('online-waiting').classList.remove('hidden');
+        document.getElementById('room-code-display').textContent = data.code;
+      });
+
+      socket.on('damas:game-start', (data) => {
+        onlineRoomCode = data.code;
+        onlineColor = data.color;
+        onlineStatus = 'playing';
+        board = data.board;
+        turn = data.turn;
+        selected = null; legalHere = []; lastMove = null; gameOver = null;
+        document.getElementById('online-panel').classList.add('hidden');
+        document.getElementById('board-wrap').classList.remove('hidden');
+        document.getElementById('resign-btn').classList.remove('hidden');
+        document.getElementById('newgame-btn').classList.add('hidden');
+        document.getElementById('status-line').textContent = '';
+        render();
+      });
+
+      socket.on('damas:board-update', (data) => {
+        board = data.board;
+        turn = data.turn;
+        lastMove = data.lastMove;
+        selected = null;
+        legalHere = [];
+        gameOver = data.gameOver || null;
+        document.getElementById('status-line').textContent = '';
+        render();
+      });
+
+      socket.on('damas:move-rejected', (data) => {
+        document.getElementById('status-line').textContent = errorMessage(data);
+        selected = null;
+        legalHere = [];
+        render();
+      });
+
+      socket.on('damas:room-error', (data) => {
+        document.getElementById('status-line').textContent = errorMessage(data);
+      });
+
+      socket.on('damas:opponent-disconnected', () => {
+        gameOver = { over: true, winner: onlineColor, reason: 'opponent-left' };
+        render();
+      });
+
+      socket.on('damas:game-over', (data) => {
+        gameOver = { over: true, winner: data.winner, reason: data.reason || 'resign' };
+        render();
+      });
+    }
+
+    function createOnlineRoom() {
+      ensureSocket();
+      const user = readStoredUser();
+      socket.emit('damas:create-room', { playerName: user?.username || 'Jugador', country: user?.country || 'DO' });
+    }
+
+    function joinOnlineRoom() {
+      ensureSocket();
+      const code = document.getElementById('join-code-input').value.trim().toUpperCase();
+      if (!code) return;
+      const user = readStoredUser();
+      socket.emit('damas:join-room', { code, playerName: user?.username || 'Jugador', country: user?.country || 'DO' });
+    }
+
+    function resignOnline() {
+      if (mode !== 'online' || !onlineRoomCode) return;
+      socket.emit('damas:resign', { room: onlineRoomCode });
+    }
+
+    function setMode(newMode) {
+      mode = newMode;
+      ['local', 'bot', 'online'].forEach((m) => {
+        document.getElementById(`mode-${m}`).classList.toggle('active', m === newMode);
+      });
+
+      if (newMode === 'online') {
+        ensureSocket();
+        document.getElementById('online-panel').classList.remove('hidden');
+        document.getElementById('board-wrap').classList.toggle('hidden', onlineStatus !== 'playing');
+        document.getElementById('resign-btn').classList.toggle('hidden', onlineStatus !== 'playing');
+        document.getElementById('newgame-btn').classList.toggle('hidden', onlineStatus === 'playing');
+        if (onlineStatus === 'idle') {
+          document.getElementById('online-setup').classList.remove('hidden');
+          document.getElementById('online-waiting').classList.add('hidden');
+        }
+        document.getElementById('status-line').textContent = '';
+      } else {
+        document.getElementById('online-panel').classList.add('hidden');
+        document.getElementById('board-wrap').classList.remove('hidden');
+        document.getElementById('resign-btn').classList.add('hidden');
+        document.getElementById('newgame-btn').classList.remove('hidden');
+        newGame();
+      }
     }
 
     function newGame() {
+      if (mode === 'online') return; // una sala online no se reinicia unilateralmente
       board = E.createInitialBoard();
       turn = E.COLOR.WHITE;
       selected = null;
@@ -466,10 +697,11 @@
       gameOver = null;
       botThinking = false;
       document.getElementById('thinking-line').textContent = '';
+      document.getElementById('status-line').textContent = '';
       render();
     }
 
-    render();
+    setMode('local');
   </script>
 </body>
 </html>
