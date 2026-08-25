@@ -13,7 +13,7 @@
 
   function wasDismissed() {
     try {
-      return sessionStorage.getItem('ozama-install-dismissed') === '1';
+      return localStorage.getItem('ozama-install-dismissed') === '1';
     } catch (_) {
       return false;
     }
@@ -21,7 +21,7 @@
 
   function rememberDismissal() {
     try {
-      sessionStorage.setItem('ozama-install-dismissed', '1');
+      localStorage.setItem('ozama-install-dismissed', '1');
     } catch (_) {}
   }
 
