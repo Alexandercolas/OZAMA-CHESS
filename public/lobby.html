@@ -34,6 +34,8 @@
       --s2:    #1C1710;
       --s3:    #252015;
       --teja:  #7A3A2A;
+      --dama:  #D9714B;
+      --dama-2: #EFA07A;
       --text:  #E9E4DA;
       --dim:   rgba(233,228,218,0.45);
       --ghost: rgba(233,228,218,0.14);
@@ -230,6 +232,15 @@
     .sb-icon svg { width: 16px; height: 16px; display: block; }
     .sb-item:hover .sb-icon { color: var(--gold); }
     .sb-item.on .sb-icon { color: var(--gold-2); }
+
+    /* Damas es un proyecto propio dentro de la app: su icono usa el
+       color solido de Damas en vez del dorado del Ajedrez, para que
+       se distinga de un vistazo en el menu. */
+    .sb-item[href="/damas.html"] .sb-icon { color: var(--dama); }
+    .sb-item[href="/damas.html"]:hover .sb-icon,
+    .sb-item[href="/damas.html"].on .sb-icon { color: var(--dama-2); }
+    .sb-item[href="/damas.html"]:hover .sb-name,
+    .sb-item[href="/damas.html"].on .sb-name { color: var(--dama-2); }
 
     .sb-txt { position: relative; z-index: 1; }
     .sb-name { font-family: var(--fb); font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); display: block; transition: color var(--dur-fast) var(--ease-out); }
