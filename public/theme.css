@@ -58,6 +58,10 @@ html, body {
   color: var(--text);
   font-family: var(--fb);
   overflow-x: hidden;
+  /* Sin esto, el "tema oscuro automatico" de Chrome en Android
+     reprocesa los colores de la pagina (ya oscura) y los botones
+     pierden contraste entre si, aunque en escritorio se vean bien. */
+  color-scheme: dark;
 }
 
 body::before {
