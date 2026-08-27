@@ -373,6 +373,7 @@ function adminRoomSnapshot(code, room) {
 
 function adminRuntimeSnapshot() {
   const activeRooms = [...rooms.values()].filter((room) => ['waiting', 'playing'].includes(room.status)).length;
+  const activeDamasRooms = [...damasRooms.values()].filter((room) => ['waiting', 'playing'].includes(room.status)).length;
   const authenticatedUsers = new Set(
     [...io.sockets.sockets.values()]
       .map((socket) => socket.data.userId && String(socket.data.userId))
@@ -382,6 +383,7 @@ function adminRuntimeSnapshot() {
     socketConnections: io.sockets.sockets.size,
     onlineUsers: authenticatedUsers.size,
     activeRooms,
+    activeDamasRooms,
     waitingPlayers: matchQueue.length,
   };
 }
@@ -435,11 +437,63 @@ function adminDisconnectUser(userId) {
   return disconnected;
 }
 
+// ── Visibilidad admin de Damas (namespace separado de rooms/ajedrez) ──
+function adminDamasRoomSnapshot(code, room) {
+  const connected = io.sockets.adapter.rooms.get(code)?.size || 0;
+  const player = (info, socketId) => info ? {
+    name: info.name || 'Jugador',
+    country: info.country || 'DO',
+    elo: Number(info.elo || 1200),
+    connected: !!socketId,
+  } : null;
+  return {
+    code,
+    status: room.status || 'waiting',
+    turn: room.turn || 'w',
+    connected,
+    white: player(room.playerInfo?.w, room.white),
+    black: player(room.playerInfo?.b, room.black),
+  };
+}
+
+function adminActiveDamasRooms() {
+  return [...damasRooms.entries()]
+    .filter(([, room]) => ['waiting', 'playing'].includes(room.status))
+    .map(([code, room]) => adminDamasRoomSnapshot(code, room))
+    .sort((a, b) => a.code.localeCompare(b.code));
+}
+
+function adminCloseDamasRoom(code, reason) {
+  const room = damasRooms.get(code);
+  if (!room) return null;
+  const snapshot = adminDamasRoomSnapshot(code, room);
+
+  damasCancelCloseTimer(room);
+  room.status = 'closed';
+
+  const socketIds = [...(io.sockets.adapter.rooms.get(code) || [])];
+  for (const socketId of socketIds) {
+    const roomSocket = io.sockets.sockets.get(socketId);
+    if (!roomSocket) continue;
+    roomSocket.emit('damas:game-over', { winner: null, reason: 'admin-closed' });
+    roomSocket.emit('room-closed', { reason });
+    roomSocket.leave(code);
+    roomSocket.data.damasRoomCode = null;
+    roomSocket.data.damasColor = null;
+  }
+
+  damasRooms.delete(code);
+  console.warn(`[Admin] Sala de Damas ${code} cerrada manualmente`);
+  return snapshot;
+}
+
 app.locals.adminRuntime = {
   snapshot: adminRuntimeSnapshot,
   rooms: adminActiveRooms,
   closeRoom: adminCloseRoom,
   disconnectUser: adminDisconnectUser,
+  damasRooms: adminActiveDamasRooms,
+  closeDamasRoom: adminCloseDamasRoom,
 };
 
 const PIECE = { PAWN: 'p', KNIGHT: 'n', BISHOP: 'b', ROOK: 'r', QUEEN: 'q', KING: 'k' };
@@ -1021,6 +1075,29 @@ io.on('connection', (socket) => {
       const message = 'Demasiadas acciones. Espera un momento.';
       socket.emit(errorEvent, name === 'playerMove' ? { message } : message);
       console.warn(`[RATE] ${name} limitado socket=${socket.id} user=${socket.data.userId || 'anon'}`);
+      return false;
+    }
+  }
+
+  // Variante de consumeSocketLimit para eventos alcanzables sin login
+  // (Damas invitado). consumeSocketLimit mezcla socket.id en la llave,
+  // asi que un invitado podia reconectar con un socket nuevo para
+  // resetear su propio limite; para un usuario logueado esto no
+  // importa (userId es estable), pero para 'anon' es un vector real de
+  // spam. Aqui, sin sesion, se usa la IP como identidad en su lugar.
+  async function consumeDamasLimit(name, errorEvent = 'damas:room-error') {
+    const limiter = socketLimiters[name];
+    if (!limiter) return true;
+    const ip = String(socket.handshake?.headers?.['x-forwarded-for']?.split(',')[0]?.trim()
+      || socket.handshake?.address || 'unknown');
+    const identity = socket.data.userId ? String(socket.data.userId) : `ip:${ip}`;
+    try {
+      await limiter.consume(identity);
+      return true;
+    } catch (_) {
+      const message = 'Demasiadas acciones. Espera un momento.';
+      socket.emit(errorEvent, name === 'damasMove' ? { message } : message);
+      console.warn(`[RATE] ${name} limitado identity=${identity}`);
       return false;
     }
   }
@@ -1700,7 +1777,7 @@ if (room.white && room.black && !room.clockInterval) {
   socket.on('damas:create-room', async (payload = {}) => {
     const data = parseSocketPayload(damasSchemas.createRoom, payload, 'damas:room-error');
     if (!data) return;
-    if (!(await consumeSocketLimit('damasCreateRoom', 'damas:room-error'))) return;
+    if (!(await consumeDamasLimit('damasCreateRoom', 'damas:room-error'))) return;
     // A proposito sin requireSocketAuth(): Damas permite jugar como
     // invitado en la web. getPlayerInfo() ya sabe devolver un perfil de
     // invitado (userId: null) cuando socket.data.user no existe.
@@ -1733,7 +1810,7 @@ if (room.white && room.black && !room.clockInterval) {
   socket.on('damas:join-room', async (payload = {}) => {
     const data = parseSocketPayload(damasSchemas.joinRoom, payload, 'damas:room-error');
     if (!data) return;
-    if (!(await consumeSocketLimit('damasJoinRoom', 'damas:room-error'))) return;
+    if (!(await consumeDamasLimit('damasJoinRoom', 'damas:room-error'))) return;
     const { code, playerName = 'Jugador 2', country = 'DO' } = data;
 
     const room = damasRooms.get(code);
@@ -1761,7 +1838,7 @@ if (room.white && room.black && !room.clockInterval) {
   socket.on('damas:move', async (payload = {}) => {
     const data = parseSocketPayload(damasSchemas.move, payload, 'damas:move-rejected');
     if (!data) return;
-    if (!(await consumeSocketLimit('damasMove', 'damas:move-rejected'))) return;
+    if (!(await consumeDamasLimit('damasMove', 'damas:move-rejected'))) return;
     const { room: code, fromR, fromC, seq } = data;
 
     const room = damasRooms.get(code);

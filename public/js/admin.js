@@ -361,6 +361,41 @@
       card.append(top, versus, meta, actions);
       grid.appendChild(card);
     }
+    await loadDamasRooms();
+  }
+
+  async function loadDamasRooms() {
+    const data = await api('/api/admin/damas-rooms/active');
+    const grid = $('#damas-room-grid');
+    grid.replaceChildren();
+    if (!data.rooms?.length) {
+      grid.appendChild(emptyState('Sin salas de Damas activas', 'No hay partidas ni salas de Damas vivas en este momento.'));
+      return;
+    }
+    for (const room of data.rooms) {
+      const card = element('article', 'room-card');
+      const top = element('div', 'room-top');
+      top.append(element('strong', 'room-code', room.code), badge(room.status === 'playing' ? 'En partida' : 'Esperando', room.status === 'playing' ? 'good' : 'warn'));
+      const versus = element('div', 'versus');
+      versus.append(playerBlock(room.white, 'Blancas'), element('span', 'versus-mark', 'VS'), playerBlock(room.black, 'Negras'));
+      const meta = element('div', 'room-meta');
+      meta.append(
+        element('span', '', `Turno: ${room.turn === 'w' ? 'blancas' : 'negras'}`),
+        element('span', '', `${room.connected} conexiones`),
+      );
+      const actions = element('div', 'room-actions');
+      actions.appendChild(actionButton('Cierre de emergencia', 'danger', async () => {
+        const accepted = await confirmAction('Cerrar sala', `La sala de Damas ${room.code} terminará y ambos jugadores serán notificados. Esta acción queda auditada.`, 'Cerrar sala');
+        if (!accepted) return;
+        try {
+          await api(`/api/admin/damas-rooms/${encodeURIComponent(room.code)}`, { method: 'DELETE' });
+          showToast(`Sala de Damas ${room.code} cerrada.`, 'success');
+          await loadDamasRooms();
+        } catch (err) { showToast(err.message, 'error'); }
+      }));
+      card.append(top, versus, meta, actions);
+      grid.appendChild(card);
+    }
   }
 
   function resultLabel(match) {

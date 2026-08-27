@@ -163,6 +163,7 @@ router.get('/stats', async (req, res) => {
       users: { total: totalUsers, activeAccounts, online: runtime.onlineUsers },
       sockets: { connections: runtime.socketConnections },
       rooms: { active: runtime.activeRooms, waitingPlayers: runtime.waitingPlayers },
+      damasRooms: { active: runtime.activeDamasRooms || 0 },
       matches: { total: totalMatches, finished: finishedMatches, active: Math.max(0, totalMatches - finishedMatches) },
       events: { active: activeEvents },
     });
@@ -268,6 +269,26 @@ router.delete('/rooms/:code', async (req, res) => {
     const closed = await runtimeFor(req)?.closeRoom?.(code, 'Cierre administrativo de emergencia.');
     if (!closed) return res.status(404).json({ error: 'La sala ya no esta activa.' });
     await writeAudit(req, 'room.closed', 'room', code, { previousStatus: closed.status });
+    return res.json({ ok: true, room: closed });
+  } catch (err) {
+    return res.status(500).json({ error: 'No se pudo cerrar la sala.' });
+  }
+});
+
+router.get('/damas-rooms/active', (req, res) => {
+  const rooms = runtimeFor(req)?.damasRooms?.() || [];
+  res.json({ rooms, total: rooms.length });
+});
+
+router.delete('/damas-rooms/:code', async (req, res) => {
+  const code = cleanString(req.params.code, 6).toUpperCase();
+  if (!/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(code)) {
+    return res.status(400).json({ error: 'Codigo de sala invalido.' });
+  }
+  try {
+    const closed = runtimeFor(req)?.closeDamasRoom?.(code, 'Cierre administrativo de emergencia.');
+    if (!closed) return res.status(404).json({ error: 'La sala ya no esta activa.' });
+    await writeAudit(req, 'damas_room.closed', 'damas_room', code, { previousStatus: closed.status });
     return res.json({ ok: true, room: closed });
   } catch (err) {
     return res.status(500).json({ error: 'No se pudo cerrar la sala.' });

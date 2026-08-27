@@ -666,7 +666,10 @@
     let statsRecordedForThisGame = false;
 
     function showGameOverOverlay() {
-      const iWon = mode === 'online' ? gameOver.winner === onlineColor
+      // winner:null es un cierre neutral (ej. un admin cerrando la sala),
+      // no una derrota -- no hay "yo" que ganara ni perdiera.
+      const iWon = gameOver.winner === null ? null
+        : mode === 'online' ? gameOver.winner === onlineColor
         : mode === 'bot' ? gameOver.winner === E.COLOR.WHITE
         : null; // modo local: partida compartida, no hay "yo"
 
@@ -676,7 +679,8 @@
       }
 
       const title = document.getElementById('gameover-title');
-      if (iWon === true) title.textContent = 'GANASTE';
+      if (gameOver.winner === null) title.textContent = 'PARTIDA TERMINADA';
+      else if (iWon === true) title.textContent = 'GANASTE';
       else if (iWon === false) title.textContent = 'PERDISTE';
       else title.textContent = gameOver.winner === E.COLOR.WHITE ? 'GANARON LAS BLANCAS' : 'GANARON LAS NEGRAS';
 
@@ -685,6 +689,7 @@
         'no-moves': 'el rival no tiene movimientos',
         'resign': selfResigned ? 'te rendiste' : 'el rival se rindio',
         'opponent-left': 'el rival se desconecto',
+        'admin-closed': 'un administrador cerro la sala',
       };
       document.getElementById('gameover-reason').textContent = reasonLabels[gameOver.reason] || 'Partida terminada.';
       document.getElementById('gameover-overlay').classList.remove('hidden');
