@@ -453,6 +453,7 @@
           <button class="btn-mode" type="button" id="diff-easy" onclick="setBotDifficulty('easy')">Aprendiz</button>
           <button class="btn-mode" type="button" id="diff-medium" onclick="setBotDifficulty('medium')">Centinela</button>
           <button class="btn-mode" type="button" id="diff-hard" onclick="setBotDifficulty('hard')">Maestro</button>
+          <button class="btn-mode" type="button" id="diff-master" onclick="setBotDifficulty('master')">Alcázar</button>
         </div>
       </aside>
 
@@ -521,11 +522,16 @@
     const AI = window.OzamaCheckersAI;
     const BOT_COLOR = E.COLOR.BLACK;
     // Mismos nombres tematicos que el bot de ajedrez (Aprendiz/Centinela/
-    // Maestro), para que se sienta parte de la misma familia de producto.
+    // Maestro/Alcazar), para que se sienta parte de la misma familia de
+    // producto. Alcazar (~2500 ELO, dificil de vencer de verdad) corre
+    // en un Web Worker (ver getBotWorker) porque a esa profundidad la
+    // busqueda puede tardar varios segundos y congelaria la pestana si
+    // corriera en el hilo principal.
     const BOT_LEVELS = {
-      easy:   { depth: 3, blunderChance: 0.35 },
-      medium: { depth: 5, blunderChance: 0 },
-      hard:   { depth: 8, blunderChance: 0 },
+      easy:   { depth: 3,  blunderChance: 0.35 },
+      medium: { depth: 5,  blunderChance: 0 },
+      hard:   { depth: 8,  blunderChance: 0 },
+      master: { depth: 10, blunderChance: 0 },
     };
     let botDifficulty = 'medium';
     let board = E.createInitialBoard();
@@ -784,11 +790,50 @@
       if (mode === 'bot' && !gameOver && turn === BOT_COLOR) scheduleBotMove();
     }
 
+    // ── Bot en Web Worker (ver checkers-ai-worker.js) ──────────────
+    // Profundidades fuertes (Alcazar) pueden tardar varios segundos;
+    // correrlas fuera del hilo principal evita que la pestana se
+    // congele mientras el bot "piensa".
+    let botWorker = null;
+    let botWorkerRequestId = 0;
+    const botWorkerCallbacks = new Map();
+
+    function getBotWorker() {
+      if (botWorker) return botWorker;
+      botWorker = new Worker('/checkers-ai-worker.js');
+      botWorker.onmessage = (event) => {
+        const { requestId, move, error } = event.data || {};
+        const callback = botWorkerCallbacks.get(requestId);
+        if (!callback) return;
+        botWorkerCallbacks.delete(requestId);
+        if (error) callback.reject(new Error(error));
+        else callback.resolve(move);
+      };
+      botWorker.onerror = (err) => {
+        for (const callback of botWorkerCallbacks.values()) callback.reject(err);
+        botWorkerCallbacks.clear();
+      };
+      return botWorker;
+    }
+
+    function chooseMoveInWorker(boardState, color, depth) {
+      return new Promise((resolve, reject) => {
+        const requestId = ++botWorkerRequestId;
+        botWorkerCallbacks.set(requestId, { resolve, reject });
+        try {
+          getBotWorker().postMessage({ board: boardState, color, depth, requestId });
+        } catch (err) {
+          botWorkerCallbacks.delete(requestId);
+          reject(err);
+        }
+      });
+    }
+
     function scheduleBotMove() {
       botThinking = true;
       document.getElementById('thinking-line').textContent = 'El bot esta pensando...';
       document.getElementById('board').classList.add('thinking');
-      setTimeout(() => {
+      setTimeout(async () => {
         const level = BOT_LEVELS[botDifficulty] || BOT_LEVELS.medium;
         let move;
         if (level.blunderChance > 0 && Math.random() < level.blunderChance) {
@@ -798,7 +843,13 @@
             .flatMap((entry) => entry.sequences.map((seq) => ({ r: entry.r, c: entry.c, seq })));
           move = allMoves[Math.floor(Math.random() * allMoves.length)];
         } else {
-          move = AI.chooseMove(board, BOT_COLOR, level.depth);
+          try {
+            move = await chooseMoveInWorker(board, BOT_COLOR, level.depth);
+          } catch (_) {
+            // Respaldo si el Worker no esta disponible en este navegador:
+            // calcula en el hilo principal (puede notarse una pausa).
+            move = AI.chooseMove(board, BOT_COLOR, level.depth);
+          }
         }
         botThinking = false;
         document.getElementById('thinking-line').textContent = '';
@@ -809,7 +860,7 @@
 
     function setBotDifficulty(level) {
       botDifficulty = level;
-      ['easy', 'medium', 'hard'].forEach((l) => {
+      ['easy', 'medium', 'hard', 'master'].forEach((l) => {
         document.getElementById(`diff-${l}`).classList.toggle('active', l === level);
       });
       if (mode === 'bot') newGame();

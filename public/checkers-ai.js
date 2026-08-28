@@ -11,7 +11,7 @@
 // sin cambiar la API publica.
 
 (function () {
-  const E = window.OzamaCheckers;
+  const E = self.OzamaCheckers;
   if (!E) throw new Error('checkers-ai.js requiere que checkers-engine.js se cargue primero.');
 
   const MAN_VALUE = 100;
@@ -108,5 +108,7 @@
     return bestMove;
   }
 
-  window.OzamaCheckersAI = { chooseMove, evaluate };
+  const OzamaCheckersAI = { chooseMove, evaluate };
+  if (typeof self !== 'undefined') self.OzamaCheckersAI = OzamaCheckersAI;
+  if (typeof module !== 'undefined' && module.exports) module.exports = OzamaCheckersAI;
 })();

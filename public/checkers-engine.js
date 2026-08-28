@@ -281,10 +281,11 @@
     otherColor,
   };
 
-  // Disponible en el navegador (window.OzamaCheckers) y en Node/servidor
-  // (module.exports), para que el cliente y el servidor validen las
-  // jugadas con exactamente el mismo codigo -- nunca confiar en un
-  // motor de reglas distinto en cada lado.
-  if (typeof window !== 'undefined') window.OzamaCheckers = OzamaCheckers;
+  // Disponible en el hilo principal del navegador (window.OzamaCheckers,
+  // ya que window.self === window), dentro de un Web Worker
+  // (self.OzamaCheckers, donde no existe `window`), y en Node/servidor
+  // (module.exports) -- para que el cliente, el bot en su Worker, y el
+  // servidor validen las jugadas con exactamente el mismo codigo.
+  if (typeof self !== 'undefined') self.OzamaCheckers = OzamaCheckers;
   if (typeof module !== 'undefined' && module.exports) module.exports = OzamaCheckers;
 })();
