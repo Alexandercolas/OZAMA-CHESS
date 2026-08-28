@@ -596,7 +596,30 @@ function checkPawnPromotion(board,row,col,color){
 function showPromotionDialog(row, col, color) {
   state.promotionPending = { row, col, color };
   const dlg = document.getElementById('promotion-dialog');
-  if (dlg) dlg.style.display = 'flex';
+  if (!dlg) return;
+  const optionsEl = dlg.querySelector('.promotion-options');
+  if (optionsEl) {
+    const order = [PIECE.QUEEN, PIECE.ROOK, PIECE.BISHOP, PIECE.KNIGHT];
+    optionsEl.innerHTML = order.map(type => {
+      const key = `${color}${type}`;
+      let inner;
+      if (CONFIG.USE_BLENDER_PIECES && BLENDER_PIECE_NAMES[type]) {
+        const style = color === COLOR.WHITE ? 'gold' : 'black';
+        const colorClass = color === COLOR.WHITE ? 'white' : 'black';
+        inner = `<span class="piece piece-3d piece-${colorClass} piece-${type}"><img src="./assets/pieces/blender/${style}/${BLENDER_PIECE_NAMES[type]}.png" alt="" draggable="false"></span>`;
+      } else if (CONFIG.USE_INLINE_SVG && PIECE_SVGS[key]) {
+        inner = `<span class="piece piece-${color === COLOR.WHITE ? 'white' : 'black'} piece-${type}">${PIECE_SVGS[key]}</span>`;
+      } else {
+        inner = '?';
+      }
+      return `<button type="button" class="promotion-btn" data-type="${type}">${inner}</button>`;
+    }).join('');
+    optionsEl.querySelectorAll('.promotion-btn').forEach(btn => {
+      btn.addEventListener('click', () => applyPromotion(row, col, color, btn.dataset.type));
+    });
+  }
+  dlg.classList.remove('hidden');
+  dlg.style.display = 'flex';
 }
 
 function applyPromotion(row,col,color,chosenType,isRemoteMove=false){
@@ -605,7 +628,7 @@ function applyPromotion(row,col,color,chosenType,isRemoteMove=false){
   state.promotionPending = null;
   
   const dlg = document.getElementById('promotion-dialog');
-  if (dlg) dlg.style.display = 'none';
+  if (dlg) { dlg.style.display = 'none'; dlg.classList.add('hidden'); }
 
   if (state._pendingHistoryEntry) {
     state._pendingHistoryEntry.promotion = chosenType;
