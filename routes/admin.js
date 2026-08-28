@@ -255,6 +255,26 @@ async function updateUser(req, res) {
 router.patch('/users/:id', updateUser);
 router.patch('/users/:id/plan', updateUser);
 
+router.delete('/users/:id', async (req, res) => {
+  try {
+    if (!validObjectId(req.params.id)) return res.status(400).json({ error: 'Usuario invalido.' });
+    if (String(req.params.id) === String(req.user._id)) {
+      return res.status(400).json({ error: 'No puedes eliminar tu propia cuenta administradora.' });
+    }
+    const user = await User.findById(req.params.id).select('username email');
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
+
+    const summary = { username: user.username, email: user.email };
+    runtimeFor(req)?.disconnectUser?.(String(user._id));
+    await User.deleteOne({ _id: user._id });
+    await writeAudit(req, 'user.deleted', 'user', String(req.params.id), summary);
+    return res.json({ ok: true, deleted: summary });
+  } catch (err) {
+    console.error('[Admin] Delete user:', err.message);
+    return res.status(500).json({ error: 'No se pudo eliminar el usuario.' });
+  }
+});
+
 router.get('/rooms/active', (req, res) => {
   const rooms = runtimeFor(req)?.rooms?.() || [];
   res.json({ rooms, total: rooms.length });

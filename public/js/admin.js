@@ -282,7 +282,24 @@
         catch (err) { showToast(err.message, 'error'); }
       });
       logoutButton.disabled = self;
-      actions.append(activeButton, premiumButton, logoutButton);
+
+      const deleteButton = actionButton('Eliminar', 'danger', async () => {
+        const accepted = await confirmAction(
+          'Eliminar cuenta',
+          `Esto borra a ${user.username} de forma permanente junto con su perfil. Esta acción no se puede deshacer.`,
+          'Eliminar',
+        );
+        if (!accepted) return;
+        try {
+          await api(`/api/admin/users/${encodeURIComponent(user._id)}`, { method: 'DELETE' });
+          showToast(`${user.username} eliminado.`, 'success');
+          state.loaded.delete('dashboard');
+          await loadUsers();
+        } catch (err) { showToast(err.message, 'error'); }
+      });
+      deleteButton.disabled = self;
+
+      actions.append(activeButton, premiumButton, logoutButton, deleteButton);
 
       row.append(
         tableCell('Jugador', playerIdentity(user), 'user-column'),
