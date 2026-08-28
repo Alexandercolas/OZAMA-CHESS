@@ -306,7 +306,7 @@ router.delete('/damas-rooms/:code', async (req, res) => {
     return res.status(400).json({ error: 'Codigo de sala invalido.' });
   }
   try {
-    const closed = runtimeFor(req)?.closeDamasRoom?.(code, 'Cierre administrativo de emergencia.');
+    const closed = await runtimeFor(req)?.closeDamasRoom?.(code, 'Cierre administrativo de emergencia.');
     if (!closed) return res.status(404).json({ error: 'La sala ya no esta activa.' });
     await writeAudit(req, 'damas_room.closed', 'damas_room', code, { previousStatus: closed.status });
     return res.json({ ok: true, room: closed });

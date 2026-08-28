@@ -3,6 +3,7 @@
 const express              = require('express');
 const User                 = require('../models/User');
 const Match                = require('../models/Match');
+const DamasMatch           = require('../models/DamasMatch');
 const Room                 = require('../models/Room');
 const Event                = require('../models/Event');
 const { requireAuth, userIsAdmin } = require('../middleware/auth');
@@ -130,6 +131,37 @@ router.get('/history', requireAuth, async (req, res) => {
     res.json({ matches, total, page, pages: Math.ceil(total / limit) });
   } catch (err) {
     serverError(res, 'History', err);
+  }
+});
+
+// GET /api/user/damas-history - historial de Damas (ranking propio,
+// separado del de ajedrez)
+router.get('/damas-history', requireAuth, async (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    const userId = req.user._id;
+    const page   = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit  = Math.min(20, parseInt(req.query.limit) || 10);
+
+    const filter = {
+      $or: [
+        { 'whitePlayer.userId': userId },
+        { 'blackPlayer.userId': userId },
+      ],
+    };
+
+    const [matches, total] = await Promise.all([
+      DamasMatch.find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      DamasMatch.countDocuments(filter),
+    ]);
+
+    res.json({ matches, total, page, pages: Math.ceil(total / limit) });
+  } catch (err) {
+    serverError(res, 'DamasHistory', err);
   }
 });
 

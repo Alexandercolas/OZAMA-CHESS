@@ -72,6 +72,16 @@ const UserSchema = new mongoose.Schema(
       streak: { type: Number, default: 0 },
     },
 
+    // ELO y estadisticas de Damas, separados de los de ajedrez -- son
+    // juegos distintos, cada uno con su propio ranking.
+    damasElo: { type: Number, default: 1200 },
+    damasStats: {
+      wins:   { type: Number, default: 0 },
+      losses: { type: Number, default: 0 },
+      draws:  { type: Number, default: 0 },
+      streak: { type: Number, default: 0 },
+    },
+
     // The paid plan must never provide competitive advantages.
     plan: {
       type: String,
@@ -111,6 +121,14 @@ UserSchema.methods.updateElo = function (opponentElo, result) {
   const K  = this.elo < 2100 ? 32 : this.elo < 2400 ? 24 : 16;
   const Ea = 1 / (1 + Math.pow(10, (opponentElo - this.elo) / 400));
   this.elo  = Math.max(100, Math.round(this.elo + K * (result - Ea)));
+};
+
+// Misma formula K-factor que updateElo, pero sobre damasElo -- Damas
+// tiene su propio ranking, no comparte el de ajedrez.
+UserSchema.methods.updateDamasElo = function (opponentElo, result) {
+  const K  = this.damasElo < 2100 ? 32 : this.damasElo < 2400 ? 24 : 16;
+  const Ea = 1 / (1 + Math.pow(10, (opponentElo - this.damasElo) / 400));
+  this.damasElo = Math.max(100, Math.round(this.damasElo + K * (result - Ea)));
 };
 
 UserSchema.set('toJSON', {

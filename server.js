@@ -19,6 +19,7 @@ const { protectCookieWrites, socketToken } = require('./middleware/session');
 
 const connectDatabase = require('./config/database');
 const Match           = require('./models/Match');
+const DamasMatch      = require('./models/DamasMatch');
 const Room            = require('./models/Room');
 const User            = require('./models/User');
 
@@ -220,16 +221,87 @@ function damasStartCloseTimer(code) {
   const room = damasRooms.get(code);
   if (!room) return;
   damasCancelCloseTimer(room);
-  room.closeTimer = setTimeout(() => {
+  room.closeTimer = setTimeout(async () => {
     if (room.status === 'playing') {
       const survivorColor = room.white ? 'w' : room.black ? 'b' : null;
       if (survivorColor) {
         room.status = 'finished';
         io.to(code).emit('damas:game-over', { winner: survivorColor, reason: 'opponent-left' });
+        await finishDamasGame(room, code, { winner: survivorColor, reason: 'opponent-left' });
       }
     }
     damasRooms.delete(code);
   }, 30_000);
+}
+
+// Guarda el resultado final de una partida de Damas (historial + ELO
+// propio de Damas, separado del de ajedrez). Solo persiste cuando
+// ambos lados son cuentas reales -- una partida de invitado no tiene a
+// quien atribuirsela. Abandono (rival se fue / cerro un admin) se
+// registra en el historial pero nunca mueve el ELO, igual que el
+// ajedrez trata sus partidas 'abandoned'.
+async function finishDamasGame(room, code, { winner, reason }) {
+  const wInfo = room.playerInfo?.w;
+  const bInfo = room.playerInfo?.b;
+  if (!wInfo || !bInfo || !wInfo.userId || !bInfo.userId) return;
+
+  const abandoned = reason === 'opponent-left' || reason === 'admin-closed';
+  const result = abandoned ? 'abandoned'
+    : winner === 'w' ? 'white_win'
+    : winner === 'b' ? 'black_win'
+    : 'draw';
+
+  try {
+    const eloChange = { white: null, black: null };
+
+    if (!abandoned) {
+      const [wUser, bUser] = await Promise.all([User.findById(wInfo.userId), User.findById(bInfo.userId)]);
+      if (wUser && bUser) {
+        const wResult = result === 'white_win' ? 1 : result === 'draw' ? 0.5 : 0;
+        const bResult = 1 - wResult;
+        const wBefore = wUser.damasElo;
+        const bBefore = bUser.damasElo;
+
+        wUser.updateDamasElo(bBefore, wResult);
+        bUser.updateDamasElo(wBefore, bResult);
+
+        if (result === 'white_win') {
+          wUser.damasStats.wins++; bUser.damasStats.losses++;
+          wUser.damasStats.streak = Number(wUser.damasStats.streak || 0) + 1;
+          bUser.damasStats.streak = 0;
+        } else if (result === 'black_win') {
+          bUser.damasStats.wins++; wUser.damasStats.losses++;
+          bUser.damasStats.streak = Number(bUser.damasStats.streak || 0) + 1;
+          wUser.damasStats.streak = 0;
+        } else {
+          wUser.damasStats.draws++; bUser.damasStats.draws++;
+          wUser.damasStats.streak = 0; bUser.damasStats.streak = 0;
+        }
+
+        eloChange.white = wUser.damasElo - wBefore;
+        eloChange.black = bUser.damasElo - bBefore;
+
+        await Promise.all([
+          wUser.save({ validateModifiedOnly: true }),
+          bUser.save({ validateModifiedOnly: true }),
+        ]);
+      }
+    }
+
+    await DamasMatch.create({
+      roomCode: code,
+      whitePlayer: playerSnapshot(wInfo),
+      blackPlayer: playerSnapshot(bInfo),
+      result,
+      winner: winner || null,
+      reason,
+      eloChange,
+      startedAt: room.startedAt || new Date(),
+      endedAt: new Date(),
+    });
+  } catch (err) {
+    console.warn('[DAMAS] No se pudo guardar el resultado:', err.message);
+  }
 }
 
 // ── Cola de matchmaking ──────────────────────────────────────────
@@ -463,10 +535,11 @@ function adminActiveDamasRooms() {
     .sort((a, b) => a.code.localeCompare(b.code));
 }
 
-function adminCloseDamasRoom(code, reason) {
+async function adminCloseDamasRoom(code, reason) {
   const room = damasRooms.get(code);
   if (!room) return null;
   const snapshot = adminDamasRoomSnapshot(code, room);
+  const wasPlaying = room.status === 'playing';
 
   damasCancelCloseTimer(room);
   room.status = 'closed';
@@ -482,6 +555,7 @@ function adminCloseDamasRoom(code, reason) {
     roomSocket.data.damasColor = null;
   }
 
+  if (wasPlaying) await finishDamasGame(room, code, { winner: null, reason: 'admin-closed' });
   damasRooms.delete(code);
   console.warn(`[Admin] Sala de Damas ${code} cerrada manualmente`);
   return snapshot;
@@ -1001,7 +1075,7 @@ io.use(async (socket, next) => {
   if (!token) return next();
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
-    const user = await User.findById(decoded.id).select('+tokenVersion username country avatar avatarImage elo isActive').lean();
+    const user = await User.findById(decoded.id).select('+tokenVersion username country avatar avatarImage elo damasElo isActive').lean();
     if (!user?.isActive || Number(decoded.v || 0) !== Number(user.tokenVersion || 0)) {
       return next(new Error('Sesion invalida.'));
     }
@@ -1013,6 +1087,7 @@ io.use(async (socket, next) => {
       avatar: user.avatar,
       avatarImage: user.avatarImage,
       elo: user.elo,
+      damasElo: user.damasElo,
     };
     socket.data.playerName = user.username;
   } catch (_) {
@@ -1787,6 +1862,9 @@ if (room.white && room.black && !room.clockInterval) {
     do { code = generateCode(); } while (rooms.has(code) || damasRooms.has(code));
 
     const pInfo = await getPlayerInfo(playerName, country);
+    // getPlayerInfo() es compartido con ajedrez y devuelve el elo de
+    // ajedrez; Damas tiene su propio ranking.
+    if (socket.data.user) pInfo.elo = Number(socket.data.user.damasElo ?? 1200);
 
     damasRooms.set(code, {
       white: socket.id, black: null,
@@ -1819,10 +1897,12 @@ if (room.white && room.black && !room.clockInterval) {
     if (room.white === socket.id) { socket.emit('damas:room-error', 'No puedes unirte a tu propia sala.'); return; }
 
     const pInfo = await getPlayerInfo(playerName, country);
+    if (socket.data.user) pInfo.elo = Number(socket.data.user.damasElo ?? 1200);
     room.black = socket.id;
     room.playerInfo.b = pInfo;
     room.tokens.b = createRoomToken();
     room.status = 'playing';
+    room.startedAt = new Date();
 
     socket.join(code);
     socket.data.damasRoomCode = code;
@@ -1877,6 +1957,8 @@ if (room.white && room.black && !room.clockInterval) {
       capturedCount: result.captured.length,
       gameOver: status.over ? status : null,
     });
+
+    if (status.over) await finishDamasGame(room, code, { winner: status.winner, reason: status.reason });
   });
 
   socket.on('damas:resign', async (payload = {}) => {
@@ -1889,7 +1971,9 @@ if (room.white && room.black && !room.clockInterval) {
     if (!myColor || room.status !== 'playing') return;
     damasCancelCloseTimer(room);
     room.status = 'finished';
-    io.to(code).emit('damas:game-over', { winner: OzamaCheckers.otherColor(myColor), reason: 'resign' });
+    const winner = OzamaCheckers.otherColor(myColor);
+    io.to(code).emit('damas:game-over', { winner, reason: 'resign' });
+    await finishDamasGame(room, code, { winner, reason: 'resign' });
   });
 
   // Reconectar a una partida de Damas en curso tras perder el socket
