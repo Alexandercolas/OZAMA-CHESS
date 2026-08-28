@@ -7,7 +7,7 @@
   <script src="/mobile-runtime.js"></script>
   <meta name="theme-color" content="#0D0B08"/>
   <meta name="robots" content="noindex, nofollow"/>
-  <title>OZAMA DAMAS - Vista previa</title>
+  <title>OZAMA DAMAS</title>
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -208,6 +208,21 @@
       background: transparent;
       border: 3px solid rgba(220,90,60,0.85);
     }
+
+    .coord {
+      position: absolute;
+      font-family: var(--fm);
+      font-size: 9px;
+      font-weight: 700;
+      line-height: 1;
+      pointer-events: none;
+      z-index: 2;
+      opacity: 0.65;
+    }
+    .square.light .coord { color: var(--bd); }
+    .square.dark  .coord { color: var(--bl); }
+    .coord-rank { top: 3px; left: 3px; }
+    .coord-file { bottom: 3px; right: 3px; }
 
     .piece {
       width: 78%;
@@ -423,7 +438,7 @@
 </head>
 <body>
   <div class="page">
-    <div class="dev-banner">Vista previa de Damas &mdash; puedes jugar online sin registrarte. Las partidas todavia no se guardan en tu perfil.</div>
+    <div class="dev-banner">Juega online sin registrarte, o inicia sesion para llevar tus estadisticas. Las partidas de Damas todavia no se guardan en tu perfil.</div>
 
     <a class="back-link" href="/lobby.html">&larr; Volver al lobby</a>
 
@@ -518,6 +533,54 @@
 
   <script>
     'use strict';
+
+    // ── Sonido (tonos sintetizados, sin archivos externos) ─────────
+    // Respeta el mismo interruptor que ya usa el ajedrez
+    // (ozama-sound-muted en localStorage), asi que silenciar uno
+    // silencia el otro.
+    let audioCtx = null;
+    function getAudioCtx() {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      if (!audioCtx) audioCtx = new AC();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    }
+    function soundMuted() {
+      try { return localStorage.getItem('ozama-sound-muted') === 'true'; }
+      catch (_) { return false; }
+    }
+    function playTone(freq, duration, type, gainPeak) {
+      if (soundMuted()) return;
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(gainPeak || 0.14, ctx.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + duration);
+    }
+    function playMoveSound() { playTone(320, 0.09, 'sine', 0.12); }
+    function playCaptureSound() {
+      playTone(180, 0.12, 'square', 0.11);
+      setTimeout(() => playTone(140, 0.10, 'square', 0.09), 60);
+    }
+    function playWinSound() {
+      [523, 659, 784].forEach((f, i) => setTimeout(() => playTone(f, 0.18, 'sine', 0.13), i * 100));
+    }
+    function playLoseSound() {
+      [330, 262].forEach((f, i) => setTimeout(() => playTone(f, 0.22, 'sine', 0.11), i * 130));
+    }
+    ['pointerdown', 'touchstart', 'keydown'].forEach((eventName) => {
+      document.addEventListener(eventName, () => getAudioCtx(), { once: true, passive: true });
+    });
+
     const E = window.OzamaCheckers;
     const AI = window.OzamaCheckersAI;
     const BOT_COLOR = E.COLOR.BLACK;
@@ -618,6 +681,19 @@
             sq.appendChild(dot);
           }
 
+          if (c === 0) {
+            const rankLabel = document.createElement('span');
+            rankLabel.className = 'coord coord-rank';
+            rankLabel.textContent = String(E.SIZE - r);
+            sq.appendChild(rankLabel);
+          }
+          if (r === E.SIZE - 1) {
+            const fileLabel = document.createElement('span');
+            fileLabel.className = 'coord coord-file';
+            fileLabel.textContent = 'abcdefgh'[c];
+            sq.appendChild(fileLabel);
+          }
+
           sq.addEventListener('click', () => onSquareClick(r, c));
           boardEl.appendChild(sq);
         }
@@ -679,9 +755,13 @@
         : mode === 'bot' ? gameOver.winner === E.COLOR.WHITE
         : null; // modo local: partida compartida, no hay "yo"
 
-      if (iWon !== null && !statsRecordedForThisGame) {
+      const isFirstShow = !statsRecordedForThisGame;
+      if (isFirstShow) {
         statsRecordedForThisGame = true;
-        recordResult(iWon);
+        if (iWon !== null) recordResult(iWon);
+        if (iWon === true) playWinSound();
+        else if (iWon === false) playLoseSound();
+        else playMoveSound();
       }
 
       const title = document.getElementById('gameover-title');
@@ -782,6 +862,9 @@
       selected = null;
       legalHere = [];
       turn = E.otherColor(turn);
+
+      const wasCapture = seq.some((step) => step.capturedR !== -1);
+      if (wasCapture) playCaptureSound(); else playMoveSound();
 
       const status = E.checkGameOver(board, turn);
       gameOver = status.over ? status : null;
@@ -932,6 +1015,7 @@
         legalHere = [];
         gameOver = data.gameOver || null;
         document.getElementById('status-line').textContent = '';
+        if (data.capturedCount > 0) playCaptureSound(); else playMoveSound();
         render();
       });
 

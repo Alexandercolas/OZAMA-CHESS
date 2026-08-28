@@ -1874,6 +1874,7 @@ if (room.white && room.black && !room.clockInterval) {
       board: room.board,
       turn: room.turn,
       lastMove: { fromR, fromC, toR: result.to.r, toC: result.to.c },
+      capturedCount: result.captured.length,
       gameOver: status.over ? status : null,
     });
   });
