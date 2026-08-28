@@ -573,6 +573,31 @@
     }
     .profile-tab:hover { color: var(--gold); background: rgba(200,152,60,0.06); }
     .profile-tab.is-active { color: var(--carbon); background: var(--gold); }
+
+    /* Selector Ajedrez / Damas -- cada juego tiene su propio ELO y
+       estadisticas, este toggle cambia cual se muestra sin recargar. */
+    .game-toggle {
+      display: flex; gap: 6px;
+      background: var(--surface);
+      border: 1px solid rgba(200,152,60,0.14);
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 20px;
+    }
+    .game-toggle-btn {
+      flex: 1;
+      padding: 9px 12px;
+      border: none; border-radius: 7px;
+      background: transparent;
+      color: var(--dim);
+      font-family: var(--fb);
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .game-toggle-btn:hover { color: var(--gold); }
+    .game-toggle-btn.is-active { background: var(--gold); color: var(--carbon); }
   </style>
 </head>
 <body>
@@ -601,6 +626,8 @@
     const _user  = JSON.parse(localStorage.getItem('ozama-user') || 'null');
     const _token = window.OZAMA_RUNTIME?.getAuthToken?.() || '';
     let profileInitialized = false;
+    let currentGame = 'chess';
+    let currentUser = null;
 
         function getFlag(country) {
           if (!country || country === 'OTHER') return '<span class="country-code">--</span>';
@@ -647,10 +674,51 @@
           `;
         }
 
+    function statCardsHtml(game, user) {
+      const stats = (game === 'damas' ? user.damasStats : user.stats) || { wins: 0, losses: 0, draws: 0 };
+      const wins = stats.wins || 0, losses = stats.losses || 0, draws = stats.draws || 0;
+      const gamesPlayed = wins + losses + draws;
+      const winRate = gamesPlayed > 0 ? Math.round(wins / gamesPlayed * 100) : 0;
+      return `
+        <div class="stat-card oz-card wins">
+          <div class="stat-value">${wins}</div>
+          <div class="stat-label">Victorias</div>
+        </div>
+        <div class="stat-card oz-card losses">
+          <div class="stat-value">${losses}</div>
+          <div class="stat-label">Derrotas</div>
+        </div>
+        <div class="stat-card oz-card draws">
+          <div class="stat-value">${draws}</div>
+          <div class="stat-label">Tablas</div>
+        </div>
+        <div class="stat-card oz-card">
+          <div class="stat-value">${winRate}%</div>
+          <div class="stat-label">% Victorias</div>
+        </div>
+      `;
+    }
+
+    function heroEloValue(game, user) {
+      return (game === 'damas' ? user.damasElo : user.elo) || 1200;
+    }
+
+    function switchGame(game) {
+      currentGame = game;
+      document.querySelectorAll('.game-toggle-btn').forEach((btn) => {
+        btn.classList.toggle('is-active', btn.dataset.game === game);
+      });
+      if (!currentUser) return;
+      const eloEl = document.getElementById('hero-elo');
+      if (eloEl) eloEl.textContent = `ELO ${heroEloValue(game, currentUser)}`;
+      const grid = document.getElementById('estadisticas');
+      if (grid) grid.innerHTML = statCardsHtml(game, currentUser);
+    }
+
     function renderProfile(user) {
       user.stats = user.stats || { wins: 0, losses: 0, draws: 0 };
-      const gamesPlayed = (user.stats.wins || 0) + (user.stats.losses || 0) + (user.stats.draws || 0);
-      const winRate = gamesPlayed > 0 ? Math.round((user.stats.wins || 0) / gamesPlayed * 100) : 0;
+      user.damasStats = user.damasStats || { wins: 0, losses: 0, draws: 0 };
+      currentUser = user;
       const avatar = Math.abs(Number(user.avatar) || 0) % 6;
       const initial = escapeHtml((user.username || '?')[0].toUpperCase());
       const username = escapeHtml(user.username || 'Jugador');
@@ -671,31 +739,19 @@
                     <span class="profile-country">${getFlag(user.country)}</span>
                     <span>${user.country || 'DO'}</span>
                   </div>
-                  <div class="elo-display">ELO ${user.elo ? user.elo : 1200}</div>
+                  <div class="elo-display" id="hero-elo">ELO ${heroEloValue(currentGame, user)}</div>
                   <div class="plan-badge ${premiumActive ? 'premium' : ''}">${planLabel}</div>
                 </div>
 
         <div class="container">
 
+          <div class="game-toggle oz-enter" style="--d:0">
+            <button class="game-toggle-btn ${currentGame === 'chess' ? 'is-active' : ''}" data-game="chess" onclick="switchGame('chess')">Ajedrez</button>
+            <button class="game-toggle-btn ${currentGame === 'damas' ? 'is-active' : ''}" data-game="damas" onclick="switchGame('damas')">Damas</button>
+          </div>
+
           <!-- Stats -->
-                  <div class="stats-grid" id="estadisticas">
-                    <div class="stat-card oz-card oz-enter wins" style="--d:1">
-                      <div class="stat-value">${user.stats.wins || 0}</div>
-                      <div class="stat-label">Victorias</div>
-                    </div>
-                    <div class="stat-card oz-card oz-enter losses" style="--d:2">
-                      <div class="stat-value">${user.stats.losses || 0}</div>
-                      <div class="stat-label">Derrotas</div>
-                    </div>
-                    <div class="stat-card oz-card oz-enter draws" style="--d:3">
-                      <div class="stat-value">${user.stats.draws || 0}</div>
-                      <div class="stat-label">Tablas</div>
-                    </div>
-                    <div class="stat-card oz-card oz-enter" style="--d:4">
-                      <div class="stat-value">${winRate}%</div>
-                      <div class="stat-label">% Victorias</div>
-                    </div>
-                  </div>
+                  <div class="stats-grid oz-enter" id="estadisticas" style="--d:1">${statCardsHtml(currentGame, user)}</div>
 
                   <div class="friends-panel oz-card oz-enter" id="amigos" style="--d:6">
                     <div class="section-title">Amigos</div>
@@ -832,6 +888,7 @@
       logout,
       addFriend,
       removeFriend,
+      switchGame,
     });
     })();
   </script>

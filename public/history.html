@@ -573,6 +573,30 @@
     }
     .profile-tab:hover { color: var(--gold); background: rgba(200,152,60,0.06); }
     .profile-tab.is-active { color: var(--carbon); background: var(--gold); }
+
+    /* Selector Ajedrez / Damas -- cada juego guarda su propio historial. */
+    .game-toggle {
+      display: flex; gap: 6px;
+      background: var(--surface);
+      border: 1px solid rgba(200,152,60,0.14);
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 20px;
+    }
+    .game-toggle-btn {
+      flex: 1;
+      padding: 9px 12px;
+      border: none; border-radius: 7px;
+      background: transparent;
+      color: var(--dim);
+      font-family: var(--fb);
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .game-toggle-btn:hover { color: var(--gold); }
+    .game-toggle-btn.is-active { background: var(--gold); color: var(--carbon); }
   </style>
 </head>
 <body>
@@ -603,6 +627,16 @@
     let currentHistoryPage = 1;
     let historyBusy = false;
     let historyInitialized = false;
+    let currentGame = 'chess';
+
+    const DAMAS_REASON_LABELS = {
+      'no-pieces': 'Sin fichas',
+      'no-moves': 'Sin movimientos',
+      'resign': 'Rendicion',
+      'opponent-left': 'Rival se fue',
+      'admin-closed': 'Cerrado por admin',
+      'draw': 'Tablas',
+    };
 
         function getFlag(country) {
           if (!country || country === 'OTHER') return '<span class="country-code">--</span>';
@@ -650,7 +684,7 @@
           `;
         }
 
-    function renderHistory(user, history, total, page) {
+    function renderHistory(user, history, total, page, game) {
             const matchRows = history.length === 0 ?
                `<div class="empty-msg">Sin partidas registradas aun</div>`
               : history.map(m => {
@@ -675,12 +709,18 @@
                     eloClass = 'elo-down'; eloText = change != null ? `${change}` : '-'; resultText = result === 'abandoned' ? 'Abandono' : 'Derrota';
                   }
 
+                  const extraDetail = game === 'damas'
+                    ? (DAMAS_REASON_LABELS[m.reason] || '')
+                    : `${movesCount} movidas`;
+                  const detail = [resultText, myColor === 'w' ? 'Blancas' : 'Negras', extraDetail, `Sala ${m.roomCode || ''}`]
+                    .filter(Boolean).join(' · ');
+
                   return `
                     <div class="match-row">
                       <div class="match-result-badge ${badge}">${icon}</div>
                       <div class="match-info">
                         <div class="match-vs">${getFlag(rivalPlayer.country)} vs ${rival}</div>
-                        <div class="match-detail">${resultText} · ${myColor === 'w' ? 'Blancas' : 'Negras'} · ${movesCount} movidas · Sala ${m.roomCode || ''}</div>
+                        <div class="match-detail">${detail}</div>
                       </div>
                       <div class="match-elo-change ${eloClass}">${eloText}</div>
                       <div class="match-date">${formatDate(m.createdAt)}</div>
@@ -699,6 +739,10 @@
 
       document.getElementById('main-content').innerHTML = `
         <div class="container" style="padding-top:28px;">
+                    <div class="game-toggle oz-enter" style="--d:7">
+                      <button class="game-toggle-btn ${game === 'chess' ? 'is-active' : ''}" data-game="chess" onclick="switchGame('chess')">Ajedrez</button>
+                      <button class="game-toggle-btn ${game === 'damas' ? 'is-active' : ''}" data-game="damas" onclick="switchGame('damas')">Damas</button>
+                    </div>
                     <div class="section-title oz-enter" id="historial" style="--d:8">Historial de Partidas</div>
                     <div class="match-list oz-enter" id="match-list" style="--d:9">${matchRows}</div>
                     ${paginationHtml}
@@ -711,23 +755,31 @@
       if (historyBusy) return;
       historyBusy = true;
       currentHistoryPage = Math.max(1, Number(page) || 1);
+      const endpoint = currentGame === 'damas' ? '/api/user/damas-history' : '/api/user/history';
       try {
         const [histRes, userRes] = await Promise.all([
-          fetch(`/api/user/history?page=${currentHistoryPage}&limit=10`, { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' }),
+          fetch(`${endpoint}?page=${currentHistoryPage}&limit=10`, { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' }),
           fetch('/api/user/me', { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' }),
         ]);
         if (!histRes.ok || !userRes.ok) throw new Error();
         const data = await histRes.json();
         const userData = await userRes.json();
         localStorage.setItem('ozama-user', JSON.stringify(userData.user));
-        renderHistory(userData.user, data.matches, data.total, currentHistoryPage);
+        renderHistory(userData.user, data.matches, data.total, currentHistoryPage, currentGame);
         historyInitialized = true;
       } catch (err) {
         const list = document.getElementById('match-list');
         if (list) list.innerHTML = '<div class="empty-msg">No se pudo cargar el historial.</div>';
+        else document.getElementById('main-content').innerHTML = '<div class="loading">No se pudo cargar el historial. Recarga la pagina.</div>';
       } finally {
         historyBusy = false;
       }
+    }
+
+    function switchGame(game) {
+      if (currentGame === game || historyBusy) return;
+      currentGame = game;
+      loadPage(1);
     }
 
     async function init() {
@@ -752,6 +804,7 @@
     Object.assign(window, {
       logout,
       loadPage,
+      switchGame,
     });
     })();
   </script>
