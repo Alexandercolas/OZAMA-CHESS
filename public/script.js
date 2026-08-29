@@ -212,7 +212,14 @@ let state = {
   lastMove:null, _autoPromotionPiece:null, _finishReported:false,
   _pendingOnlineMove:null,
   capturedByW:[], capturedByB:[],
+  // null = viendo la posicion en vivo. Un numero = revisando el
+  // tablero tal como quedo despues de moveHistory[reviewIndex].
+  reviewIndex: null,
 };
+
+function cloneBoard(board) {
+  return board.map(row => row.map(cell => (cell ? { ...cell } : null)));
+}
 
 function boardViewColor() {
   return IS_ONLINE && PLAYER_COLOR === COLOR.BLACK ? COLOR.BLACK : COLOR.WHITE;
@@ -320,12 +327,13 @@ function startNewGame() {
   state.board=createInitialBoard(); state.turn=COLOR.WHITE; state.selected=null; state.legalMoves=[];
   state.castlingRights={w:{kingside:true,queenside:true},b:{kingside:true,queenside:true}};
   state.enPassantTarget=null; state.status=STATUS.PLAYING; state.winner=null; state.endReason=null;
-  state.moveCount=0; state.halfMoveClock=0; state.moveHistory=[];
+  state.moveCount=0; state.halfMoveClock=0; state.moveHistory=[]; state.reviewIndex=null;
   state.promotionPending=null; state._pendingHistoryEntry=null;
   state.lastMove=null; state._autoPromotionPiece=null; state._finishReported=false;
   state._pendingOnlineMove=null;
   state.capturedByW=[]; state.capturedByB=[];
   renderBoard(); updateStatusDisplay();
+  if (typeof renderMoveList === 'function') renderMoveList();
   CLOCK.set(600000, 600000);
   if (!IS_ONLINE) CLOCK.start(COLOR.WHITE);
   saveLocalGameSnapshot();
@@ -377,7 +385,7 @@ function restoreGameSnapshot(snapshot,{clockW,clockB}={}){
   state.status=STATUS.PLAYING; state.winner=null; state.endReason=null;
   state.moveCount=Number(snapshot.moveCount)||0;
   state.halfMoveClock=Number(snapshot.halfMoveClock)||0;
-  state.moveHistory=[];
+  state.moveHistory=[]; state.reviewIndex=null;
   state.promotionPending=null; state._pendingHistoryEntry=null;
   state.lastMove=snapshot.lastMove||null;
   state._autoPromotionPiece=null; state._finishReported=false; state._pendingOnlineMove=null;
@@ -387,6 +395,7 @@ function restoreGameSnapshot(snapshot,{clockW,clockB}={}){
   CLOCK.stop();
   if(Number.isFinite(clockW)&&Number.isFinite(clockB)) CLOCK.set(clockW,clockB);
   renderBoard(); updateStatusDisplay();
+  if (typeof renderMoveList === 'function') renderMoveList();
   return true;
 }
 
@@ -444,7 +453,7 @@ function restoreLocalGameSnapshot(){
   state.endReason=snapshot.endReason||null;
   state.moveCount=Number(snapshot.moveCount)||0;
   state.halfMoveClock=Number(snapshot.halfMoveClock)||0;
-  state.moveHistory=[];
+  state.moveHistory=[]; state.reviewIndex=null;
   state.promotionPending=null; state._pendingHistoryEntry=null;
   state.lastMove=snapshot.lastMove||null;
   state._autoPromotionPiece=null; state._finishReported=false; state._pendingOnlineMove=null;
@@ -454,6 +463,7 @@ function restoreLocalGameSnapshot(){
   CLOCK.set(Number(snapshot.clockW)||600000,Number(snapshot.clockB)||600000);
   CLOCK.start(state.turn);
   renderBoard(); updateStatusDisplay();
+  if (typeof renderMoveList === 'function') renderMoveList();
   setTimeout(()=>maybeScheduleBotMove(),120);
   return true;
 }
@@ -673,6 +683,21 @@ function finishMoveExecution() {
         ? 'fifty_move'
         : null;
 
+  if (state._pendingHistoryEntry) {
+    const entry = state._pendingHistoryEntry;
+    entry.check = status === STATUS.CHECK;
+    entry.checkmate = status === STATUS.CHECKMATE;
+    entry.notation = getMoveNotation(entry);
+    entry.boardAfter = cloneBoard(state.board);
+    entry.capturedByW = state.capturedByW.map(p => ({ ...p }));
+    entry.capturedByB = state.capturedByB.map(p => ({ ...p }));
+    entry.turnAfter = state.turn;
+    state.moveHistory.push(entry);
+    state._pendingHistoryEntry = null;
+    state.reviewIndex = null;
+    if (typeof renderMoveList === 'function') renderMoveList();
+  }
+
   if (status === STATUS.CHECKMATE) {
     state.winner = enemy(state.turn);
     playSound('gameover');
@@ -810,10 +835,25 @@ function renderBoard() {
   if (!container) return;
   container.innerHTML = '';
   container.classList.toggle('flipped', isBoardFlipped());
+
+  // Modo revision (estilo chess.com): mientras se mira una jugada
+  // pasada, el tablero se pinta desde la foto guardada en
+  // moveHistory[reviewIndex] en vez del tablero real -- state.board
+  // (la posicion en vivo) no se toca para nada.
+  const reviewing = state.reviewIndex !== null && !!state.moveHistory[state.reviewIndex];
+  const reviewEntry = reviewing ? state.moveHistory[state.reviewIndex] : null;
+  const board = reviewing ? reviewEntry.boardAfter : state.board;
+  const lastMove = reviewing ? reviewEntry : state.lastMove;
+  container.classList.toggle('reviewing', reviewing);
+
   const checkedKingColor =
-    (state.status === STATUS.CHECK || state.status === STATUS.CHECKMATE) && isInCheck(state.board, state.turn)
+    !reviewing && (state.status === STATUS.CHECK || state.status === STATUS.CHECKMATE) && isInCheck(state.board, state.turn)
       ? state.turn
-      : null;
+      : reviewing && reviewEntry.checkmate
+        ? reviewEntry.piece.color === COLOR.WHITE ? COLOR.BLACK : COLOR.WHITE
+        : reviewing && reviewEntry.check
+          ? reviewEntry.turnAfter
+          : null;
 
   for (let vr = 0; vr < 8; vr++) {
     for (let vc = 0; vc < 8; vc++) {
@@ -826,23 +866,23 @@ function renderBoard() {
       sq.dataset.viewRow = vr;
       sq.dataset.viewCol = vc;
 
-      if (state.selected && state.selected.row === r && state.selected.col === c) {
+      if (!reviewing && state.selected && state.selected.row === r && state.selected.col === c) {
         sq.classList.add('selected');
       }
 
-      if (state.lastMove?.from?.row === r && state.lastMove.from.col === c) {
+      if (lastMove?.from?.row === r && lastMove.from.col === c) {
         sq.classList.add('last-move-from');
       }
-      if (state.lastMove?.to?.row === r && state.lastMove.to.col === c) {
+      if (lastMove?.to?.row === r && lastMove.to.col === c) {
         sq.classList.add('last-move-to');
       }
 
-      const legalMove = state.legalMoves.find(m => m.row === r && m.col === c);
+      const legalMove = !reviewing && state.legalMoves.find(m => m.row === r && m.col === c);
       if (legalMove) {
         sq.classList.add('highlight');
       }
 
-      const p = state.board[r][c];
+      const p = board[r][c];
       if (p?.type === PIECE.KING && p.color === checkedKingColor) {
         sq.classList.add('in-check');
       }
@@ -889,6 +929,10 @@ function renderBoard() {
 }
 
 function handleSquareClick(r, c) {
+  // Tocar el tablero mientras se revisa una jugada pasada vuelve a la
+  // posicion en vivo (igual que chess.com) en vez de interpretarse
+  // como un intento de jugada contra un tablero que ya no es el real.
+  if (state.reviewIndex !== null) { goToMoveIndex(null); return; }
   if (state.status === STATUS.CHECKMATE || state.status === STATUS.STALEMATE) return;
   if (IS_ONLINE && !_onlineSynced) return;
   if (IS_ONLINE && state.turn !== PLAYER_COLOR) return;
@@ -915,6 +959,92 @@ function handleSquareClick(r, c) {
   }
 }
 
+// ================================================================
+// SECTION 9B: REVISION DE JUGADAS (estilo chess.com)
+// ================================================================
+
+// index null = posicion en vivo. index numerico = la posicion tal
+// como quedo despues de esa jugada (0-based, moveHistory[index]).
+function goToMoveIndex(index) {
+  const clamped = index === null
+    ? null
+    : Math.max(0, Math.min(index, state.moveHistory.length - 1));
+  state.reviewIndex = state.moveHistory.length ? clamped : null;
+  state.selected = null;
+  state.legalMoves = [];
+  renderBoard();
+  renderMoveList();
+}
+
+function renderMoveList() {
+  const listEl = document.getElementById('move-list');
+  if (!listEl) return;
+  const history = state.moveHistory;
+
+  if (!history.length) {
+    listEl.innerHTML = '<div class="move-empty">Sin jugadas todavia</div>';
+  } else {
+    let html = '';
+    for (let i = 0; i < history.length; i += 2) {
+      const moveNo = i / 2 + 1;
+      const w = history[i];
+      const b = history[i + 1];
+      const activeW = state.reviewIndex === i ? ' active' : '';
+      const activeB = b && state.reviewIndex === i + 1 ? ' active' : '';
+      html += `<div class="move-row">` +
+        `<span class="move-no">${moveNo}.</span>` +
+        `<span class="move-entry${activeW}" data-index="${i}">${escapeMoveText(w.notation)}</span>` +
+        (b ? `<span class="move-entry${activeB}" data-index="${i + 1}">${escapeMoveText(b.notation)}</span>` : '') +
+        `</div>`;
+    }
+    listEl.innerHTML = html;
+    listEl.querySelectorAll('.move-entry').forEach((el) => {
+      el.addEventListener('click', () => goToMoveIndex(Number(el.dataset.index)));
+    });
+    if (state.reviewIndex === null) {
+      listEl.scrollTop = listEl.scrollHeight;
+    } else {
+      listEl.querySelector('.move-entry.active')?.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  const panel = document.getElementById('move-panel');
+  if (panel) panel.classList.toggle('reviewing', state.reviewIndex !== null);
+
+  const atStart = history.length > 0 && (state.reviewIndex === 0);
+  const atLive = state.reviewIndex === null;
+  const firstBtn = document.getElementById('move-first-btn');
+  const prevBtn  = document.getElementById('move-prev-btn');
+  const nextBtn  = document.getElementById('move-next-btn');
+  const lastBtn  = document.getElementById('move-last-btn');
+  if (firstBtn) firstBtn.disabled = !history.length || atStart;
+  if (prevBtn)  prevBtn.disabled  = !history.length || atStart;
+  if (nextBtn)  nextBtn.disabled  = !history.length || atLive;
+  if (lastBtn)  lastBtn.disabled  = !history.length || atLive;
+}
+
+function escapeMoveText(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch]));
+}
+
+function setupMoveNav() {
+  document.getElementById('move-first-btn')?.addEventListener('click', () => {
+    if (state.moveHistory.length) goToMoveIndex(0);
+  });
+  document.getElementById('move-prev-btn')?.addEventListener('click', () => {
+    if (!state.moveHistory.length) return;
+    const cur = state.reviewIndex === null ? state.moveHistory.length - 1 : state.reviewIndex - 1;
+    goToMoveIndex(cur < 0 ? 0 : cur);
+  });
+  document.getElementById('move-next-btn')?.addEventListener('click', () => {
+    if (state.reviewIndex === null) return;
+    const nxt = state.reviewIndex + 1;
+    goToMoveIndex(nxt >= state.moveHistory.length ? null : nxt);
+  });
+  document.getElementById('move-last-btn')?.addEventListener('click', () => goToMoveIndex(null));
+  document.getElementById('move-live-btn')?.addEventListener('click', () => goToMoveIndex(null));
+}
+
 function executeMove(from, to) {
   const piece = state.board[from.row][from.col];
   if (!piece) return false;
@@ -933,6 +1063,24 @@ function executeMove(from, to) {
   }
 
   recordCapturedPiece(capturedPiece, piece.color);
+
+  // Punto de partida para el historial de jugadas (revision estilo
+  // chess.com) -- boardBefore hace falta para desambiguar notacion
+  // ("Nbd2" vs "Nd2") y finishMoveExecution() completa el resto
+  // (jaque/mate, boardAfter) una vez se conoce el turno siguiente.
+  state._pendingHistoryEntry = {
+    from: { row: from.row, col: from.col },
+    to: { row: to.row, col: to.col },
+    piece: { type: piece.type, color: piece.color },
+    captured: capturedPiece ? { type: capturedPiece.type, color: capturedPiece.color } : null,
+    castling: to.castling || null,
+    enPassant: !!to.enPassant,
+    promotion: null,
+    boardBefore: cloneBoard(state.board),
+    epTargetBefore: state.enPassantTarget,
+    check: false,
+    checkmate: false,
+  };
 
   // Actualizar tablero
   state.board[to.row][to.col] = piece;
@@ -1427,6 +1575,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   updateSoundButton();
   setupOnlineSocket();
   setupControls();
+  setupMoveNav();
   if (IS_BOT_MODE && restoreLocalGameSnapshot()) return;
   startNewGame();
 });
