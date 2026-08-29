@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://flagcdn.com; media-src 'self'; connect-src 'self' https://ozama-chess.onrender.com wss://ozama-chess.onrender.com ws: wss:">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://www.paypal.com https://www.paypalobjects.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://flagcdn.com https://www.paypalobjects.com; media-src 'self'; frame-src 'self' https://www.paypal.com https://www.sandbox.paypal.com; connect-src 'self' https://ozama-chess.onrender.com wss://ozama-chess.onrender.com ws: wss: https://www.paypal.com https://www.sandbox.paypal.com">
   <script src="/mobile-runtime.js"></script>
   <meta name="theme-color" content="#0D0B08"/>
   <meta name="mobile-web-app-capable" content="yes"/>
@@ -497,6 +497,42 @@
 
     .plan-note strong { color: var(--gold); font-family: var(--ft); letter-spacing: 1px; }
 
+    .premium-panel { padding: 20px; margin-bottom: 28px; }
+    .premium-benefits { list-style: none; display: grid; gap: 8px; margin: 14px 0 18px; }
+    .premium-benefits li {
+      font-size: 12.5px; color: var(--text); line-height: 1.5;
+      padding-left: 22px; position: relative;
+    }
+    .premium-benefits li::before {
+      content: '\2726'; position: absolute; left: 0; top: 0;
+      color: var(--gold); font-size: 12px;
+    }
+    .premium-price {
+      font-family: var(--ft); font-size: 20px; font-weight: 800;
+      color: var(--gold); letter-spacing: 1px; margin-bottom: 4px;
+    }
+    .premium-price span { font-size: 11px; color: var(--dim); font-weight: 600; letter-spacing: 1px; }
+    #paypal-button-container { max-width: 320px; margin-top: 10px; }
+    .premium-status-msg {
+      font-size: 12px; color: var(--dim); letter-spacing: 0.5px;
+      margin-top: 10px; line-height: 1.5;
+    }
+    .premium-active-box {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 12px;
+      padding: 14px 16px; border-radius: 10px;
+      background: rgba(200,152,60,0.08); border: 1px solid rgba(200,152,60,0.28);
+    }
+    .btn-cancel-premium {
+      padding: 9px 16px; border-radius: 6px;
+      border: 1px solid rgba(203,72,58,0.4);
+      background: transparent; color: #d98275;
+      font-size: 10px; font-weight: 800; letter-spacing: 1.5px;
+      text-transform: uppercase; cursor: pointer;
+    }
+    .btn-cancel-premium:hover { border-color: #d98275; background: rgba(139,35,27,0.15); }
+    .btn-cancel-premium:disabled { opacity: 0.5; cursor: wait; }
+
     /* Paginacion */
     .pagination {
       display: flex; justify-content: center; gap: 8px; margin-top: 20px;
@@ -770,6 +806,17 @@
                       <div class="plan-note"><strong>Plan ${planLabel}</strong><br>${planNote}</div>
                     </div>
 
+                    <div class="premium-panel oz-card oz-enter" id="premium-panel" style="--d:6">
+                      <div class="section-title">OZAMA Premium</div>
+                      <ul class="premium-benefits">
+                        <li>Marco dorado + insignia PREMIUM en tu avatar</li>
+                        <li>Tema de tablero exclusivo (Zona Colonial)</li>
+                        <li>Exportar tus partidas en formato PGN</li>
+                      </ul>
+                      <div style="color:var(--dim);font-size:11px;letter-spacing:0.5px;margin-bottom:14px;">Solo cosmetico y de comodidad -- nunca da ventaja dentro de la partida.</div>
+                      <div id="premium-panel-body"><div class="loading" style="padding:12px 0;"><div class="spinner" style="width:22px;height:22px;"></div></div></div>
+                    </div>
+
                     <div class="account-panel oz-card oz-enter" id="cuenta" style="--d:7">
                       <div class="section-title">Cuenta y privacidad</div>
                       <div class="account-links">
@@ -791,6 +838,112 @@
 
         </div>
       `;
+    }
+
+    let _paypalSdkPromise = null;
+    function loadPaypalSdk(clientId) {
+      if (_paypalSdkPromise) return _paypalSdkPromise;
+      _paypalSdkPromise = new Promise((resolve, reject) => {
+        if (window.paypal) { resolve(window.paypal); return; }
+        const script = document.createElement('script');
+        script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&vault=true&intent=subscription`;
+        script.onload = () => resolve(window.paypal);
+        script.onerror = () => reject(new Error('No se pudo cargar PayPal.'));
+        document.head.appendChild(script);
+      });
+      return _paypalSdkPromise;
+    }
+
+    async function initPremiumPanel(user) {
+      const body = document.getElementById('premium-panel-body');
+      if (!body) return;
+
+      const premiumUntil = user.premiumUntil ? new Date(user.premiumUntil) : null;
+      const premiumActive = user.plan === 'premium' && (!premiumUntil || premiumUntil > new Date());
+
+      if (premiumActive) {
+        const untilLabel = premiumUntil
+          ? premiumUntil.toLocaleDateString('es-DO', { year: 'numeric', month: 'long', day: 'numeric' })
+          : 'sin fecha limite';
+        body.innerHTML = `
+          <div class="premium-active-box">
+            <div>
+              <div style="color:var(--gold);font-weight:800;font-size:13px;letter-spacing:1px;">Premium activo</div>
+              <div style="color:var(--dim);font-size:11px;margin-top:3px;">Se renueva/vence el ${escapeHtml(untilLabel)}</div>
+            </div>
+            <button class="btn-cancel-premium" id="cancel-premium-btn" onclick="cancelPremium()">Cancelar suscripcion</button>
+          </div>
+          <div class="premium-status-msg" id="premium-status-msg"></div>
+        `;
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/billing/config', { cache: 'no-store' });
+        const config = await res.json();
+        if (!config?.enabled || !config?.clientId || !config?.planId) {
+          body.innerHTML = '<div class="premium-status-msg">Premium todavia no esta disponible para pago. Vuelve pronto.</div>';
+          return;
+        }
+
+        body.innerHTML = `
+          <div class="premium-price">$4.99 <span>USD / mes, cancelas cuando quieras</span></div>
+          <div id="paypal-button-container"></div>
+          <div class="premium-status-msg" id="premium-status-msg"></div>
+        `;
+
+        const paypal = await loadPaypalSdk(config.clientId);
+        const statusMsg = document.getElementById('premium-status-msg');
+        paypal.Buttons({
+          style: { shape: 'pill', color: 'gold', layout: 'vertical', label: 'subscribe' },
+          createSubscription: (_data, actions) => actions.subscription.create({ plan_id: config.planId }),
+          onApprove: async (data) => {
+            if (statusMsg) statusMsg.textContent = 'Confirmando tu suscripcion...';
+            try {
+              const confirmRes = await fetch('/api/billing/confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_token}` },
+                body: JSON.stringify({ subscriptionID: data.subscriptionID }),
+              });
+              const confirmData = await confirmRes.json().catch(() => ({}));
+              if (!confirmRes.ok) throw new Error(confirmData.error || 'No se pudo confirmar la suscripcion.');
+              if (statusMsg) statusMsg.textContent = 'Listo! Ya sos Premium.';
+              const meRes = await fetch('/api/user/me', { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' });
+              const meData = await meRes.json();
+              localStorage.setItem('ozama-user', JSON.stringify(meData.user));
+              renderSettings(meData.user);
+              initPremiumPanel(meData.user);
+            } catch (err) {
+              if (statusMsg) statusMsg.textContent = err.message || 'No se pudo confirmar la suscripcion.';
+            }
+          },
+          onError: () => {
+            if (statusMsg) statusMsg.textContent = 'Hubo un problema con PayPal. Intenta de nuevo.';
+          },
+        }).render('#paypal-button-container');
+      } catch (err) {
+        body.innerHTML = '<div class="premium-status-msg">No se pudo cargar Premium en este momento.</div>';
+      }
+    }
+
+    async function cancelPremium() {
+      const button = document.getElementById('cancel-premium-btn');
+      const statusMsg = document.getElementById('premium-status-msg');
+      if (!confirm('Vas a cancelar tu suscripcion Premium. Seguis con los beneficios hasta que venza el periodo ya pago. Continuar?')) return;
+      if (button) { button.disabled = true; button.textContent = 'Cancelando...'; }
+      try {
+        const res = await fetch('/api/billing/cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_token}` },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'No se pudo cancelar.');
+        if (statusMsg) statusMsg.textContent = 'Suscripcion cancelada. Seguira activa hasta la fecha de vencimiento ya pagada.';
+        if (button) button.remove();
+      } catch (err) {
+        if (statusMsg) statusMsg.textContent = err.message || 'No se pudo cancelar.';
+        if (button) { button.disabled = false; button.textContent = 'Cancelar suscripcion'; }
+      }
     }
 
     async function saveProfile() {
@@ -882,6 +1035,7 @@
         const data = await res.json();
         localStorage.setItem('ozama-user', JSON.stringify(data.user));
         renderSettings(data.user);
+        initPremiumPanel(data.user);
       } catch (err) {
         document.getElementById('main-content').innerHTML =
           '<div class="loading">Error cargando los ajustes. Recarga la pagina.</div>';
@@ -896,6 +1050,7 @@
       clearAvatarImage,
       saveProfile,
       deleteAccount,
+      cancelPremium,
     });
     })();
   </script>

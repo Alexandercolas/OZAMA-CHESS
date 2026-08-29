@@ -247,7 +247,7 @@ test('public leaderboard stays finite and excludes known test accounts', () => {
   assert.match(route, /\$not: \/\^sec\[A-D\]_\\d\{8\}\$\/i/);
   assert.match(route, /\$nin: \['imgsrconeerror'\]/);
   assert.match(route, /\.limit\(20\)/);
-  assert.match(route, /\.select\('username country avatar avatarImage elo stats plan'\)/);
+  assert.match(route, /\.select\('username country avatar avatarImage elo stats plan premiumUntil'\)/);
   assert.doesNotMatch(route, /\.select\([^)]*email/);
   assert.doesNotMatch(route, /\.select\([^)]*lastSeenAt/);
 });

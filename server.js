@@ -27,6 +27,7 @@ const authRoutes      = require('./routes/auth');
 const userRoutes      = require('./routes/user');
 const adminRoutes     = require('./routes/admin');
 const eventRoutes     = require('./routes/events');
+const billingRoutes   = require('./routes/billing');
 
 const OzamaCheckers   = require('./public/checkers-engine.js');
 
@@ -108,11 +109,18 @@ app.use((req, res, next) => {
     && Boolean(String(process.env.GOOGLE_WEB_CLIENT_ID || '').trim());
   const recaptchaEnabled = onLoginPage
     && Boolean(String(process.env.RECAPTCHA_SITE_KEY || '').trim());
+  const onSettingsPage = req.path === '/settings.html';
+  const paypalEnabled = onSettingsPage
+    && Boolean(String(process.env.PAYPAL_CLIENT_ID || '').trim());
   const googleScript = googleLoginEnabled ? ' https://accounts.google.com/gsi/client' : '';
   const googleParent = googleLoginEnabled ? ' https://accounts.google.com/gsi/' : '';
   const googleStyle = googleLoginEnabled ? ' https://accounts.google.com/gsi/style' : '';
   const recaptchaScript = recaptchaEnabled ? ' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/' : '';
   const recaptchaFrame = recaptchaEnabled ? ' https://www.google.com/recaptcha/' : '';
+  const paypalScript = paypalEnabled ? ' https://www.paypal.com https://www.paypalobjects.com' : '';
+  const paypalFrame = paypalEnabled ? ' https://www.paypal.com https://www.sandbox.paypal.com' : '';
+  const paypalConnect = paypalEnabled ? ' https://www.paypal.com https://www.sandbox.paypal.com' : '';
+  const paypalImg = paypalEnabled ? ' https://www.paypalobjects.com' : '';
   res.set('X-Content-Type-Options', 'nosniff');
   res.set('X-Frame-Options', 'DENY');
   res.set('X-DNS-Prefetch-Control', 'off');
@@ -126,13 +134,13 @@ app.use((req, res, next) => {
     "frame-ancestors 'none'",
     "form-action 'self'",
     "object-src 'none'",
-    `script-src 'self' 'unsafe-inline'${googleScript}${recaptchaScript}`,
+    `script-src 'self' 'unsafe-inline'${googleScript}${recaptchaScript}${paypalScript}`,
     `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com${googleStyle}`,
     "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: https://flagcdn.com",
+    `img-src 'self' data: https://flagcdn.com${paypalImg}`,
     "media-src 'self'",
-    `frame-src 'self'${googleParent}${recaptchaFrame}`,
-    `connect-src 'self' ws: wss:${googleParent}${recaptchaFrame}`,
+    `frame-src 'self'${googleParent}${recaptchaFrame}${paypalFrame}`,
+    `connect-src 'self' ws: wss:${googleParent}${recaptchaFrame}${paypalConnect}`,
   ].join('; '));
   if (process.env.NODE_ENV === 'production') {
     res.set('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
@@ -153,6 +161,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/billing', billingRoutes);
 
 app.get('/api/health/db', (_req, res) => {
   res.json({

@@ -1043,6 +1043,98 @@ function setupMoveNav() {
   });
   document.getElementById('move-last-btn')?.addEventListener('click', () => goToMoveIndex(null));
   document.getElementById('move-live-btn')?.addEventListener('click', () => goToMoveIndex(null));
+  document.getElementById('move-pgn-btn')?.addEventListener('click', exportPgn);
+}
+
+// Exportar PGN es un beneficio Premium (solo comodidad, no da ventaja
+// dentro de la partida) -- el boton solo se muestra si el usuario ya
+// es premium (ver setupPgnExportGate). El PGN se arma 100% del lado
+// del cliente, a partir de moveHistory que ya esta en pantalla.
+function pgnResultTag() {
+  if (!state.winner && state.status !== STATUS.DRAW && state.status !== STATUS.STALEMATE) return '*';
+  if (state.winner === COLOR.WHITE) return '1-0';
+  if (state.winner === COLOR.BLACK) return '0-1';
+  return state.status === STATUS.DRAW || state.status === STATUS.STALEMATE ? '1/2-1/2' : '*';
+}
+
+function buildPgnText() {
+  const history = state.moveHistory || [];
+  const today = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
+  const result = pgnResultTag();
+  const headers = [
+    `[Event "OZAMA CHESS"]`,
+    `[Site "ozama-chess.onrender.com"]`,
+    `[Date "${today}"]`,
+    `[White "?"]`,
+    `[Black "?"]`,
+    `[Result "${result}"]`,
+  ].join('\n');
+
+  let moveText = '';
+  for (let i = 0; i < history.length; i += 2) {
+    const moveNo = i / 2 + 1;
+    const w = history[i];
+    const b = history[i + 1];
+    moveText += `${moveNo}. ${w.notation} `;
+    if (b) moveText += `${b.notation} `;
+  }
+  moveText += result;
+
+  return `${headers}\n\n${moveText.trim()}\n`;
+}
+
+function exportPgn() {
+  if (!state.moveHistory.length) return;
+  const pgn = buildPgnText();
+  const blob = new Blob([pgn], { type: 'application/x-chess-pgn' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `ozama-chess-${stamp}.pgn`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function userIsPremiumActive() {
+  const user = STORED_USER;
+  const premiumUntil = user?.premiumUntil ? new Date(user.premiumUntil) : null;
+  return user?.plan === 'premium' && (!premiumUntil || premiumUntil > new Date());
+}
+
+// Solo se ve el boton si el usuario logueado es Premium activo (chequeo
+// de comodidad en cliente; el dato ya viene revalidado por
+// validateStoredSession() momentos antes en el arranque de la pagina).
+function setupPgnExportGate() {
+  const btn = document.getElementById('move-pgn-btn');
+  if (!btn) return;
+  btn.style.display = userIsPremiumActive() ? '' : 'none';
+}
+
+// Tema de tablero "Ebano" -- otro beneficio Premium, 100% cosmetico.
+// Si la suscripcion vence, el boton se oculta solo y el tema vuelve al
+// por defecto (no se borra la preferencia guardada, por si renueva).
+function togglePremiumTheme() {
+  if (!userIsPremiumActive()) return;
+  const active = document.body.classList.toggle('theme-ebony');
+  try { localStorage.setItem('ozama-board-theme', active ? 'ebony' : 'default'); } catch (_) {}
+  document.getElementById('theme-toggle-btn')?.classList.toggle('is-active', active);
+}
+
+function setupPremiumThemeGate() {
+  const btn = document.getElementById('theme-toggle-btn');
+  if (!btn) return;
+  const premiumActive = userIsPremiumActive();
+  btn.style.display = premiumActive ? '' : 'none';
+  if (!premiumActive) return;
+  let saved = 'default';
+  try { saved = localStorage.getItem('ozama-board-theme') || 'default'; } catch (_) {}
+  if (saved === 'ebony') {
+    document.body.classList.add('theme-ebony');
+    btn.classList.add('is-active');
+  }
 }
 
 // Reconstruye moveHistory completo (con notacion, fotos de tablero,
@@ -1659,11 +1751,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     return;
   }
   if (!(await validateStoredSession())) return;
+  STORED_USER = readStoredUser();
   document.body.classList.remove('auth-checking');
   updateSoundButton();
   setupOnlineSocket();
   setupControls();
   setupMoveNav();
+  setupPgnExportGate();
+  setupPremiumThemeGate();
   if (IS_BOT_MODE && restoreLocalGameSnapshot()) return;
   startNewGame();
 });

@@ -19,19 +19,27 @@ function serverError(res, scope, err) {
   return res.status(500).json({ error: 'Error interno del servidor.' });
 }
 
+// Un plan 'premium' vencido (nadie baja el campo `plan` a mano cuando
+// PayPal deja de cobrar) NO cuenta como activo -- siempre hay que
+// chequear la fecha, nunca confiar solo en el string del plan.
+function isPremiumActive(user) {
+  if (user?.plan !== 'premium') return false;
+  const premiumUntil = user?.premiumUntil ? new Date(user.premiumUntil) : null;
+  return !premiumUntil || premiumUntil > new Date();
+}
+
 function premiumCapabilities(user) {
   const premiumUntil = user?.premiumUntil ? new Date(user.premiumUntil) : null;
-  const premiumActive = user?.plan === 'premium' && (!premiumUntil || premiumUntil > new Date());
+  const premiumActive = isPremiumActive(user);
   return {
     plan: user?.plan || 'free',
     premiumActive,
     premiumUntil,
     subscriptionStatus: user?.subscriptionStatus || 'none',
     benefits: premiumActive ? [
-      'Temas visuales premium',
-      'Avatares exclusivos',
-      'Estadisticas avanzadas',
-      'Confort de sala',
+      'Marco dorado + insignia PREMIUM en tu avatar',
+      'Tema de tablero exclusivo (Zona Colonial)',
+      'Exportar tus partidas en formato PGN',
     ] : [],
   };
 }
@@ -172,9 +180,15 @@ router.get('/leaderboard', async (req, res) => {
     const players = await User.find(publicLeaderboardFilter())
       .sort({ elo: -1 })
       .limit(20)
-      .select('username country avatar avatarImage elo stats plan');
+      .select('username country avatar avatarImage elo stats plan premiumUntil');
 
-    res.json({ players });
+    res.json({ players: players.map((player) => {
+      const json = player.toJSON();
+      json.premiumActive = isPremiumActive(player);
+      delete json.plan;
+      delete json.premiumUntil;
+      return json;
+    }) });
   } catch (err) {
     serverError(res, 'Leaderboard', err);
   }
@@ -354,11 +368,16 @@ router.get('/:username', async (req, res) => {
     if (!validUsername(username)) return res.status(400).json({ error: 'Usuario invalido.' });
 
     const user = await User.findOne({ username })
-      .select('username country avatar avatarImage elo stats plan createdAt');
+      .select('username country avatar avatarImage elo stats plan premiumUntil createdAt');
 
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
 
-    res.json({ user });
+    const json = user.toJSON();
+    json.premiumActive = isPremiumActive(user);
+    delete json.plan;
+    delete json.premiumUntil;
+
+    res.json({ user: json });
   } catch (err) {
     serverError(res, 'Public profile', err);
   }

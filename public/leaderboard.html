@@ -277,6 +277,11 @@
       display: block;
     }
 
+    .avatar.premium {
+      border: 1px solid var(--gold-2);
+      box-shadow: 0 0 0 2px rgba(226,185,96,0.55), 0 0 14px rgba(226,185,96,0.35);
+    }
+
     .player-name {
       overflow: hidden;
       color: var(--warm);
@@ -284,6 +289,22 @@
       font-weight: 800;
       text-overflow: ellipsis;
       white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .premium-tag {
+      flex: 0 0 auto;
+      padding: 1px 6px;
+      border-radius: 3px;
+      border: 1px solid rgba(226,185,96,0.5);
+      background: rgba(226,185,96,0.12);
+      color: var(--gold-2);
+      font-family: var(--mono);
+      font-size: 8.5px;
+      font-weight: 800;
+      letter-spacing: 1px;
     }
 
     .player-country {
@@ -496,11 +517,12 @@
     }
 
     function avatar(player) {
+      const premiumClass = player.premiumActive ? ' premium' : '';
       if (player.avatarImage) {
-        return `<span class="avatar"><img src="${escapeHtml(player.avatarImage)}" alt=""></span>`;
+        return `<span class="avatar${premiumClass}"><img src="${escapeHtml(player.avatarImage)}" alt=""></span>`;
       }
       const initial = escapeHtml((player.username || '?').charAt(0).toUpperCase());
-      return `<span class="avatar">${initial}</span>`;
+      return `<span class="avatar${premiumClass}">${initial}</span>`;
     }
 
     function statsFor(player) {
@@ -533,7 +555,7 @@
             <div class="player">
               ${avatar(player)}
               <div>
-                <div class="player-name">${username}</div>
+                <div class="player-name">${username}${player.premiumActive ? '<span class="premium-tag">PREMIUM</span>' : ''}</div>
                 <div class="player-country">
                   <img class="flag" src="https://flagcdn.com/40x30/${code}.png" alt="${code.toUpperCase()}" onerror="this.style.visibility='hidden'">
                   <span>${code.toUpperCase()}</span>

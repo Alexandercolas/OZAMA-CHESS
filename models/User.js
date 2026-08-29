@@ -89,6 +89,7 @@ const UserSchema = new mongoose.Schema(
       default: 'free',
     },
     premiumUntil: { type: Date, default: null },
+    paypalSubscriptionId: { type: String, default: null, select: false },
     subscriptionStatus: {
       type: String,
       enum: ['none', 'trial', 'active', 'past_due', 'cancelled'],

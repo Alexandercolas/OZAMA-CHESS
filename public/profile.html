@@ -97,6 +97,9 @@
       flex-shrink: 0;
       overflow: hidden;
     }
+    .avatar-ring.premium {
+      box-shadow: 0 0 0 3px rgba(200,152,60,0.85), 0 0 34px rgba(200,152,60,0.4);
+    }
     .avatar-ring img,
     .avatar-choice img,
     .friend-avatar img {
@@ -726,9 +729,10 @@
       const premiumUntil = user.premiumUntil ? new Date(user.premiumUntil) : null;
       const premiumActive = user.plan === 'premium' && (!premiumUntil || premiumUntil > new Date());
       const planLabel = premiumActive ? 'Premium' : 'Free';
+      const ringClass = `avatar-ring${premiumActive ? ' premium' : ''}`;
       const heroAvatar = avatarImage
-        ? `<div class="avatar-ring" id="avatar-ring" data-initial="${initial}"><img src="${escapeHtml(avatarImage)}" alt=""></div>`
-        : `<div class="avatar-ring ${avatarClass(avatar)}" id="avatar-ring" data-initial="${initial}">${initial}</div>`;
+        ? `<div class="${ringClass}" id="avatar-ring" data-initial="${initial}"><img src="${escapeHtml(avatarImage)}" alt=""></div>`
+        : `<div class="${ringClass} ${avatarClass(avatar)}" id="avatar-ring" data-initial="${initial}">${initial}</div>`;
 
       document.getElementById('main-content').innerHTML = `
         <!-- Hero -->
