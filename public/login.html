@@ -946,12 +946,17 @@
     let recaptchaSiteKey = '';
 
     function loadRecaptchaScript(siteKey) {
-      if (window.grecaptcha) return Promise.resolve();
+      // Esta clave se creo como reCAPTCHA Enterprise (desde la consola
+      // de Cloud), no "clasica" -- necesita enterprise.js y el
+      // namespace grecaptcha.enterprise, api.js normal no la reconoce
+      // (confirmado en vivo: cargaba pero grecaptcha.execute tiraba
+      // "Invalid site key or not loaded in api.js").
+      if (window.grecaptcha?.enterprise) return Promise.resolve();
       return new Promise((resolve, reject) => {
         const script = document.createElement('script');
-        script.src = 'https://www.google.com/recaptcha/api.js?render=' + encodeURIComponent(siteKey);
+        script.src = 'https://www.google.com/recaptcha/enterprise.js?render=' + encodeURIComponent(siteKey);
         script.async = true;
-        script.onload = () => window.grecaptcha.ready(resolve);
+        script.onload = () => window.grecaptcha.enterprise.ready(resolve);
         script.onerror = () => reject(new Error('reCAPTCHA no disponible.'));
         document.head.appendChild(script);
       });
@@ -973,8 +978,8 @@
     // esta configurada, un token vacio se rechaza (falla cerrado); si
     // no esta configurada todavia, no bloquea nada.
     async function getRecaptchaToken(action) {
-      if (!recaptchaSiteKey || !window.grecaptcha) return '';
-      try { return await window.grecaptcha.execute(recaptchaSiteKey, { action }); }
+      if (!recaptchaSiteKey || !window.grecaptcha?.enterprise) return '';
+      try { return await window.grecaptcha.enterprise.execute(recaptchaSiteKey, { action }); }
       catch (_) { return ''; }
     }
 
