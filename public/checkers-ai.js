@@ -53,7 +53,17 @@
     return score;
   }
 
-  function minimax(board, colorToMove, depth, alpha, beta, forColor) {
+  // Senal de "se acabo el tiempo" para cortar una busqueda a mitad de
+  // camino -- una sola llamada de minimax en una posicion abierta
+  // puede tardar varios segundos ella sola, asi que el limite de
+  // tiempo tiene que vivir DENTRO de la recursion (chequear solo entre
+  // jugadas raiz, como se hacia antes, no alcanzaba: eso solo corta
+  // entre una jugada raiz y la siguiente, no en medio de una).
+  const SEARCH_TIMEOUT = Symbol('search_timeout');
+
+  function minimax(board, colorToMove, depth, alpha, beta, forColor, deadline) {
+    if (deadline !== undefined && Date.now() > deadline) throw SEARCH_TIMEOUT;
+
     const status = E.checkGameOver(board, colorToMove);
     if (status.over) {
       if (status.winner === forColor) return 100000 + depth;
@@ -68,7 +78,7 @@
 
     for (const move of moves) {
       const { board: nextBoard } = E.applyMove(board, move.r, move.c, move.seq);
-      const value = minimax(nextBoard, E.otherColor(colorToMove), depth - 1, alpha, beta, forColor);
+      const value = minimax(nextBoard, E.otherColor(colorToMove), depth - 1, alpha, beta, forColor, deadline);
 
       if (maximizing) {
         if (value > best) best = value;
@@ -99,12 +109,12 @@
     if (!moves.length) return null;
     if (moves.length === 1) return moves[0];
 
-    const startTime = Date.now();
+    const deadline = Date.now() + timeBudgetMs;
     let bestMove = moves[0];
     let moveScores = new Map();
 
     for (let d = 1; d <= depth; d++) {
-      if (d > 1 && Date.now() - startTime > timeBudgetMs) break;
+      if (d > 1 && Date.now() > deadline) break;
 
       const orderedMoves = [...moves].sort(
         (a, b) => (moveScores.get(b) ?? 0) - (moveScores.get(a) ?? 0)
@@ -115,21 +125,30 @@
       let alpha = -Infinity;
       const beta = Infinity;
       const newScores = new Map();
+      let timedOut = false;
 
-      for (const move of orderedMoves) {
-        const { board: nextBoard } = E.applyMove(board, move.r, move.c, move.seq);
-        const score = minimax(nextBoard, E.otherColor(color), d - 1, alpha, beta, color);
-        newScores.set(move, score);
-        if (score > bestScoreThisDepth) {
-          bestScoreThisDepth = score;
-          bestMoveThisDepth = move;
+      try {
+        for (const move of orderedMoves) {
+          const { board: nextBoard } = E.applyMove(board, move.r, move.c, move.seq);
+          const score = minimax(nextBoard, E.otherColor(color), d - 1, alpha, beta, color, deadline);
+          newScores.set(move, score);
+          if (score > bestScoreThisDepth) {
+            bestScoreThisDepth = score;
+            bestMoveThisDepth = move;
+          }
+          if (bestScoreThisDepth > alpha) alpha = bestScoreThisDepth;
         }
-        if (bestScoreThisDepth > alpha) alpha = bestScoreThisDepth;
-        // Salvavidas: si una sola profundidad se esta yendo muy larga
-        // (posicion inusualmente abierta), no sigas evaluando el resto
-        // de jugadas raiz -- ya hay una candidata decente.
-        if (Date.now() - startTime > timeBudgetMs * 1.6) break;
+      } catch (err) {
+        if (err !== SEARCH_TIMEOUT) throw err;
+        timedOut = true;
       }
+
+      // Una profundidad que se corto a la mitad queda descartada
+      // entera -- alfa-beta con una busqueda incompleta puede dar un
+      // puntaje enganoso para las ultimas jugadas evaluadas. Se
+      // devuelve la mejor jugada de la ultima profundidad que si
+      // termino completa.
+      if (timedOut) break;
 
       moveScores = newScores;
       bestMove = bestMoveThisDepth;
