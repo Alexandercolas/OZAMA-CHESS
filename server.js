@@ -1741,8 +1741,15 @@ if (room.white && room.black && !room.clockInterval) {
     const { username } = data;
     if (!requireSocketAuth()) return;
     try {
+      // Escapar caracteres especiales de regex antes de meterlos en la
+      // consulta -- sin esto, un nombre de usuario con metacaracteres
+      // (".", "*", "(a+)+", etc.) se interpreta como patron en vez de
+      // texto literal: en el mejor caso da resultados raros, en el
+      // peor es un vector de ReDoS. Mismo patron que ya usa
+      // routes/user.js para busqueda de amigos.
+      const safeUsername = username.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const user = await User.findOne({
-        username: { $regex: username.trim(), $options: 'i' }
+        username: { $regex: safeUsername, $options: 'i' }
       }).select('username country avatar avatarImage elo stats').lean();
 
       if (!user) {
