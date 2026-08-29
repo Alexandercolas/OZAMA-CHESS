@@ -1214,11 +1214,16 @@ function setupOnlineSocket() {
   });
 
   function rejoin() {
+    // El servidor valida este payload con zod en modo .strict() (solo
+    // acepta roomCode/color/token) y ademas ya toma el nombre de la
+    // sesion autenticada, no de aqui -- mandar 'playerName' de mas
+    // hacia que CUALQUIER partida online fallara la validacion y
+    // rejoin-failed te devolvia siempre al lobby, aunque todo lo demas
+    // (sala, token) estuviera perfecto.
     socket.emit('rejoin', {
       roomCode: ROOM_CODE,
       color: PLAYER_COLOR,
       token: sessionStorage.getItem('ozama-room-token') || '',
-      playerName: sessionStorage.getItem('ozama-myname') || '',
     });
   }
 
