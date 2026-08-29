@@ -85,24 +85,56 @@
 
   // Elige la mejor jugada para `color` en `board`. Devuelve
   // { r, c, seq } o null si no hay jugadas (partida terminada).
-  function chooseMove(board, color, depth = 5) {
+  //
+  // Profundizacion iterativa con presupuesto de tiempo: en vez de
+  // buscar directo a `depth` (que en Alcazar/nivel 10 podia tardar
+  // hasta ~19s en posiciones abiertas), busca 1, 2, 3... plies,
+  // reordenando las jugadas por el puntaje de la vuelta anterior
+  // (mejora mucho la poda alfa-beta) y se detiene apenas se agota
+  // `timeBudgetMs`, devolviendo la mejor jugada de la ultima
+  // profundidad que alcanzo a terminar completa. Siempre corre al
+  // menos profundidad 1, y si encuentra mate forzado corta antes.
+  function chooseMove(board, color, depth = 5, timeBudgetMs = 2500) {
     const moves = flattenMoves(board, color);
     if (!moves.length) return null;
     if (moves.length === 1) return moves[0];
 
+    const startTime = Date.now();
     let bestMove = moves[0];
-    let bestScore = -Infinity;
-    let alpha = -Infinity;
-    const beta = Infinity;
+    let moveScores = new Map();
 
-    for (const move of moves) {
-      const { board: nextBoard } = E.applyMove(board, move.r, move.c, move.seq);
-      const score = minimax(nextBoard, E.otherColor(color), depth - 1, alpha, beta, color);
-      if (score > bestScore) {
-        bestScore = score;
-        bestMove = move;
+    for (let d = 1; d <= depth; d++) {
+      if (d > 1 && Date.now() - startTime > timeBudgetMs) break;
+
+      const orderedMoves = [...moves].sort(
+        (a, b) => (moveScores.get(b) ?? 0) - (moveScores.get(a) ?? 0)
+      );
+
+      let bestScoreThisDepth = -Infinity;
+      let bestMoveThisDepth = orderedMoves[0];
+      let alpha = -Infinity;
+      const beta = Infinity;
+      const newScores = new Map();
+
+      for (const move of orderedMoves) {
+        const { board: nextBoard } = E.applyMove(board, move.r, move.c, move.seq);
+        const score = minimax(nextBoard, E.otherColor(color), d - 1, alpha, beta, color);
+        newScores.set(move, score);
+        if (score > bestScoreThisDepth) {
+          bestScoreThisDepth = score;
+          bestMoveThisDepth = move;
+        }
+        if (bestScoreThisDepth > alpha) alpha = bestScoreThisDepth;
+        // Salvavidas: si una sola profundidad se esta yendo muy larga
+        // (posicion inusualmente abierta), no sigas evaluando el resto
+        // de jugadas raiz -- ya hay una candidata decente.
+        if (Date.now() - startTime > timeBudgetMs * 1.6) break;
       }
-      if (bestScore > alpha) alpha = bestScore;
+
+      moveScores = newScores;
+      bestMove = bestMoveThisDepth;
+
+      if (bestScoreThisDepth > 90000 || bestScoreThisDepth < -90000) break; // mate forzado encontrado
     }
 
     return bestMove;

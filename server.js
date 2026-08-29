@@ -175,6 +175,11 @@ const rooms = new Map();
 const damasRooms = new Map();
 const onlinePlayers = new Map();
 const pendingChallenges = new Map();
+// Version de Damas de lo mismo -- lista aparte porque son perfiles/ELO
+// distintos, y solo tiene sentido para jugadores logueados (invitado
+// no tiene un nombre unico contra el cual desafiar a alguien).
+const damasOnlinePlayers = new Map();
+const damasPendingChallenges = new Map();
 const ROOM_CODE_PATTERN = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/;
 const roomCodeSchema = z.string().trim().toUpperCase().regex(ROOM_CODE_PATTERN).max(6);
 const squareSchema = z.object({
@@ -420,6 +425,10 @@ function playerSnapshot(info) {
 
 function broadcastOnlinePlayers() {
   io.emit('players-online', [...onlinePlayers.values()]);
+}
+
+function broadcastDamasOnlinePlayers() {
+  io.emit('damas:players-online', [...damasOnlinePlayers.values()]);
 }
 
 function adminRoomSnapshot(code, room) {
@@ -1935,6 +1944,153 @@ if (room.white && room.black && !room.clockInterval) {
     console.log(`[DAMAS] "${pInfo.name}" se unio a la sala ${code}`);
   });
 
+  // ── Jugadores en linea + desafiar (version Damas) ───────────────
+  // Solo para usuarios logueados -- un invitado no tiene un nombre
+  // estable contra el cual otro jugador pueda desafiarlo. Reusa los
+  // mismos schemas de zod que Ajedrez (no tienen nada especifico del
+  // juego), pero listas/eventos separados: son perfiles y ELO
+  // distintos, y una sala de Damas, no de Ajedrez.
+  socket.on('damas:player-online', async (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.playerOnline, payload);
+    if (!data) return;
+    if (!requireSocketAuth()) return;
+    const { username, elo = 1200, country = 'DO' } = data;
+    const info = await getPlayerInfo(username, country);
+    damasOnlinePlayers.set(socket.id, {
+      username: info.name,
+      country: info.country,
+      avatar: info.avatar || 0,
+      avatarImage: info.avatarImage || '',
+      elo: Number(socket.data.user?.damasElo ?? elo ?? 1200),
+      inGame: !!socket.data.damasRoomCode,
+    });
+    broadcastDamasOnlinePlayers();
+  });
+
+  socket.on('damas:challenge-send', async (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.challengeSend, payload, 'damas:challenge-error');
+    if (!data) return;
+    if (!(await consumeSocketLimit('challengeSend', 'damas:challenge-error'))) return;
+    const { targetUsername } = data;
+    if (!requireSocketAuth('Debes iniciar sesión para desafiar.')) return;
+    const cleanTarget = String(targetUsername || '').trim().toLowerCase();
+    if (!/^[a-z0-9_]{3,20}$/.test(cleanTarget)) {
+      socket.emit('damas:challenge-error', 'Jugador invalido.');
+      return;
+    }
+
+    let targetSocket = null;
+    for (const [, s] of io.sockets.sockets) {
+      const tUser = await User.findById(s.data.userId).select('username').lean().catch(() => null);
+      if (tUser && tUser.username.toLowerCase() === cleanTarget) {
+        targetSocket = s; break;
+      }
+    }
+
+    if (!targetSocket) {
+      socket.emit('damas:challenge-error', 'El jugador no está conectado en este momento.');
+      return;
+    }
+    if (targetSocket.id === socket.id) {
+      socket.emit('damas:challenge-error', 'No puedes desafiarte a ti mismo.');
+      return;
+    }
+    if (targetSocket.data.damasRoomCode) {
+      socket.emit('damas:challenge-error', 'El jugador ya está en una partida.');
+      return;
+    }
+
+    const challenger = await User.findById(socket.data.userId).select('username country avatar avatarImage damasElo').lean();
+    if (!challenger) {
+      socket.emit('damas:challenge-error', 'Tu sesion ya no es valida.');
+      return;
+    }
+    if (!damasPendingChallenges.has(targetSocket.id)) damasPendingChallenges.set(targetSocket.id, new Set());
+    damasPendingChallenges.get(targetSocket.id).add(socket.id);
+
+    targetSocket.emit('damas:challenge-received', {
+      from: { username: challenger.username, country: challenger.country, avatar: challenger.avatar, avatarImage: challenger.avatarImage, elo: challenger.damasElo },
+      socketId: socket.id,
+    });
+    socket.emit('damas:challenge-sent', { to: targetUsername });
+    console.log(`[DAMAS] ${challenger.username} desafió a ${targetUsername}`);
+  });
+
+  socket.on('damas:challenge-accept', async (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.challengeSocket, payload, 'damas:challenge-error');
+    if (!data) return;
+    const { challengerSocketId } = data;
+    if (!requireSocketAuth()) return;
+    const pending = damasPendingChallenges.get(socket.id);
+    if (!pending?.has(challengerSocketId)) {
+      socket.emit('damas:challenge-error', 'Este desafio ya no es valido.');
+      return;
+    }
+    pending.delete(challengerSocketId);
+    if (!pending.size) damasPendingChallenges.delete(socket.id);
+    const challengerSocket = io.sockets.sockets.get(challengerSocketId);
+    if (!challengerSocket || !challengerSocket.connected) {
+      socket.emit('damas:challenge-error', 'El rival ya no está disponible.');
+      return;
+    }
+    if (!challengerSocket.data.userId) {
+      socket.emit('damas:challenge-error', 'El rival perdió la sesión.');
+      return;
+    }
+
+    const pInfo = await getPlayerInfo();
+    if (socket.data.user) pInfo.elo = Number(socket.data.user.damasElo ?? 1200);
+    const cUser = await User.findById(challengerSocket.data.userId).select('username country avatar avatarImage damasElo').lean();
+    const cInfo = cUser
+      ? { userId: cUser._id, name: cUser.username, country: cUser.country, avatar: cUser.avatar, avatarImage: cUser.avatarImage, elo: cUser.damasElo }
+      : { userId: null, name: challengerSocket.data.playerName || 'Jugador', country: 'DO', avatar: 0, avatarImage: '', elo: 1200 };
+
+    let code;
+    do { code = generateCode(); } while (rooms.has(code) || damasRooms.has(code));
+
+    const flip = Math.random() < 0.5;
+    const wSock = flip ? challengerSocket : socket;
+    const bSock = flip ? socket : challengerSocket;
+    const wInfo = flip ? cInfo : pInfo;
+    const bInfo = flip ? pInfo : cInfo;
+
+    damasRooms.set(code, {
+      white: wSock.id, black: bSock.id,
+      board: OzamaCheckers.createInitialBoard(),
+      turn: OzamaCheckers.COLOR.WHITE,
+      status: 'playing',
+      playerInfo: { w: wInfo, b: bInfo },
+      tokens: { w: createRoomToken(), b: createRoomToken() },
+      closeTimer: null,
+      createdAt: Date.now(),
+      startedAt: new Date(),
+    });
+
+    wSock.join(code); bSock.join(code);
+    wSock.data.damasRoomCode = code; wSock.data.damasColor = 'w';
+    bSock.data.damasRoomCode = code; bSock.data.damasColor = 'b';
+
+    const newRoom = damasRooms.get(code);
+    const startPayload = { code, board: newRoom.board, turn: newRoom.turn, playerInfo: newRoom.playerInfo };
+    wSock.emit('damas:game-start', { ...startPayload, color: 'w', roomToken: newRoom.tokens.w });
+    bSock.emit('damas:game-start', { ...startPayload, color: 'b', roomToken: newRoom.tokens.b });
+    console.log(`[DAMAS] Desafío aceptado, sala ${code}`);
+  });
+
+  socket.on('damas:challenge-decline', (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.challengeSocket, payload, 'damas:challenge-error');
+    if (!data) return;
+    const { challengerSocketId } = data;
+    const pending = damasPendingChallenges.get(socket.id);
+    if (!pending?.has(challengerSocketId)) return;
+    pending.delete(challengerSocketId);
+    if (!pending.size) damasPendingChallenges.delete(socket.id);
+    const challengerSocket = io.sockets.sockets.get(challengerSocketId);
+    if (challengerSocket) {
+      challengerSocket.emit('damas:challenge-declined', { by: socket.data.playerName || socket.data.user?.username || 'El jugador' });
+    }
+  });
+
   socket.on('damas:move', async (payload = {}) => {
     const data = parseSocketPayload(damasSchemas.move, payload, 'damas:move-rejected');
     if (!data) return;
@@ -2047,6 +2203,14 @@ if (room.white && room.black && !room.clockInterval) {
       if (!challengers.size) pendingChallenges.delete(targetId);
     }
     broadcastOnlinePlayers();
+
+    damasOnlinePlayers.delete(socket.id);
+    damasPendingChallenges.delete(socket.id);
+    for (const [targetId, challengers] of damasPendingChallenges) {
+      challengers.delete(socket.id);
+      if (!challengers.size) damasPendingChallenges.delete(targetId);
+    }
+    broadcastDamasOnlinePlayers();
 
     const qIdx = matchQueue.findIndex(e => e.socketId === socket.id);
     if (qIdx !== -1) matchQueue.splice(qIdx, 1);

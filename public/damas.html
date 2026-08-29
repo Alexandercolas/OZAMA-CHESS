@@ -104,6 +104,25 @@
       align-items: stretch;
     }
 
+    /* Grupo "Modo" (J1 vs J2 / Vs Bot / Online): horizontal y compacto
+       en vez de 3 pastillas largas apiladas -- entran los 3 en el
+       ancho del sidebar sin tocar el tamano del tablero. */
+    .controls.mode-row {
+      flex-wrap: nowrap;
+      gap: 6px;
+    }
+    .controls.mode-row .btn-mode {
+      flex: 1;
+      min-width: 0;
+      padding: 9px 4px;
+      font-size: 8.5px;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      border-radius: var(--radius-md);
+    }
+
     @media (min-width: 760px) {
       .game-shell {
         grid-template-columns: 200px 1fr;
@@ -362,6 +381,22 @@
       line-height: 1.6;
     }
 
+    .damas-player-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border: 1px solid rgba(200,152,60,0.15);
+      background: rgba(255,255,255,0.02);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .damas-player-chip:hover { border-color: var(--dama); background: rgba(217,113,75,0.08); }
+    .damas-player-flag { width: 20px; height: 15px; border-radius: 2px; object-fit: cover; flex-shrink: 0; }
+    .damas-player-name { flex: 1; min-width: 0; font-size: 12px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .damas-player-elo { font-family: var(--fm); font-size: 10px; color: var(--dim); flex-shrink: 0; }
+
     .btn-resign {
       padding: 9px 20px;
       background: var(--s3);
@@ -461,8 +496,8 @@
         </div>
 
         <div class="side-label">Modo</div>
-        <div class="controls stacked">
-          <button class="btn-mode" type="button" id="mode-local" onclick="setMode('local')">Pasar y jugar</button>
+        <div class="controls mode-row">
+          <button class="btn-mode" type="button" id="mode-local" onclick="setMode('local')">J1 vs J2</button>
           <button class="btn-mode" type="button" id="mode-bot" onclick="setMode('bot')">Vs Bot</button>
           <button class="btn-mode" type="button" id="mode-online" onclick="setMode('online')">Online</button>
         </div>
@@ -488,6 +523,24 @@
             <div class="online-row" style="margin-top:14px;">
               <input class="online-input" id="join-code-input" type="text" maxlength="6" placeholder="CODIGO"/>
               <button class="btn-mode" type="button" onclick="joinOnlineRoom()">Unirse</button>
+            </div>
+
+            <div class="online-note hidden" id="damas-guest-note" style="margin-top:16px;">
+              Inicia sesion para ver jugadores en linea y desafiar directamente.
+            </div>
+
+            <div class="hidden" id="damas-challenge-block">
+              <div class="side-label" style="margin-top:18px;">Desafiar jugador</div>
+              <div class="online-row" style="margin-top:8px;">
+                <input class="online-input" id="damas-challenge-username" type="text" maxlength="20" placeholder="NOMBRE DE USUARIO" style="text-transform:none; letter-spacing:0.5px;"/>
+                <button class="btn-mode" type="button" onclick="sendDamasChallenge()">Desafiar</button>
+              </div>
+              <div class="online-note" id="damas-challenge-status" style="margin-top:6px;"></div>
+
+              <div class="side-label" style="margin-top:18px;">Jugadores en linea</div>
+              <div id="damas-players-list" style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
+                <div class="online-note">Nadie mas conectado aun...</div>
+              </div>
             </div>
           </div>
           <div class="hidden" id="online-waiting">
@@ -530,6 +583,17 @@
       <div class="controls" style="justify-content:center;">
         <button class="btn-primary" type="button" onclick="playAgain()">Jugar de nuevo</button>
         <a class="btn-mode" href="/lobby.html" style="text-decoration:none; display:inline-flex; align-items:center;">Volver al lobby</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="damas-challenge-modal">
+    <div class="overlay-card" style="text-align:center;">
+      <h2>DESAFIO RECIBIDO</h2>
+      <p id="damas-challenge-modal-sub">Un jugador te desafia</p>
+      <div class="controls" style="justify-content:center;">
+        <button class="btn-primary" type="button" onclick="acceptDamasChallenge()">Aceptar</button>
+        <button class="btn-mode" type="button" onclick="declineDamasChallenge()">Rechazar</button>
       </div>
     </div>
   </div>
@@ -593,11 +657,15 @@
     // en un Web Worker (ver getBotWorker) porque a esa profundidad la
     // busqueda puede tardar varios segundos y congelaria la pestana si
     // corriera en el hilo principal.
+    // timeBudgetMs: profundizacion iterativa en checkers-ai.js -- el
+    // bot busca hasta `depth` plies pero corta apenas se agota el
+    // presupuesto de tiempo, para que "piense" pero no se cuelgue
+    // varios segundos en Maestro/Alcazar (llegaba a tardar ~19s antes).
     const BOT_LEVELS = {
-      easy:   { depth: 3,  blunderChance: 0.35 },
-      medium: { depth: 5,  blunderChance: 0 },
-      hard:   { depth: 8,  blunderChance: 0 },
-      master: { depth: 10, blunderChance: 0 },
+      easy:   { depth: 3,  blunderChance: 0.35, timeBudgetMs: 1200 },
+      medium: { depth: 5,  blunderChance: 0,    timeBudgetMs: 1800 },
+      hard:   { depth: 8,  blunderChance: 0,    timeBudgetMs: 2200 },
+      master: { depth: 10, blunderChance: 0,    timeBudgetMs: 2800 },
     };
     let botDifficulty = 'medium';
     let board = E.createInitialBoard();
@@ -914,12 +982,12 @@
       return botWorker;
     }
 
-    function chooseMoveInWorker(boardState, color, depth) {
+    function chooseMoveInWorker(boardState, color, depth, timeBudgetMs) {
       return new Promise((resolve, reject) => {
         const requestId = ++botWorkerRequestId;
         botWorkerCallbacks.set(requestId, { resolve, reject });
         try {
-          getBotWorker().postMessage({ board: boardState, color, depth, requestId });
+          getBotWorker().postMessage({ board: boardState, color, depth, timeBudgetMs, requestId });
         } catch (err) {
           botWorkerCallbacks.delete(requestId);
           reject(err);
@@ -942,11 +1010,11 @@
           move = allMoves[Math.floor(Math.random() * allMoves.length)];
         } else {
           try {
-            move = await chooseMoveInWorker(board, BOT_COLOR, level.depth);
+            move = await chooseMoveInWorker(board, BOT_COLOR, level.depth, level.timeBudgetMs);
           } catch (_) {
             // Respaldo si el Worker no esta disponible en este navegador:
             // calcula en el hilo principal (puede notarse una pausa).
-            move = AI.chooseMove(board, BOT_COLOR, level.depth);
+            move = AI.chooseMove(board, BOT_COLOR, level.depth, level.timeBudgetMs);
           }
         }
         botThinking = false;
@@ -990,6 +1058,8 @@
       socket.on('connect_error', () => {
         document.getElementById('status-line').textContent = 'No se pudo conectar al servidor. Intenta de nuevo.';
       });
+
+      socket.on('connect', announceDamasPlayerOnline);
 
       socket.on('damas:room-created', (data) => {
         onlineRoomCode = data.code;
@@ -1069,6 +1139,88 @@
         gameOver = { over: true, winner: data.winner, reason: data.reason || 'resign' };
         render();
       });
+
+      // ── Jugadores en linea + desafiar (solo con cuenta) ──────────
+      socket.on('damas:players-online', (players) => {
+        const list = document.getElementById('damas-players-list');
+        if (!list) return;
+        const me = readStoredUser();
+        const others = players.filter((p) => p.username !== me?.username);
+        if (!others.length) {
+          list.innerHTML = '<div class="online-note">Nadie mas conectado aun...</div>';
+          return;
+        }
+        list.innerHTML = others.map((p) => {
+          const flag = (p.country || 'DO').toLowerCase();
+          const username = escapeHtmlDamas(p.username || 'Jugador');
+          const tag = p.inGame ? ' · EN PARTIDA' : '';
+          return `<div class="damas-player-chip" onclick="prefillDamasChallenge('${username}')">
+            <img class="damas-player-flag" src="https://flagcdn.com/20x15/${flag}.png" onerror="this.style.display='none'"/>
+            <span class="damas-player-name">${username}</span>
+            <span class="damas-player-elo">${p.elo || 1200}${tag}</span>
+          </div>`;
+        }).join('');
+      });
+
+      socket.on('damas:challenge-sent', () => {
+        document.getElementById('damas-challenge-status').textContent = 'Desafio enviado...';
+      });
+      socket.on('damas:challenge-error', (data) => {
+        document.getElementById('damas-challenge-status').textContent = errorMessage(data);
+      });
+      socket.on('damas:challenge-declined', ({ by } = {}) => {
+        document.getElementById('damas-challenge-status').textContent = `${by || 'El jugador'} rechazo el desafio.`;
+      });
+      socket.on('damas:challenge-received', ({ from, socketId } = {}) => {
+        damasChallengerSocketId = socketId;
+        const flag = /^[A-Z]{2}$/i.test(from?.country || '') ? String(from.country).toLowerCase() : 'do';
+        const username = escapeHtmlDamas(from?.username || 'Jugador');
+        const elo = Number.isFinite(Number(from?.elo)) ? Number(from.elo) : 1200;
+        document.getElementById('damas-challenge-modal-sub').innerHTML =
+          `<img src="https://flagcdn.com/20x15/${flag}.png" style="width:18px;vertical-align:middle;margin-right:6px;border-radius:1px;" onerror="this.style.display='none'"/>
+           <strong style="color:var(--dama)">${username}</strong> (ELO ${elo}) te desafia a Damas`;
+        document.getElementById('damas-challenge-modal').classList.remove('hidden');
+      });
+    }
+
+    function escapeHtmlDamas(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch]));
+    }
+
+    let damasChallengerSocketId = null;
+
+    function announceDamasPlayerOnline() {
+      const user = readStoredUser();
+      if (!user) return; // invitado: no aplica (no tiene nombre estable)
+      socket.emit('damas:player-online', { username: user.username, elo: user.damasElo || 1200, country: user.country || 'DO' });
+    }
+
+    function prefillDamasChallenge(username) {
+      const input = document.getElementById('damas-challenge-username');
+      if (!input) return;
+      input.value = username;
+      input.focus();
+    }
+
+    function sendDamasChallenge() {
+      const input = document.getElementById('damas-challenge-username');
+      const username = input?.value.trim();
+      const status = document.getElementById('damas-challenge-status');
+      if (!username) { if (status) status.textContent = 'Ingresa un nombre de usuario.'; return; }
+      ensureSocket();
+      socket.emit('damas:challenge-send', { targetUsername: username });
+      if (status) status.textContent = 'Enviando desafio...';
+    }
+
+    function acceptDamasChallenge() {
+      document.getElementById('damas-challenge-modal').classList.add('hidden');
+      socket.emit('damas:challenge-accept', { challengerSocketId: damasChallengerSocketId });
+    }
+
+    function declineDamasChallenge() {
+      document.getElementById('damas-challenge-modal').classList.add('hidden');
+      socket.emit('damas:challenge-decline', { challengerSocketId: damasChallengerSocketId });
+      damasChallengerSocketId = null;
     }
 
     function createOnlineRoom() {
@@ -1110,6 +1262,11 @@
           nameInput.disabled = false;
           nameInput.placeholder = 'TU NOMBRE';
         }
+        // Ver jugadores en linea y desafiar por nombre solo tiene
+        // sentido con cuenta -- un invitado no tiene un nombre estable.
+        document.getElementById('damas-challenge-block').classList.toggle('hidden', !user);
+        document.getElementById('damas-guest-note').classList.toggle('hidden', !!user);
+        if (user) announceDamasPlayerOnline();
         document.getElementById('online-panel').classList.remove('hidden');
         document.getElementById('board-wrap').classList.toggle('hidden', onlineStatus !== 'playing');
         document.getElementById('resign-btn').classList.toggle('hidden', onlineStatus !== 'playing');

@@ -11,9 +11,9 @@
 importScripts('/checkers-engine.js', '/checkers-ai.js');
 
 self.onmessage = (event) => {
-  const { board, color, depth, requestId } = event.data || {};
+  const { board, color, depth, timeBudgetMs, requestId } = event.data || {};
   try {
-    const move = self.OzamaCheckersAI.chooseMove(board, color, depth);
+    const move = self.OzamaCheckersAI.chooseMove(board, color, depth, timeBudgetMs);
     self.postMessage({ requestId, move });
   } catch (error) {
     self.postMessage({ requestId, error: error?.message || 'Error en el worker del bot.' });
