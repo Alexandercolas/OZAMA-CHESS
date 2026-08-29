@@ -942,6 +942,42 @@
       btn.classList.toggle('is-visible', !showing);
     }
 
+    // ── reCAPTCHA v3 (invisible) para el registro ──
+    let recaptchaSiteKey = '';
+
+    function loadRecaptchaScript(siteKey) {
+      if (window.grecaptcha) return Promise.resolve();
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://www.google.com/recaptcha/api.js?render=' + encodeURIComponent(siteKey);
+        script.async = true;
+        script.onload = () => window.grecaptcha.ready(resolve);
+        script.onerror = () => reject(new Error('reCAPTCHA no disponible.'));
+        document.head.appendChild(script);
+      });
+    }
+
+    async function initRecaptcha() {
+      const res = await fetch('/api/auth/providers', { cache: 'no-store' });
+      if (!res.ok) return;
+      const providers = await res.json();
+      const siteKey = String(providers?.recaptcha?.siteKey || '');
+      if (!providers?.recaptcha?.enabled || !siteKey) return;
+      recaptchaSiteKey = siteKey;
+      await loadRecaptchaScript(siteKey);
+    }
+
+    // Si algo falla aca (script bloqueado, sin conexion a Google, etc.)
+    // se devuelve string vacio y el registro sigue de largo -- el
+    // servidor es quien decide si eso bloquea o no: si RECAPTCHA_SECRET_KEY
+    // esta configurada, un token vacio se rechaza (falla cerrado); si
+    // no esta configurada todavia, no bloquea nada.
+    async function getRecaptchaToken(action) {
+      if (!recaptchaSiteKey || !window.grecaptcha) return '';
+      try { return await window.grecaptcha.execute(recaptchaSiteKey, { action }); }
+      catch (_) { return ''; }
+    }
+
     function loadGoogleIdentityScript() {
       if (window.google?.accounts?.id) return Promise.resolve();
       return new Promise((resolve, reject) => {
@@ -1179,10 +1215,11 @@
 
       setLoading('btn-register', true);
       try {
+        const recaptchaToken = await getRecaptchaToken('register');
         const res = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, email, password, country }),
+          body: JSON.stringify({ username, email, password, country, recaptchaToken }),
         });
         const data = await res.json();
 
@@ -1267,6 +1304,7 @@
 
     checkExistingSession();
     initGoogleAuth().catch(() => {});
+    initRecaptcha().catch(() => {});
   </script>
 </body>
 </html>

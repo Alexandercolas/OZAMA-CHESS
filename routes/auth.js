@@ -8,6 +8,7 @@ const User    = require('../models/User');
 const { requireAuth } = require('../middleware/auth');
 const { requestToken, setSessionCookie, clearSessionCookie } = require('../middleware/session');
 const { googleProviderConfig, verifyGoogleIdToken } = require('../services/google-auth');
+const { recaptchaProviderConfig, verifyRecaptchaToken } = require('../services/recaptcha');
 
 const router  = express.Router();
 const authAttempts = new Map();
@@ -176,7 +177,7 @@ async function findGoogleUser({ sub, email, name }) {
 
 router.get('/providers', (_req, res) => {
   res.set('Cache-Control', 'no-store');
-  return res.json({ google: googleProviderConfig() });
+  return res.json({ google: googleProviderConfig(), recaptcha: recaptchaProviderConfig() });
 });
 
 router.post('/google', limitGoogle, async (req, res) => {
@@ -233,6 +234,14 @@ router.post('/register', limitRegister, async (req, res) => {
     }
     if (!validCountry(country)) {
       return res.status(400).json({ error: 'Pais invalido.' });
+    }
+
+    const captchaOk = await verifyRecaptchaToken(req.body.recaptchaToken, {
+      action: 'register',
+      remoteip: req.ip,
+    });
+    if (!captchaOk) {
+      return res.status(400).json({ error: 'No se pudo verificar que sos una persona. Recarga la pagina e intenta de nuevo.' });
     }
 
     const exists = await User.findOne({

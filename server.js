@@ -103,11 +103,16 @@ app.use((req, res, next) => {
 });
 app.use(express.json({ limit: '600kb' }));
 app.use((req, res, next) => {
-  const googleLoginEnabled = req.path === '/login.html'
+  const onLoginPage = req.path === '/login.html';
+  const googleLoginEnabled = onLoginPage
     && Boolean(String(process.env.GOOGLE_WEB_CLIENT_ID || '').trim());
+  const recaptchaEnabled = onLoginPage
+    && Boolean(String(process.env.RECAPTCHA_SITE_KEY || '').trim());
   const googleScript = googleLoginEnabled ? ' https://accounts.google.com/gsi/client' : '';
   const googleParent = googleLoginEnabled ? ' https://accounts.google.com/gsi/' : '';
   const googleStyle = googleLoginEnabled ? ' https://accounts.google.com/gsi/style' : '';
+  const recaptchaScript = recaptchaEnabled ? ' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/' : '';
+  const recaptchaFrame = recaptchaEnabled ? ' https://www.google.com/recaptcha/' : '';
   res.set('X-Content-Type-Options', 'nosniff');
   res.set('X-Frame-Options', 'DENY');
   res.set('X-DNS-Prefetch-Control', 'off');
@@ -121,13 +126,13 @@ app.use((req, res, next) => {
     "frame-ancestors 'none'",
     "form-action 'self'",
     "object-src 'none'",
-    `script-src 'self' 'unsafe-inline'${googleScript}`,
+    `script-src 'self' 'unsafe-inline'${googleScript}${recaptchaScript}`,
     `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com${googleStyle}`,
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: https://flagcdn.com",
     "media-src 'self'",
-    `frame-src 'self'${googleParent}`,
-    `connect-src 'self' ws: wss:${googleParent}`,
+    `frame-src 'self'${googleParent}${recaptchaFrame}`,
+    `connect-src 'self' ws: wss:${googleParent}${recaptchaFrame}`,
   ].join('; '));
   if (process.env.NODE_ENV === 'production') {
     res.set('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
