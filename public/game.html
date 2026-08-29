@@ -150,7 +150,9 @@
        ================================================================ */
 
     .sb {
-      background: linear-gradient(180deg, #111008, #0C0A05);
+      background:
+        linear-gradient(180deg, rgba(17,16,8,0.90) 0%, rgba(12,10,5,0.80) 55%, rgba(12,10,5,0.95) 100%),
+        url('/assets/bg/zona-colonial-night.jpg') center 32% / cover no-repeat;
       border-right: 1px solid;
       border-image: linear-gradient(180deg, rgba(200,152,60,0.35), rgba(200,152,60,0.02)) 1;
       display: flex; flex-direction: column;
@@ -166,17 +168,6 @@
 
     /* Silueta de arcos coloniales muy tenue al pie del sidebar --
        insinua la "Zona Colonial" sin depender de una foto real. */
-    .sb::after {
-      content: '';
-      position: absolute; left: 0; right: 0; bottom: 0; height: 120px;
-      pointer-events: none;
-      opacity: 0.5;
-      background-repeat: repeat-x; background-position: bottom;
-      background-size: 160px 110px;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='110' viewBox='0 0 160 110'%3E%3Cg fill='%238B4A3A' fill-opacity='0.16'%3E%3Cpath d='M6 110V52a24 24 0 0 1 48 0v58z'/%3E%3Cpath d='M62 110V40a29 29 0 0 1 58 0v70z'/%3E%3Cpath d='M128 110V56a20 20 0 0 1 40 0v54z'/%3E%3C/g%3E%3C/svg%3E");
-      mask-image: linear-gradient(to top, black, transparent);
-      -webkit-mask-image: linear-gradient(to top, black, transparent);
-    }
 
     .sb-nav {
       position: relative; z-index: 1;
