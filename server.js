@@ -710,6 +710,17 @@ async function getOrRestoreRoom(roomCode) {
   const saved = await Room.findOne({ roomCode: code, status: { $in: ['waiting', 'playing'] } }).lean().catch(() => null);
   if (!saved) return null;
 
+  // El proceso se reinicio (o esta sala nunca vivio en memoria en este
+  // proceso) -- el historial de jugadas para la revision en el cliente
+  // sale del Match ya guardado en Mongo, no hay otra copia.
+  let moves = [];
+  if (saved.match) {
+    const match = await Match.findById(saved.match).select('moves').lean().catch(() => null);
+    if (Array.isArray(match?.moves)) {
+      moves = match.moves.map((m) => ({ from: m.from, to: m.to, promotion: m.promotion || null }));
+    }
+  }
+
   const room = {
     white: null,
     black: null,
@@ -724,6 +735,7 @@ async function getOrRestoreRoom(roomCode) {
     },
     matchId: saved.match || null,
     game: restoreGameFromSnapshot(saved.gameState),
+    moves,
     clockW: saved.clockW || DEFAULT_TIME_MS,
     clockB: saved.clockB || DEFAULT_TIME_MS,
     clockInterval: null,
@@ -1199,7 +1211,7 @@ io.on('connection', (socket) => {
       currentTurn: 'w', rematchReady: new Set(), drawOfferBy: null,
       timer: null, status: 'playing', playerInfo: { w: wInfo, b: bInfo }, matchId: null,
       tokens: { w: createRoomToken(), b: createRoomToken() },
-      game: createGameState(),
+      game: createGameState(), moves: [],
       clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS, clockInterval: null,
     });
 
@@ -1310,7 +1322,7 @@ io.on('connection', (socket) => {
       currentTurn: 'w', rematchReady: new Set(), drawOfferBy: null,
       timer: null, status: 'waiting', playerInfo: { w: pInfo, b: null }, matchId: null,
       tokens: { w: createRoomToken(), b: null },
-      game: createGameState(),
+      game: createGameState(), moves: [],
       clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS, clockInterval: null,
     });
 
@@ -1448,6 +1460,7 @@ io.on('connection', (socket) => {
       clockB: room.clockB || DEFAULT_TIME_MS,
       roomToken: room.tokens[assignedColor],
       game: createGameSnapshot(room.game),
+      moves: room.moves || [],
     });
     socket.to(cleanRoomCode).emit('opponent-reconnected', { playerName: socket.data.playerName });
     // Si ambos jugadores están en sala, reanudar reloj
@@ -1504,6 +1517,7 @@ if (room.white && room.black && !room.clockInterval) {
     }
 
     room.currentTurn = room.game.turn;
+    (room.moves = room.moves || []).push({ from: validation.from, to: validation.to, promotion: validation.promotion || null });
     socket.to(code).emit('opponent-move', {
       from: validation.from,
       to: validation.to,

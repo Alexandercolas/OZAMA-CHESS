@@ -1045,6 +1045,86 @@ function setupMoveNav() {
   document.getElementById('move-live-btn')?.addEventListener('click', () => goToMoveIndex(null));
 }
 
+// Reconstruye moveHistory completo (con notacion, fotos de tablero,
+// capturas) a partir de la lista plana {from,to,promotion} que manda
+// el servidor en 'rejoin-ok' -- asi la revision de jugadas sigue
+// disponible aunque la pagina se haya recargado a mitad de partida.
+// Nunca toca state.board/state.turn/etc: arma todo sobre un tablero
+// de trabajo aparte y solo devuelve el arreglo final.
+function buildMoveHistoryFromMoves(moves) {
+  const board = createInitialBoard();
+  let turn = COLOR.WHITE;
+  let enPassantTarget = null;
+  let capturedByW = [];
+  let capturedByB = [];
+  const gsr = { castlingRights: { w: { kingside: true, queenside: true }, b: { kingside: true, queenside: true } } };
+  const history = [];
+
+  for (const mv of moves) {
+    const from = mv?.from, to = mv?.to;
+    if (!from || !to) break;
+    const piece = board[from.row]?.[from.col];
+    if (!piece) break;
+
+    gsr.enPassantTarget = enPassantTarget;
+    const legalMove = getLegalMovesForSquare(board, from.row, from.col, gsr)
+      .find(m => m.row === to.row && m.col === to.col);
+    const moveFlags = legalMove || to;
+
+    const captured = board[to.row][to.col];
+    const enPassantCaptured = moveFlags.enPassant && enPassantTarget
+      ? board[from.row][enPassantTarget.col]
+      : null;
+    const capturedPiece = captured || enPassantCaptured;
+    const boardBefore = cloneBoard(board);
+    const epTargetBefore = enPassantTarget;
+
+    board[to.row][to.col] = piece;
+    board[from.row][from.col] = null;
+    if (moveFlags.castling === 'kingside') {
+      board[from.row][5] = board[from.row][7]; board[from.row][7] = null;
+    } else if (moveFlags.castling === 'queenside') {
+      board[from.row][3] = board[from.row][0]; board[from.row][0] = null;
+    }
+    if (moveFlags.enPassant && enPassantTarget) {
+      board[from.row][enPassantTarget.col] = null;
+    }
+    enPassantTarget = (piece.type === PIECE.PAWN && Math.abs(to.row - from.row) === 2)
+      ? { row: (from.row + to.row) / 2, col: from.col }
+      : null;
+
+    const promotion = mv.promotion || null;
+    if (promotion) board[to.row][to.col] = { type: promotion, color: piece.color };
+
+    if (capturedPiece && capturedPiece.type !== PIECE.KING) {
+      (piece.color === COLOR.WHITE ? capturedByW : capturedByB).push({ type: capturedPiece.type, color: capturedPiece.color });
+    }
+
+    turn = enemy(turn);
+    gsr.enPassantTarget = enPassantTarget;
+    const status = evaluateGameStatus(board, turn, gsr);
+
+    const entry = {
+      from: { row: from.row, col: from.col }, to: { row: to.row, col: to.col },
+      piece: { type: piece.type, color: piece.color },
+      captured: capturedPiece ? { type: capturedPiece.type, color: capturedPiece.color } : null,
+      castling: moveFlags.castling || null,
+      enPassant: !!moveFlags.enPassant,
+      promotion,
+      boardBefore, epTargetBefore,
+      check: status === STATUS.CHECK,
+      checkmate: status === STATUS.CHECKMATE,
+      boardAfter: cloneBoard(board),
+      capturedByW: capturedByW.map(p => ({ ...p })),
+      capturedByB: capturedByB.map(p => ({ ...p })),
+      turnAfter: turn,
+    };
+    entry.notation = getMoveNotation(entry);
+    history.push(entry);
+  }
+  return history;
+}
+
 function executeMove(from, to) {
   const piece = state.board[from.row][from.col];
   if (!piece) return false;
@@ -1296,7 +1376,7 @@ function resignGame() {
   showConfirm(
     'RENDIRSE',
     IS_ONLINE
-      ? 'Si abandonas ahora, la partida contará como derrota y no se podrá deshacer.'
+      ? 'La empezaste, terminala. Rendirte cuenta como derrota y no se puede deshacer.'
       : 'Si abandonas ahora, la partida contra el bot terminará de inmediato.',
     completeResignation,
     'Rendirse'
@@ -1521,7 +1601,7 @@ function setupOnlineSocket() {
     showGameEnd('TABLAS', `${playerName || 'Tu rival'} aceptó el empate.`, { online: true, canPlayAgain: false });
   });
 
-  socket.on('rejoin-ok', ({ color, playerInfo, currentTurn, clockW, clockB, roomToken, game } = {}) => {
+  socket.on('rejoin-ok', ({ color, playerInfo, currentTurn, clockW, clockB, roomToken, game, moves } = {}) => {
     setConfirmedPlayerColor(color);
     if (roomToken) sessionStorage.setItem('ozama-room-token', roomToken);
     _onlineSynced = true;
@@ -1537,6 +1617,14 @@ function setupOnlineSocket() {
       CLOCK.set(clockW || 600000, clockB || 600000);
       renderBoard();
       updateStatusDisplay();
+    }
+    // El servidor guarda cada jugada valida (Match.moves) desde el
+    // principio -- reconstruye la lista de revision aunque la pagina
+    // se haya recargado o reconectado a mitad de partida.
+    if (Array.isArray(moves) && moves.length && typeof buildMoveHistoryFromMoves === 'function') {
+      state.moveHistory = buildMoveHistoryFromMoves(moves);
+      state.reviewIndex = null;
+      if (typeof renderMoveList === 'function') renderMoveList();
     }
   });
 
