@@ -928,7 +928,20 @@
        Colonial" del mock de referencia.
        ================================================================ */
     @media (min-width: 1081px) {
-      .main { gap: 22px; }
+      /* El panel de jugadas nuevo hizo la columna del tablero mas alta
+         -- en pantallas de laptop mas bajas ya no entra completa. Antes
+         esto se cortaba sin remedio (.main tenia overflow:hidden y sin
+         scroll). Ahora .main puede scrollear verticalmente por su
+         cuenta (se estira para llenar .body via grid) mientras el
+         header y el sidebar quedan fijos. */
+      .main {
+        gap: 22px;
+        align-items: flex-start;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-top: 20px;
+        padding-bottom: 20px;
+      }
       .board-col {
         display: flex; flex-direction: column; align-items: center; gap: 14px;
       }
