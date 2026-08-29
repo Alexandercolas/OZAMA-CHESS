@@ -29,13 +29,16 @@
       --sq:    56px;
       --board-border: 3px;
       --board-edge: 6px;
-      --gold:  #C8983C;
+      /* Paleta "Zona Colonial" -- ver mock de referencia */
+      --gold:  #C89B3C; /* Oro del Alcazar */
       --gold2: var(--gold-2);
-      --text:  #E9E4DA;
+      --text:  #E9E4DA; /* Cal Colonial */
       --dim:   rgba(233,228,218,0.45);
       --ghost: rgba(233,228,218,0.14);
-      --bl:    #D4B896;
-      --bd:    #5C3A1E;
+      --bl:    #C9B79C; /* Piedra Coralina */
+      --bd:    #8B4A3A; /* Teja Espanola */
+      --iron:  #2A2D31; /* Hierro Forjado */
+      --sand:  #BB9A6A; /* Arena Antigua */
     }
 
     html, body {
@@ -285,16 +288,32 @@
 
     .pp-av {
       width: 44px; height: 44px; flex-shrink: 0;
-      border: 1.5px solid var(--amber);
+      border: 2px solid var(--amber);
+      border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       font-family: var(--ft); font-size: 20px; font-weight: 700;
       color: var(--text); background: var(--s3); position: relative;
+      box-shadow: 0 0 0 3px rgba(200,152,60,0.1), 0 4px 10px rgba(0,0,0,0.4);
     }
 
+    /* Liston: dorado para "yo", hierro forjado para el rival --
+       eco del listón de color en las tarjetas del mock de referencia. */
+    .pp-av::before {
+      content: '';
+      position: absolute; top: -7px; left: 50%; transform: translateX(-50%);
+      width: 0; height: 0;
+      border-left: 5px solid transparent; border-right: 5px solid transparent;
+      border-bottom: 7px solid var(--iron);
+      filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));
+    }
+    .pp.me .pp-av { border-color: var(--gold); }
+    .pp.me .pp-av::before { border-bottom-color: var(--gold); }
+
     .pp-flag {
-      position: absolute; bottom: -5px; right: -5px;
+      position: absolute; bottom: -3px; right: -6px;
       width: 14px; height: 10px; overflow: hidden;
       border: 1px solid var(--s1);
+      border-radius: 2px;
     }
     .pp-flag img { width: 100%; height: 100%; object-fit: cover; }
 
@@ -313,9 +332,22 @@
     /* Clock */
     .pp-clock-wrap {
       background: rgba(13,11,8,0.7); border: 1px solid rgba(200,152,60,0.14);
-      padding: 8px 12px;
-      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 12px 10px;
+      display: flex; flex-direction: column; gap: 6px;
     }
+
+    .pp-clock-row { display: flex; align-items: center; justify-content: space-between; }
+
+    .pp-clock-track {
+      width: 100%; height: 4px; border-radius: 2px; overflow: hidden;
+      background: rgba(233,228,218,0.1);
+    }
+    .pp-clock-fill {
+      height: 100%; width: 100%; border-radius: 2px;
+      background: linear-gradient(90deg, var(--gold), var(--sand));
+      transition: width 1s linear, background 0.3s;
+    }
+    .pp-clock-fill.low { background: linear-gradient(90deg, #ef4444, #b91c1c); }
 
     .pp-clock-lbl {
       font-family: var(--fb); font-size: 7px; font-weight: 600;
@@ -651,7 +683,7 @@
     .rank-label { top: 2px; left: 3px; }
     .file-label { bottom: 2px; right: 3px; }
     .light .rank-label, .light .file-label { color: var(--bd); }
-    .dark  .rank-label, .dark  .file-label { color: rgba(212,184,150,0.7); }
+    .dark  .rank-label, .dark  .file-label { color: rgba(201,183,156,0.7); }
 
     /* ── BOTTOM BAR ── */
     .bc-bottom {
@@ -892,7 +924,7 @@
       .pp-av { width: 36px; height: 36px; font-size: 17px; }
       .pp-name { font-size: 9px; letter-spacing: 1px; }
       .pp-elo { font-size: 8px; }
-      .pp-clock-wrap { align-items: flex-start; flex-direction: column; gap: 4px; padding: 8px; }
+      .pp-clock-wrap { gap: 4px; padding: 8px; }
       .player-clock { font-size: 22px; letter-spacing: 1px; }
       .pp-cap { display: flex; max-height: 74px; padding: 8px 10px; }
       .pp-cap-lbl { font-size: 6px; letter-spacing: 1.5px; margin-bottom: 4px; }
@@ -1008,8 +1040,11 @@
             </div>
           </div>
           <div class="pp-clock-wrap">
-            <span class="pp-clock-lbl">Tiempo</span>
-            <span class="player-clock" id="clock-black-v">10:00</span>
+            <div class="pp-clock-row">
+              <span class="pp-clock-lbl">Tiempo</span>
+              <span class="player-clock" id="clock-black-v">10:00</span>
+            </div>
+            <div class="pp-clock-track"><div class="pp-clock-fill" id="clock-fill-black"></div></div>
           </div>
         </div>
         <div class="pp-cap">
@@ -1078,8 +1113,11 @@
             </div>
           </div>
           <div class="pp-clock-wrap">
-            <span class="pp-clock-lbl">Tiempo</span>
-            <span class="player-clock" id="clock-white-v">10:00</span>
+            <div class="pp-clock-row">
+              <span class="pp-clock-lbl">Tiempo</span>
+              <span class="player-clock" id="clock-white-v">10:00</span>
+            </div>
+            <div class="pp-clock-track"><div class="pp-clock-fill" id="clock-fill-white"></div></div>
           </div>
         </div>
         <div class="pp-cap">
@@ -1177,7 +1215,7 @@
 
 <script src="/vendor/socket.io.min.js"></script>
 <script src="bot.js?v=20260726-1"></script>
-<script src="script.js?v=20260828-promo3d"></script>
+<script src="script.js?v=20260828-colonial1"></script>
 
 <script>
   // Sync visible clocks with hidden ones (CLOCK module updates #clock-white/black)

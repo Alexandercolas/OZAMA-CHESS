@@ -237,10 +237,20 @@ function isBoardFlipped() {
 const CLOCK = (() => {
   let _intervalId = null;
   let _times = { w: 600000, b: 600000 };
+  let _totals = { w: 600000, b: 600000 };
 
   function _fmt(ms) {
     const total = Math.max(0, Math.ceil(ms / 1000));
     return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+  }
+
+  function _renderFill(color, remaining) {
+    const el = document.getElementById(color === COLOR.WHITE ? 'clock-fill-white' : 'clock-fill-black');
+    if (!el) return;
+    const total = _totals[color] || 600000;
+    const pct = Math.max(0, Math.min(100, (remaining / total) * 100));
+    el.style.width = pct + '%';
+    el.classList.toggle('low', remaining < 30000);
   }
 
   function _render() {
@@ -254,6 +264,8 @@ const CLOCK = (() => {
       const el = document.getElementById(id);
       if (el) { el.textContent = bText; el.style.color = _times.b < 10000 ? '#ef4444' : ''; }
     });
+    _renderFill(COLOR.WHITE, _times.w);
+    _renderFill(COLOR.BLACK, _times.b);
   }
 
   function stop() { if (_intervalId) { clearInterval(_intervalId); _intervalId = null; } }
@@ -278,7 +290,15 @@ const CLOCK = (() => {
   }
 
   function switchTo(color) { start(color); }
-  function set(w, b) { _times.w = w; _times.b = b; _render(); }
+  function set(w, b) {
+    _times.w = w; _times.b = b;
+    // La barra de progreso usa este mismo valor como "100%" -- en una
+    // partida nueva es el tiempo total; en un rejoin es lo que quedaba
+    // en ese momento, asi que la barra arranca llena y baja desde ahi.
+    _totals.w = w || _totals.w;
+    _totals.b = b || _totals.b;
+    _render();
+  }
   function get() { return { w: _times.w, b: _times.b }; }
 
   return { start, stop, switchTo, set, get };
