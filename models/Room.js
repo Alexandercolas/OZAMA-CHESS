@@ -22,6 +22,13 @@ const RoomSchema = new mongoose.Schema(
       black: { type: RoomPlayerSchema, default: () => ({}) },
     },
     match:  { type: mongoose.Schema.Types.ObjectId, ref: 'Match', default: null },
+    // Tokens de reconexion por color (48 hex chars, ver createRoomToken
+    // en server.js). select:false porque son un secreto de sesion --
+    // solo getOrRestoreRoom los necesita, y los pide con +tokens.
+    tokens: {
+      w: { type: String, default: null, select: false },
+      b: { type: String, default: null, select: false },
+    },
     fen:    { type: String, default: 'startpos' },
     turn:   { type: String, enum: ['w', 'b'], default: 'w' },
     gameState: { type: mongoose.Schema.Types.Mixed, default: null },

@@ -707,7 +707,8 @@ async function getOrRestoreRoom(roomCode) {
   const existing = rooms.get(code);
   if (existing) return existing;
 
-  const saved = await Room.findOne({ roomCode: code, status: { $in: ['waiting', 'playing'] } }).lean().catch(() => null);
+  const saved = await Room.findOne({ roomCode: code, status: { $in: ['waiting', 'playing'] } })
+    .select('+tokens.w +tokens.b').lean().catch(() => null);
   if (!saved) return null;
 
   // El proceso se reinicio (o esta sala nunca vivio en memoria en este
@@ -728,7 +729,7 @@ async function getOrRestoreRoom(roomCode) {
     status: saved.status || 'playing',
     rematchReady: new Set(),
     timer: null,
-    tokens: { w: null, b: null },
+    tokens: { w: saved.tokens?.w || null, b: saved.tokens?.b || null },
     playerInfo: {
       w: roomPlayerInfo(saved.players?.white),
       b: roomPlayerInfo(saved.players?.black),
@@ -1232,6 +1233,7 @@ io.on('connection', (socket) => {
         'players.white.socketId': wSocket.id, 'players.white.userId': wInfo.userId, 'players.white.name': wInfo.name, 'players.white.country': wInfo.country, 'players.white.avatar': wInfo.avatar, 'players.white.avatarImage': wInfo.avatarImage || '',
         'players.black.socketId': bSocket.id, 'players.black.userId': bInfo.userId, 'players.black.name': bInfo.name, 'players.black.country': bInfo.country, 'players.black.avatar': bInfo.avatar, 'players.black.avatarImage': bInfo.avatarImage || '',
         match: match?._id || null, fen: 'startpos', turn: 'w', gameState: createGameSnapshot(room.game),
+        'tokens.w': room.tokens.w, 'tokens.b': room.tokens.b,
         clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS, status: 'playing', lastActivityAt: new Date(),
       }},
       { upsert: true, new: true }
@@ -1345,6 +1347,7 @@ io.on('connection', (socket) => {
         'players.white.name': pInfo.name,    'players.white.country': pInfo.country, 'players.white.avatar': pInfo.avatar, 'players.white.avatarImage': pInfo.avatarImage || '',
         'players.black.socketId': null, 'players.black.name': '',
         fen: 'startpos', turn: 'w', gameState: createGameSnapshot(rooms.get(code).game),
+        'tokens.w': rooms.get(code).tokens.w,
         clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS, status: 'waiting', lastActivityAt: new Date(),
       }},
       { upsert: true, new: true }
@@ -1392,6 +1395,7 @@ io.on('connection', (socket) => {
       'players.black.socketId': socket.id, 'players.black.userId': pInfo.userId,
       'players.black.name': pInfo.name,    'players.black.country': pInfo.country, 'players.black.avatar': pInfo.avatar, 'players.black.avatarImage': pInfo.avatarImage || '',
       match: match?._id || null, turn: room.currentTurn, gameState: createGameSnapshot(room.game),
+      'tokens.b': room.tokens.b,
       clockW: room.clockW || DEFAULT_TIME_MS, clockB: room.clockB || DEFAULT_TIME_MS, status: 'playing', lastActivityAt: new Date(),
     }}).catch((err) => console.warn('[DB] No se pudo actualizar sala:', err.message));
 
@@ -1625,6 +1629,7 @@ if (room.white && room.black && !room.clockInterval) {
       room.rematchReady = new Set();
       room.drawOfferBy  = null;
       room.game = createGameState();
+      room.moves = [];
       room.clockW = DEFAULT_TIME_MS;
       room.clockB = DEFAULT_TIME_MS;
       room.tokens = { w: createRoomToken(), b: createRoomToken() };
@@ -1640,6 +1645,7 @@ if (room.white && room.black && !room.clockInterval) {
         match: match?._id || room.matchId || null,
         turn: 'w',
         gameState: createGameSnapshot(room.game),
+        'tokens.w': room.tokens.w, 'tokens.b': room.tokens.b,
         clockW: DEFAULT_TIME_MS,
         clockB: DEFAULT_TIME_MS,
         status: 'playing',
