@@ -405,11 +405,9 @@
         saturate(1.12);
     }
     .pc-captured-piece.is-white svg, .pc-captured-piece.is-white img {
-      filter:
-        grayscale(1)
-        brightness(2.0)
-        contrast(0.8)
-        drop-shadow(0 2px 2px rgba(0,0,0,0.72));
+      /* La imagen white-matte ya viene en el color final (marfil
+         plano) -- aca solo se agrega la sombra, sin recolorear. */
+      filter: drop-shadow(0 2px 2px rgba(0,0,0,0.72));
     }
     .pc-captured-piece.is-black svg, .pc-captured-piece.is-black img {
       filter:
@@ -606,11 +604,8 @@
         drop-shadow(0 0 2px rgba(255,250,232,0.48));
     }
     .piece.piece-3d.piece-white img {
-      filter:
-        grayscale(1)
-        brightness(2.0)
-        contrast(0.8)
-        drop-shadow(0 1px 1px rgba(48,35,22,0.92));
+      /* Idem: white-matte ya es marfil plano de fabrica, sin brillo. */
+      filter: drop-shadow(0 1px 1px rgba(48,35,22,0.92));
     }
     .piece.piece-3d.piece-black {
       filter:
@@ -1356,7 +1351,7 @@
 
 <script src="/vendor/socket.io.min.js"></script>
 <script src="bot.js?v=20260726-1"></script>
-<script src="script.js?v=20260828-persisthist"></script>
+<script src="script.js?v=20260828-mattewhite"></script>
 
 <script>
   // Sync visible clocks with hidden ones (CLOCK module updates #clock-white/black)
@@ -1492,7 +1487,7 @@
             const colorClass=p.color==='w'?'is-white':'is-black';
             let inner;
             if (typeof CONFIG!=='undefined' && CONFIG.USE_BLENDER_PIECES && typeof BLENDER_PIECE_NAMES!=='undefined' && BLENDER_PIECE_NAMES[p.type]) {
-              const style = p.color==='w' ? 'gold' : 'black';
+              const style = p.color==='w' ? 'white-matte' : 'black';
               inner = `<img src="./assets/pieces/blender/${style}/${BLENDER_PIECE_NAMES[p.type]}.png" alt="" draggable="false">`;
             } else {
               inner = (typeof PIECE_SVGS!=='undefined'&&PIECE_SVGS[key]) ? PIECE_SVGS[key] : (PS[key]||'?');

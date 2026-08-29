@@ -634,7 +634,7 @@ function showPromotionDialog(row, col, color) {
       const key = `${color}${type}`;
       let inner;
       if (CONFIG.USE_BLENDER_PIECES && BLENDER_PIECE_NAMES[type]) {
-        const style = color === COLOR.WHITE ? 'gold' : 'black';
+        const style = color === COLOR.WHITE ? 'white-matte' : 'black';
         const colorClass = color === COLOR.WHITE ? 'white' : 'black';
         inner = `<span class="piece piece-3d piece-${colorClass} piece-${type}"><img src="./assets/pieces/blender/${style}/${BLENDER_PIECE_NAMES[type]}.png" alt="" draggable="false"></span>`;
       } else if (CONFIG.USE_INLINE_SVG && PIECE_SVGS[key]) {
@@ -889,7 +889,7 @@ function renderBoard() {
       if (p) {
         const key = `${p.color}${p.type}`;
         if (CONFIG.USE_BLENDER_PIECES && BLENDER_PIECE_NAMES[p.type]) {
-          const style = p.color === COLOR.WHITE ? 'gold' : 'black';
+          const style = p.color === COLOR.WHITE ? 'white-matte' : 'black';
           const colorClass = p.color === COLOR.WHITE ? 'white' : 'black';
           const pieceName = BLENDER_PIECE_NAMES[p.type];
           sq.innerHTML = `<span class="piece piece-3d piece-${colorClass} piece-${p.type}"><img src="./assets/pieces/blender/${style}/${pieceName}.png" alt="" draggable="false"></span>`;
