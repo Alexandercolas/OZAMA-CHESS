@@ -164,6 +164,20 @@
         radial-gradient(ellipse 80%  18% at 50% 0%,   rgba(200,152,60,0.04) 0%, transparent 50%);
     }
 
+    /* Silueta de arcos coloniales muy tenue al pie del sidebar --
+       insinua la "Zona Colonial" sin depender de una foto real. */
+    .sb::after {
+      content: '';
+      position: absolute; left: 0; right: 0; bottom: 0; height: 120px;
+      pointer-events: none;
+      opacity: 0.5;
+      background-repeat: repeat-x; background-position: bottom;
+      background-size: 160px 110px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='110' viewBox='0 0 160 110'%3E%3Cg fill='%238B4A3A' fill-opacity='0.16'%3E%3Cpath d='M6 110V52a24 24 0 0 1 48 0v58z'/%3E%3Cpath d='M62 110V40a29 29 0 0 1 58 0v70z'/%3E%3Cpath d='M128 110V56a20 20 0 0 1 40 0v54z'/%3E%3C/g%3E%3C/svg%3E");
+      mask-image: linear-gradient(to top, black, transparent);
+      -webkit-mask-image: linear-gradient(to top, black, transparent);
+    }
+
     .sb-nav {
       position: relative; z-index: 1;
       flex: 1; padding: 14px 0;
@@ -258,18 +272,22 @@
       background: radial-gradient(ellipse 65% 55% at 50% 45%, rgba(200,152,60,0.055) 0%, transparent 65%);
     }
 
+    /* board-col/side-col agrupan visualmente el tablero+chat y las
+       tarjetas+VS en desktop ancho. En pantallas angostas se vuelven
+       'contents' para no alterar el reflow por 'order' que ya existia. */
+    .board-col, .side-col { display: contents; }
+    .vs-divider { display: none; }
+
     /* ── PLAYER PANELS ── */
     .pp {
       width: 210px; flex-shrink: 0;
-      height: calc(var(--sq) * 8);
       display: flex; flex-direction: column;
       background: var(--s1);
       position: relative; z-index: 1;
       min-width: 0;
     }
 
-    .pp-left  { border-right: none; border: 1px solid rgba(200,152,60,0.12); border-right: none; }
-    .pp-right { border: 1px solid rgba(200,152,60,0.12); border-left: none; }
+    .pp-left, .pp-right { border: 1px solid rgba(200,152,60,0.12); }
 
     .pp.me { background: linear-gradient(180deg, rgba(200,152,60,0.05), var(--s1)); }
     .pp.me::before {
@@ -857,6 +875,38 @@
       .player-clock { font-size: 24px; }
     }
 
+    /* ================================================================
+       DESKTOP ANCHO (>1080px): tablero+chat agrupados a la izquierda,
+       tarjetas de jugador + VS apiladas a la derecha -- estilo "Zona
+       Colonial" del mock de referencia.
+       ================================================================ */
+    @media (min-width: 1081px) {
+      .main { gap: 22px; }
+      .board-col {
+        display: flex; flex-direction: column; align-items: center; gap: 14px;
+      }
+      .side-col {
+        display: flex; flex-direction: column; gap: 10px;
+        width: 220px; flex-shrink: 0;
+      }
+      .vs-divider {
+        display: flex; align-items: center; gap: 10px;
+        font-family: var(--ft); font-size: 13px; font-weight: 700;
+        color: var(--gold); letter-spacing: 5px; text-transform: uppercase;
+      }
+      .vs-divider::before, .vs-divider::after {
+        content: ''; flex: 1; height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(200,152,60,0.35), transparent);
+      }
+      .chat-col {
+        width: calc(var(--sq) * 8 + var(--board-edge));
+        max-width: none;
+        min-width: 0;
+        height: 190px;
+        border-left: 1px solid rgba(200,152,60,0.12);
+      }
+    }
+
     @media (max-width: 1080px) {
       :root { --sq: clamp(44px, calc((100vw - 158px - 36px) / 8), 52px); }
       html, body { height: auto; min-height: 100%; overflow-y: auto; }
@@ -1027,31 +1077,10 @@
     <!-- MAIN -->
     <div class="main">
 
-      <!-- JUGADOR RIVAL (izquierda del tablero) -->
-      <div class="pp pp-left" id="pp-rival">
-        <div class="pp-top">
-          <div class="pp-player">
-            <div class="pp-av" id="pp-av-black">
-              B<div class="pp-flag" id="pp-flag-black"></div>
-            </div>
-            <div class="pp-info">
-              <div class="pp-name" id="pp-name-black">Negro</div>
-              <div class="pp-elo"  id="pp-elo-black">ELO 1200</div>
-            </div>
-          </div>
-          <div class="pp-clock-wrap">
-            <div class="pp-clock-row">
-              <span class="pp-clock-lbl">Tiempo</span>
-              <span class="player-clock" id="clock-black-v">10:00</span>
-            </div>
-            <div class="pp-clock-track"><div class="pp-clock-fill" id="clock-fill-black"></div></div>
-          </div>
-        </div>
-        <div class="pp-cap">
-          <div class="pp-cap-lbl">Piezas capturadas</div>
-          <div class="pp-cap-pieces" id="captured-by-black"></div>
-        </div>
-      </div>
+      <!-- COLUMNA TABLERO: banner + tablero + botones + chat debajo.
+           .board-col es 'display:contents' bajo 1080px para no tocar
+           el reflow por 'order' ya afinado en los media queries. -->
+      <div class="board-col">
 
       <!-- COLUMNA CENTRAL: banner + tablero + botones -->
       <div class="bc oz-enter" style="--d:1">
@@ -1100,7 +1129,58 @@
         </div>
       </div>
 
-      <!-- JUGADOR LOCAL (derecha del tablero) -->
+      <!-- CHAT (debajo del tablero en desktop ancho) -->
+      <div class="chat-col" id="chat-panel">
+        <div class="chat-hd chat-header">
+          <span class="chat-ttl chat-title">Chat</span>
+          <button class="chat-toggle" onclick="toggleChat()" id="chat-toggle-btn">−</button>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+          <div class="chat-system">Partida iniciada. ¡Buena suerte!</div>
+        </div>
+        <div class="chat-input-row">
+          <input class="chat-input" id="chat-input" type="text" maxlength="200" placeholder="Mensaje…" autocomplete="off"/>
+          <button class="chat-send" onclick="sendChatMessage()" aria-label="Enviar mensaje">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 20 21 12 3 4v6l10 2-10 2v6Z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      </div><!-- /board-col -->
+
+      <!-- COLUMNA LATERAL: tarjetas de jugador + VS. Tambien
+           'display:contents' bajo 1080px. -->
+      <div class="side-col">
+
+      <!-- JUGADOR RIVAL -->
+      <div class="pp pp-left" id="pp-rival">
+        <div class="pp-top">
+          <div class="pp-player">
+            <div class="pp-av" id="pp-av-black">
+              B<div class="pp-flag" id="pp-flag-black"></div>
+            </div>
+            <div class="pp-info">
+              <div class="pp-name" id="pp-name-black">Negro</div>
+              <div class="pp-elo"  id="pp-elo-black">ELO 1200</div>
+            </div>
+          </div>
+          <div class="pp-clock-wrap">
+            <div class="pp-clock-row">
+              <span class="pp-clock-lbl">Tiempo</span>
+              <span class="player-clock" id="clock-black-v">10:00</span>
+            </div>
+            <div class="pp-clock-track"><div class="pp-clock-fill" id="clock-fill-black"></div></div>
+          </div>
+        </div>
+        <div class="pp-cap">
+          <div class="pp-cap-lbl">Piezas capturadas</div>
+          <div class="pp-cap-pieces" id="captured-by-black"></div>
+        </div>
+      </div>
+
+      <div class="vs-divider">VS</div>
+
+      <!-- JUGADOR LOCAL -->
       <div class="pp pp-right" id="pp-local">
         <div class="pp-top">
           <div class="pp-player">
@@ -1126,22 +1206,7 @@
         </div>
       </div>
 
-      <!-- CHAT (a la derecha del panel del jugador local) -->
-      <div class="chat-col" id="chat-panel">
-        <div class="chat-hd chat-header">
-          <span class="chat-ttl chat-title">Chat</span>
-          <button class="chat-toggle" onclick="toggleChat()" id="chat-toggle-btn">−</button>
-        </div>
-        <div class="chat-messages" id="chat-messages">
-          <div class="chat-system">Partida iniciada. ¡Buena suerte!</div>
-        </div>
-        <div class="chat-input-row">
-          <input class="chat-input" id="chat-input" type="text" maxlength="200" placeholder="Mensaje…" autocomplete="off"/>
-          <button class="chat-send" onclick="sendChatMessage()" aria-label="Enviar mensaje">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 20 21 12 3 4v6l10 2-10 2v6Z"/></svg>
-          </button>
-        </div>
-      </div>
+      </div><!-- /side-col -->
 
     </div><!-- /main -->
   </div><!-- /body -->
@@ -1215,7 +1280,7 @@
 
 <script src="/vendor/socket.io.min.js"></script>
 <script src="bot.js?v=20260726-1"></script>
-<script src="script.js?v=20260828-colonial1"></script>
+<script src="script.js?v=20260828-colonial2"></script>
 
 <script>
   // Sync visible clocks with hidden ones (CLOCK module updates #clock-white/black)
