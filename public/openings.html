@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; media-src 'self'; connect-src 'self' https://ozama-chess.onrender.com">
+  <script src="/mobile-runtime.js"></script>
+  <meta name="theme-color" content="#0D0B08"/>
+  <meta name="color-scheme" content="dark"/>
+  <title>OZAMA CHESS - Aperturas</title>
+  <meta name="description" content="Explorá las aperturas de ajedrez más conocidas: idea, jugadas principales y posición resultante."/>
+  <meta name="robots" content="index, follow"/>
+  <link rel="canonical" href="https://ozama-chess.onrender.com/openings.html"/>
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="/favicon.png?v=5">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <script src="/pwa.js" defer></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--carbon); color: var(--text); font-family: var(--fb); min-height: 100vh; }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 24px; background: rgba(13,11,8,0.97);
+      border-bottom: 1px solid rgba(200,152,60,0.18);
+    }
+    .topbar a.brand { color: var(--gold); font-family: var(--ft); font-weight: 900; letter-spacing: 3px; text-decoration: none; font-size: 15px; }
+    .topbar a.back { color: var(--dim); text-decoration: none; font-size: 13px; }
+    .wrap { max-width: 640px; margin: 0 auto; padding: 28px 16px 60px; }
+    .eyebrow { font-family: var(--fm); font-size: 10.5px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; text-align: center; }
+    h1 { font-family: var(--ft); font-size: 26px; text-align: center; margin: 8px 0 6px; color: var(--text); }
+    .sub { text-align: center; color: var(--dim); font-size: 13px; margin-bottom: 22px; }
+
+    .filter-row { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; justify-content: center; }
+    .filter-tab {
+      padding: 8px 14px; border-radius: 999px; cursor: pointer;
+      background: var(--s1); border: 1px solid rgba(200,152,60,0.16); color: var(--dim);
+      font-size: 11.5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+    }
+    .filter-tab.active { color: var(--gold); border-color: rgba(200,152,60,0.45); background: rgba(200,152,60,0.08); }
+
+    .op-card { background: var(--s1); border: 1px solid rgba(200,152,60,0.16); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; cursor: pointer; }
+    .op-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+    .op-name { font-family: var(--ft); font-size: 16px; color: var(--gold); }
+    .op-moves { font-family: var(--fm); font-size: 11px; color: var(--dim); white-space: nowrap; }
+    .op-desc { font-size: 12.5px; color: var(--dim); margin-top: 6px; line-height: 1.5; }
+    .op-body { display: none; margin-top: 14px; }
+    .op-card.open .op-body { display: block; }
+
+    .board { display: grid; grid-template-columns: repeat(8, 1fr); width: 100%; max-width: 280px; margin: 0 auto; aspect-ratio: 1; border: 2px solid rgba(200,152,60,0.4); border-radius: 4px; overflow: hidden; }
+    .sq { display: flex; align-items: center; justify-content: center; font-size: min(6vw, 24px); user-select: none; }
+    .sq.light { background: #2A241C; }
+    .sq.dark { background: #17130E; }
+    .sq .pc-w { color: #F3E6C5; text-shadow: 0 1px 0 rgba(0,0,0,0.6); }
+    .sq .pc-b { color: #0B0906; text-shadow: 0 1px 0 rgba(200,152,60,0.35); }
+
+    .op-actions { display: flex; justify-content: center; margin-top: 14px; }
+    .op-actions a { color: var(--gold); font-size: 12px; font-weight: 700; text-decoration: none; letter-spacing: 0.5px; text-transform: uppercase; }
+    .loading { text-align: center; padding: 40px 20px; color: var(--dim); }
+  </style>
+</head>
+<body>
+  <nav class="topbar">
+    <a class="brand" href="/">OZAMA CHESS</a>
+    <a class="back" href="/lobby.html">← Lobby</a>
+  </nav>
+  <div class="wrap" id="content">
+    <div class="loading">Cargando aperturas...</div>
+  </div>
+
+  <script>
+    const GLYPH = { p:'♟', n:'♞', b:'♝', r:'♜', q:'♛', k:'♚' };
+    let openings = [];
+    let activeFamily = 'todas';
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch]));
+    }
+
+    function boardHtml(rows) {
+      let html = '<div class="board">';
+      for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+          const ch = rows[row][col];
+          const light = (row + col) % 2 === 0;
+          let piece = '';
+          if (ch !== '.') {
+            const isWhite = ch === ch.toUpperCase();
+            piece = `<span class="${isWhite ? 'pc-w' : 'pc-b'}">${GLYPH[ch.toLowerCase()]}</span>`;
+          }
+          html += `<div class="sq ${light ? 'light' : 'dark'}">${piece}</div>`;
+        }
+      }
+      return html + '</div>';
+    }
+
+    function movesText(moves) {
+      let text = '';
+      for (let i = 0; i < moves.length; i += 2) {
+        const n = i / 2 + 1;
+        text += `${n}.${moves[i]}`;
+        if (moves[i + 1]) text += ` ${moves[i + 1]} `;
+        else text += ' ';
+      }
+      return text.trim();
+    }
+
+    const FAMILY_LABEL = { e4: '1.e4', d4: '1.d4', flanco: 'Flanco', todas: 'Todas' };
+
+    function render() {
+      const content = document.getElementById('content');
+      const families = ['todas', 'e4', 'd4', 'flanco'];
+      const filtered = activeFamily === 'todas' ? openings : openings.filter((o) => o.family === activeFamily);
+
+      const cards = filtered.map((o, i) => `
+        <div class="op-card" onclick="toggleCard(${openings.indexOf(o)})" id="card-${openings.indexOf(o)}">
+          <div class="op-head">
+            <div class="op-name">${escapeHtml(o.name)}</div>
+            <div class="op-moves">${escapeHtml(movesText(o.moves))}</div>
+          </div>
+          <div class="op-desc">${escapeHtml(o.description)}</div>
+          <div class="op-body">
+            ${boardHtml(o.finalRows)}
+            <div class="op-actions"><a href="/lobby.html#bot">Practicar contra el bot →</a></div>
+          </div>
+        </div>
+      `).join('');
+
+      content.innerHTML = `
+        <div class="eyebrow">Teoría</div>
+        <h1>Explorador de Aperturas</h1>
+        <div class="sub">Tocá una apertura para ver la posición y practicarla.</div>
+        <div class="filter-row" id="filter-row">
+          ${families.map((f) => `<div class="filter-tab ${f === activeFamily ? 'active' : ''}" onclick="setFamily('${f}')">${FAMILY_LABEL[f]}</div>`).join('')}
+        </div>
+        <div id="cards">${cards}</div>
+      `;
+    }
+
+    function setFamily(family) {
+      activeFamily = family;
+      render();
+    }
+
+    function toggleCard(index) {
+      const el = document.getElementById(`card-${index}`);
+      if (el) el.classList.toggle('open');
+    }
+
+    async function load() {
+      try {
+        const res = await fetch('/api/openings', { cache: 'no-store' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudieron cargar las aperturas.');
+        openings = data.openings;
+        render();
+      } catch (err) {
+        document.getElementById('content').innerHTML = `<div class="loading">${escapeHtml(err.message || 'Error al cargar.')}</div>`;
+      }
+    }
+
+    window.setFamily = setFamily;
+    window.toggleCard = toggleCard;
+    load();
+  </script>
+</body>
+</html>

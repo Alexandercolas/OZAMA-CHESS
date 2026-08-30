@@ -8,6 +8,7 @@ const Room                 = require('../models/Room');
 const Event                = require('../models/Event');
 const { requireAuth, optionalAuth, userIsAdmin } = require('../middleware/auth');
 const { ACHIEVEMENTS, levelFromXp, xpIntoLevel } = require('../services/achievements');
+const { detectOpening } = require('../services/openings');
 
 const router = express.Router();
 
@@ -51,52 +52,10 @@ function premiumCapabilities(user) {
 // mas jugadas sin necesitar una base ECO completa. Se matchea contra
 // el prefijo de jugadas de la partida (mas jugadas coincidentes =
 // nombre mas especifico gana).
-const OPENING_BOOK = [
-  { moves: ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5'], name: 'Ruy Lopez' },
-  { moves: ['e4', 'e5', 'Nf3', 'Nc6', 'Bc4'], name: 'Italiana' },
-  { moves: ['e4', 'e5', 'Nf3', 'Nf6'], name: 'Petrov' },
-  { moves: ['e4', 'e5', 'Nc3'], name: 'Vienesa' },
-  { moves: ['e4', 'e5'], name: 'Apertura Abierta (1.e4 e5)' },
-  { moves: ['e4', 'c5'], name: 'Siciliana' },
-  { moves: ['e4', 'e6'], name: 'Francesa' },
-  { moves: ['e4', 'c6'], name: 'Caro-Kann' },
-  { moves: ['e4', 'd5'], name: 'Escandinava' },
-  { moves: ['e4', 'd6'], name: 'Pirc / Moderna' },
-  { moves: ['e4', 'Nf6'], name: 'Alekhine' },
-  { moves: ['e4', 'g6'], name: 'Moderna' },
-  { moves: ['e4'], name: 'Apertura de Rey (1.e4)' },
-  { moves: ['d4', 'd5', 'c4', 'e6'], name: 'Gambito de Dama Rehusado' },
-  { moves: ['d4', 'd5', 'c4'], name: 'Gambito de Dama' },
-  { moves: ['d4', 'Nf6', 'c4', 'g6'], name: 'India del Rey' },
-  { moves: ['d4', 'Nf6', 'c4', 'e6'], name: 'Nimzoindia / India' },
-  { moves: ['d4', 'f5'], name: 'Holandesa' },
-  { moves: ['d4', 'd5'], name: 'Apertura de Dama Cerrada' },
-  { moves: ['d4', 'Nf6'], name: 'Defensa India' },
-  { moves: ['d4'], name: 'Apertura de Dama (1.d4)' },
-  { moves: ['Nf3'], name: 'Apertura Reti' },
-  { moves: ['c4'], name: 'Apertura Inglesa' },
-  { moves: ['g3'], name: 'Fianchetto' },
-  { moves: ['b3'], name: 'Nimzowitsch-Larsen' },
-  { moves: ['f4'], name: 'Gambito Bird' },
-];
-
-function detectOpening(pgnText) {
-  const tokens = String(pgnText || '')
-    .split(/\s+/)
-    .filter((t) => t && !/^\d+\.$/.test(t) && !/^(1-0|0-1|1\/2-1\/2|\*)$/.test(t))
-    .slice(0, 6);
-  if (!tokens.length) return null;
-  let best = null;
-  for (const entry of OPENING_BOOK) {
-    if (entry.moves.length > tokens.length) continue;
-    let ok = true;
-    for (let i = 0; i < entry.moves.length; i++) {
-      if (tokens[i] !== entry.moves[i]) { ok = false; break; }
-    }
-    if (ok && (!best || entry.moves.length > best.moves.length)) best = entry;
-  }
-  return best ? best.name : null;
-}
+// El catalogo de aperturas (antes vivia aca adentro) se movio a
+// services/openings.js para poder reusarlo tambien en el explorador
+// publico de aperturas (Fase 9) sin mantener dos copias -- ver ese
+// archivo para el catalogo completo y detectOpening().
 
 function publicLeaderboardFilter() {
   return {
