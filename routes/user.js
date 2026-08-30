@@ -7,6 +7,7 @@ const DamasMatch           = require('../models/DamasMatch');
 const Room                 = require('../models/Room');
 const Event                = require('../models/Event');
 const { requireAuth, userIsAdmin } = require('../middleware/auth');
+const { ACHIEVEMENTS, levelFromXp, xpIntoLevel } = require('../services/achievements');
 
 const router = express.Router();
 
@@ -307,6 +308,11 @@ router.get('/profile-stats', requireAuth, async (req, res) => {
       favoriteMode,
       chessGames: chessMatches.length,
       damasGames: damasMatches.length,
+      xp: req.user.xp || 0,
+      level: levelFromXp(req.user.xp),
+      xpIntoLevel: xpIntoLevel(req.user.xp),
+      achievementsUnlocked: (req.user.achievements || []).length,
+      achievementsTotal: ACHIEVEMENTS.length,
       style: {
         avgMovesPerGame: avgMoves,
         // Todavia no se trackea posicion/complejidad por jugada, asi
@@ -320,6 +326,24 @@ router.get('/profile-stats', requireAuth, async (req, res) => {
   } catch (err) {
     serverError(res, 'Profile stats', err);
   }
+});
+
+// GET /api/user/achievements - catalogo completo (Fase 4 del roadmap
+// PRO), con cuales ya desbloqueo el jugador -- asi el perfil puede
+// mostrar los bloqueados tambien, no solo los conseguidos.
+router.get('/achievements', requireAuth, async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const unlockedMap = new Map((req.user.achievements || []).map((a) => [a.key, a.unlockedAt]));
+  res.json({
+    achievements: ACHIEVEMENTS.map((a) => ({
+      key: a.key,
+      name: a.name,
+      description: a.description,
+      icon: a.icon,
+      unlocked: unlockedMap.has(a.key),
+      unlockedAt: unlockedMap.get(a.key) || null,
+    })),
+  });
 });
 
 // PATCH /api/user/me - update profile

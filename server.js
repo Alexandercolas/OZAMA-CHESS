@@ -24,6 +24,7 @@ const Room            = require('./models/Room');
 const User            = require('./models/User');
 const Event           = require('./models/Event');
 const { generateNextRound } = require('./services/tournament');
+const { xpForResult, buildContext, checkNewAchievements } = require('./services/achievements');
 
 const authRoutes      = require('./routes/auth');
 const userRoutes      = require('./routes/user');
@@ -300,6 +301,15 @@ async function finishDamasGame(room, code, { winner, reason }) {
           bumpStreak(bUser.damasStats, false);
         }
 
+        applyProgressionForMatch({
+          wUser, bUser,
+          wOutcome: result === 'white_win' ? 'win' : result === 'draw' ? 'draw' : 'loss',
+          bOutcome: result === 'black_win' ? 'win' : result === 'draw' ? 'draw' : 'loss',
+          wEloBefore: wBefore, bEloBefore: bBefore,
+          moveCount: 0,
+          game: 'damas',
+        });
+
         eloChange.white = wUser.damasElo - wBefore;
         eloChange.black = bUser.damasElo - bBefore;
 
@@ -509,6 +519,23 @@ function bumpStreak(statsObj, won) {
   if (!statsObj) return;
   statsObj.streak = won ? Number(statsObj.streak || 0) + 1 : 0;
   if (statsObj.streak > Number(statsObj.bestStreak || 0)) statsObj.bestStreak = statsObj.streak;
+}
+
+// XP + logros (Fase 4 del roadmap PRO) para los dos jugadores de una
+// partida que recien termino. Se llama DESPUES de actualizar
+// stats/streak/elo de cada usuario (buildContext necesita los totales
+// ya actualizados) y ANTES de guardarlos -- no agrega un save() extra,
+// reusa el que ya iba a pasar para cerrar la partida.
+function applyProgressionForMatch({ wUser, bUser, wOutcome, bOutcome, wEloBefore, bEloBefore, moveCount, game }) {
+  for (const [user, outcome, opponentElo] of [[wUser, wOutcome, bEloBefore], [bUser, bOutcome, wEloBefore]]) {
+    if (!user) continue;
+    user.xp = Number(user.xp || 0) + xpForResult(outcome);
+    const ctx = buildContext({ user, game, outcome, opponentElo, moveCount, endedAt: new Date() });
+    const newKeys = checkNewAchievements(user, ctx);
+    if (newKeys.length) {
+      user.achievements = [...(user.achievements || []), ...newKeys.map((key) => ({ key, unlockedAt: new Date() }))];
+    }
+  }
 }
 
 function playerSnapshot(info) {
@@ -1161,6 +1188,15 @@ async function applyEloForRoom(room, result, code) {
       bumpStreak(wUser.stats, false);
       bumpStreak(bUser.stats, false);
     }
+
+    applyProgressionForMatch({
+      wUser, bUser,
+      wOutcome: result === 'white_win' ? 'win' : result === 'draw' ? 'draw' : 'loss',
+      bOutcome: result === 'black_win' ? 'win' : result === 'draw' ? 'draw' : 'loss',
+      wEloBefore: wBefore, bEloBefore: bBefore,
+      moveCount: room.moves?.length || 0,
+      game: 'chess',
+    });
 
     await Promise.all([
       wUser.save({ validateModifiedOnly: true }),

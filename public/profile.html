@@ -203,6 +203,45 @@
     .style-item .style-value { color: var(--gold); font-weight: 700; }
     .style-item .style-value.is-empty { color: var(--dim); font-weight: 400; font-style: italic; }
 
+    .progression-panel { padding: 20px; margin-bottom: 28px; }
+    .level-row { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+    .level-badge {
+      flex-shrink: 0;
+      width: 52px; height: 52px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; flex-direction: column;
+      background: linear-gradient(135deg, var(--gold), #8B6914);
+      color: var(--carbon); font-family: var(--ft); font-weight: 900;
+    }
+    .level-badge .lv-num { font-size: 18px; line-height: 1; }
+    .level-badge .lv-lbl { font-size: 7px; letter-spacing: 1px; }
+    .level-info { flex: 1; min-width: 0; }
+    .level-xp-text { font-size: 11px; color: var(--dim); margin-bottom: 5px; letter-spacing: 0.5px; }
+    .xp-bar-track { height: 8px; border-radius: 4px; background: var(--surface2); overflow: hidden; }
+    .xp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-2, var(--gold))); border-radius: 4px; transition: width 0.4s ease; }
+
+    .achievements-title {
+      font-family: var(--ft); font-size: 15px; font-weight: 700; color: var(--gold);
+      letter-spacing: 1px; margin: 18px 0 12px;
+      padding-top: 16px; border-top: 1px solid rgba(200,152,60,0.1);
+    }
+    .achievements-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px;
+    }
+    .achievement-badge {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      padding: 14px 8px; border-radius: 10px;
+      background: var(--surface2); border: 1px solid rgba(200,152,60,0.08);
+      text-align: center;
+    }
+    .achievement-badge.is-unlocked { border-color: rgba(200,152,60,0.35); background: rgba(200,152,60,0.06); }
+    .achievement-icon { font-size: 26px; }
+    .achievement-badge:not(.is-unlocked) .achievement-icon { filter: grayscale(1); opacity: 0.35; }
+    .achievement-name { font-size: 11px; font-weight: 700; color: var(--text); }
+    .achievement-badge:not(.is-unlocked) .achievement-name { color: var(--dim); }
+    .achievement-desc { font-size: 9.5px; color: var(--dim); line-height: 1.4; }
+
     /* Stats grid */
     .container { max-width: 800px; margin: 0 auto; padding: 28px 20px 0; }
 
@@ -833,6 +872,43 @@
         _identityData = null;
       }
       renderIdentityPanel(currentGame);
+      renderLevelPanel();
+    }
+
+    function renderLevelPanel() {
+      const body = document.getElementById('level-body');
+      if (!body) return;
+      const data = _identityData;
+      if (!data) { body.innerHTML = '<div class="empty-msg">No se pudo cargar.</div>'; return; }
+      const pct = Math.max(0, Math.min(100, data.xpIntoLevel));
+      body.innerHTML = `
+        <div class="level-row">
+          <div class="level-badge"><span class="lv-num">${data.level}</span><span class="lv-lbl">NIVEL</span></div>
+          <div class="level-info">
+            <div class="level-xp-text">${data.xp} XP total · ${data.xpIntoLevel}/100 para el nivel ${data.level + 1} · ${data.achievementsUnlocked}/${data.achievementsTotal} logros</div>
+            <div class="xp-bar-track"><div class="xp-bar-fill" style="width:${pct}%"></div></div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadAchievements() {
+      const grid = document.getElementById('achievements-grid');
+      if (!grid) return;
+      try {
+        const res = await fetch('/api/user/achievements', { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        grid.innerHTML = (data.achievements || []).map((a) => `
+          <div class="achievement-badge ${a.unlocked ? 'is-unlocked' : ''}" title="${a.unlocked ? 'Desbloqueado' : 'Bloqueado'}">
+            <span class="achievement-icon">${a.icon}</span>
+            <span class="achievement-name">${escapeHtml(a.name)}</span>
+            <span class="achievement-desc">${escapeHtml(a.description)}</span>
+          </div>
+        `).join('');
+      } catch (_) {
+        grid.innerHTML = '<div class="empty-msg">No se pudieron cargar los logros.</div>';
+      }
     }
 
     function favoriteModeLabel(data) {
@@ -993,6 +1069,13 @@
                     <div class="style-grid" id="style-grid"></div>
                   </div>
 
+                  <div class="progression-panel oz-card oz-enter" id="progression-panel" style="--d:2">
+                    <div class="section-title">Progresión</div>
+                    <div id="level-body"><div class="empty-msg">Cargando...</div></div>
+                    <div class="achievements-title" id="achievements-title">Logros</div>
+                    <div class="achievements-grid" id="achievements-grid"></div>
+                  </div>
+
                   <div class="adv-stats-panel oz-card oz-enter" id="adv-stats-panel" style="--d:3">
                     <div class="adv-stats-title">
                       <div class="section-title">Estadisticas avanzadas</div>
@@ -1099,6 +1182,7 @@
         loadFriends();
         loadAdvancedStats(currentGame);
         loadIdentityStats();
+        loadAchievements();
       } catch (_) {}
     }
 
@@ -1120,6 +1204,7 @@
         loadFriends();
         loadAdvancedStats(currentGame);
         loadIdentityStats();
+        loadAchievements();
       } catch (err) {
         document.getElementById('main-content').innerHTML =
           '<div class="loading">Error cargando el perfil. Recarga la pagina.</div>';

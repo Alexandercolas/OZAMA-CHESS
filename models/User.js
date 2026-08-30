@@ -84,6 +84,17 @@ const UserSchema = new mongoose.Schema(
       bestStreak: { type: Number, default: 0 },
     },
 
+    // Progresion (Fase 4 del roadmap PRO): XP acumulada de ajedrez +
+    // Damas juntos (una sola barra de progreso para todo OZAMA, no
+    // separada por juego -- el nivel es del jugador, no del juego) y
+    // los logros que ya desbloqueo. Ver services/achievements.js para
+    // el catalogo completo y como se otorgan.
+    xp: { type: Number, default: 0 },
+    achievements: [{
+      key: { type: String, required: true },
+      unlockedAt: { type: Date, default: Date.now },
+    }],
+
     // The paid plan must never provide competitive advantages.
     plan: {
       type: String,
