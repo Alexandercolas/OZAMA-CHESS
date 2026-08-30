@@ -1438,9 +1438,20 @@ io.on('connection', (socket) => {
     const pInfo = await getPlayerInfo(playerName, country);
     socket.data.playerName = pInfo.name;
 
+    // Bloqueo (Fase 10): no emparejar con nadie que yo bloquee ni con
+    // nadie que me haya bloqueado a mi. blockedUsers va aparte de
+    // pInfo a proposito -- pInfo termina guardado en Match/DamasMatch
+    // como snapshot del jugador, y esto no tiene que filtrarse ahi.
+    const myBlockedDoc = pInfo.userId
+      ? await User.findById(pInfo.userId).select('blockedUsers').lean().catch(() => null)
+      : null;
+    const myBlocked = (myBlockedDoc?.blockedUsers || []).map(String);
+
     const rivalIdx = matchQueue.findIndex(e => {
       if (e.socketId === socket.id) return false;
       if (pInfo.userId && e.playerInfo.userId.toString() === pInfo.userId.toString()) return false;
+      if (pInfo.userId && myBlocked.includes(e.playerInfo.userId?.toString())) return false;
+      if (pInfo.userId && (e.blockedUsers || []).includes(pInfo.userId.toString())) return false;
       const rivalSocket = io.sockets.sockets.get(e.socketId);
       return rivalSocket.connected;
     });
@@ -1450,7 +1461,7 @@ io.on('connection', (socket) => {
       const rivalSocket = io.sockets.sockets.get(rival.socketId);
 
       if (!rivalSocket.connected) {
-        matchQueue.push({ socketId: socket.id, playerInfo: pInfo, joinedAt: Date.now() });
+        matchQueue.push({ socketId: socket.id, playerInfo: pInfo, joinedAt: Date.now(), blockedUsers: myBlocked });
         socket.emit('matchmaking-searching', { position: matchQueue.length });
         return;
       }
@@ -1467,7 +1478,7 @@ io.on('connection', (socket) => {
       await createMatchBetween(wSock, wInfo, bSock, bInfo, code);
 
     } else {
-      matchQueue.push({ socketId: socket.id, playerInfo: pInfo, joinedAt: Date.now() });
+      matchQueue.push({ socketId: socket.id, playerInfo: pInfo, joinedAt: Date.now(), blockedUsers: myBlocked });
       socket.emit('matchmaking-searching', { position: matchQueue.length });
       console.log(`[MM] ${pInfo.name} en cola. Cola: ${matchQueue.length}`);
     }
