@@ -95,6 +95,22 @@ const UserSchema = new mongoose.Schema(
       unlockedAt: { type: Date, default: Date.now },
     }],
 
+    // Entrenamiento tactico (Fase 8 del roadmap PRO). solvedKeys evita
+    // repetir un puzzle ya resuelto en el modo practica; lastDailyDate
+    // evita contar el desafio del dia dos veces; streak/lastSolvedDate
+    // llevan la racha de DIAS consecutivos con al menos un puzzle
+    // resuelto (independiente de la racha de victorias en partidas).
+    // Ver services/puzzles.js para el catalogo y routes/puzzles.js
+    // para donde se actualiza todo esto.
+    puzzles: {
+      solvedKeys: { type: [String], default: [] },
+      totalSolved: { type: Number, default: 0 },
+      streak: { type: Number, default: 0 },
+      bestStreak: { type: Number, default: 0 },
+      lastSolvedDate: { type: String, default: null },
+      lastDailyDate: { type: String, default: null },
+    },
+
     // The paid plan must never provide competitive advantages.
     plan: {
       type: String,

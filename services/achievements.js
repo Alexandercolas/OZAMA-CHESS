@@ -82,6 +82,27 @@ const ACHIEVEMENTS = [
     icon: '🏃',
     check: (ctx) => ctx.game === 'chess' && ctx.moveCount >= 80,
   },
+  {
+    key: 'primer_acertijo',
+    name: 'Primer Acertijo',
+    description: 'Resuelve tu primer puzzle tactico.',
+    icon: '🧩',
+    check: (ctx) => ctx.totalPuzzlesSolved >= 1,
+  },
+  {
+    key: 'diez_acertijos',
+    name: 'Mente Tactica',
+    description: 'Resuelve 10 puzzles tacticos.',
+    icon: '🧠',
+    check: (ctx) => ctx.totalPuzzlesSolved >= 10,
+  },
+  {
+    key: 'cincuenta_acertijos',
+    name: 'Maestro de la Tactica',
+    description: 'Resuelve 50 puzzles tacticos.',
+    icon: '🔮',
+    check: (ctx) => ctx.totalPuzzlesSolved >= 50,
+  },
 ];
 
 const ACHIEVEMENT_MAP = new Map(ACHIEVEMENTS.map((a) => [a.key, a]));
@@ -96,6 +117,15 @@ function xpForResult(outcome) {
   return base;
 }
 
+// XP por puzzle resuelto: base fija + un poco mas para los dificiles,
+// para que igual valga la pena intentar los avanzados sin que un
+// puzzle facil se sienta inutil.
+function xpForPuzzle(difficulty) {
+  const base = 8;
+  const bonus = Math.max(0, Math.round((Number(difficulty || 800) - 800) / 100));
+  return base + bonus;
+}
+
 function levelFromXp(xp) {
   return 1 + Math.floor(Number(xp || 0) / 100);
 }
@@ -108,7 +138,7 @@ function xpIntoLevel(xp) {
 // User ya actualizado (stats/streak/elo ya deberian estar aplicados
 // ANTES de llamar esto) y de datos puntuales de la partida que recien
 // termino.
-function buildContext({ user, game, outcome, opponentElo, moveCount, endedAt }) {
+function buildContext({ user, game, outcome, opponentElo, moveCount, endedAt, totalPuzzlesSolved }) {
   const stats = game === 'damas' ? user.damasStats : user.stats;
   const totalWins = stats?.wins || 0;
   const totalGames = (stats?.wins || 0) + (stats?.losses || 0) + (stats?.draws || 0);
@@ -122,6 +152,7 @@ function buildContext({ user, game, outcome, opponentElo, moveCount, endedAt }) 
     opponentEloWasHigher: typeof opponentElo === 'number' && opponentElo > myElo,
     moveCount: moveCount || 0,
     endHourUTC: endedAt ? new Date(endedAt).getUTCHours() : null,
+    totalPuzzlesSolved: totalPuzzlesSolved ?? (user.puzzles?.totalSolved || 0),
   };
 }
 
@@ -145,6 +176,7 @@ module.exports = {
   ACHIEVEMENTS,
   ACHIEVEMENT_MAP,
   xpForResult,
+  xpForPuzzle,
   levelFromXp,
   xpIntoLevel,
   buildContext,

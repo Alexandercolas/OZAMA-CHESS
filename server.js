@@ -32,6 +32,7 @@ const adminRoutes     = require('./routes/admin');
 const eventRoutes     = require('./routes/events');
 const billingRoutes   = require('./routes/billing');
 const matchesRoutes   = require('./routes/matches');
+const puzzlesRoutes   = require('./routes/puzzles');
 
 const OzamaCheckers   = require('./public/checkers-engine.js');
 
@@ -167,6 +168,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/matches', matchesRoutes);
+app.use('/api/puzzles', puzzlesRoutes);
 
 app.get('/api/health/db', (_req, res) => {
   res.json({
