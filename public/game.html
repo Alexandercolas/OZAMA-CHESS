@@ -778,6 +778,16 @@
     }
     .move-pgn-btn:hover { background: rgba(200,152,60,0.14); }
     .move-pgn-btn:disabled { opacity: 0.4; cursor: default; }
+    .move-analysis-summary {
+      padding: 7px 6px;
+      border-top: 1px solid rgba(200,152,60,0.1);
+      text-align: center;
+      font-size: 9.5px;
+      letter-spacing: 1px;
+      color: var(--dim);
+    }
+    .move-entry.mv-blunder { color: #e05c4a; }
+    .move-entry.mv-inaccuracy { color: #d9a441; }
     .move-list {
       display: flex; flex-direction: column;
       max-height: 130px; overflow-y: auto;
@@ -1255,6 +1265,8 @@
         <div class="move-list" id="move-list">
           <div class="move-empty">Sin jugadas todavia</div>
         </div>
+        <div class="move-analysis-summary" id="move-analysis-summary" style="display:none;"></div>
+        <button class="move-pgn-btn" id="move-analyze-btn" title="Analizar partida (Premium)" style="display:none;" onclick="analyzeGameForBlunders()">🔍 Analizar partida</button>
         <button class="move-pgn-btn" id="move-pgn-btn" title="Exportar PGN (Premium)" style="display:none;">⬇ Descargar PGN</button>
       </div>
 
@@ -1408,8 +1420,8 @@
 </div>
 
 <script src="/vendor/socket.io.min.js"></script>
-<script src="bot.js?v=20260726-1"></script>
-<script src="script.js?v=20260829-premium2"></script>
+<script src="bot.js?v=20260829-analysis"></script>
+<script src="script.js?v=20260829-analysis"></script>
 
 <script>
   // Sync visible clocks with hidden ones (CLOCK module updates #clock-white/black)

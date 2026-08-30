@@ -991,10 +991,14 @@ function renderMoveList() {
       const b = history[i + 1];
       const activeW = state.reviewIndex === i ? ' active' : '';
       const activeB = b && state.reviewIndex === i + 1 ? ' active' : '';
+      const markW = w.analysis?.level ? ` mv-${w.analysis.level}` : '';
+      const markB = b?.analysis?.level ? ` mv-${b.analysis.level}` : '';
+      const iconW = w.analysis?.level === 'blunder' ? ' ❌' : w.analysis?.level === 'inaccuracy' ? ' ⚠️' : '';
+      const iconB = b?.analysis?.level === 'blunder' ? ' ❌' : b?.analysis?.level === 'inaccuracy' ? ' ⚠️' : '';
       html += `<div class="move-row">` +
         `<span class="move-no">${moveNo}.</span>` +
-        `<span class="move-entry${activeW}" data-index="${i}">${escapeMoveText(w.notation)}</span>` +
-        (b ? `<span class="move-entry${activeB}" data-index="${i + 1}">${escapeMoveText(b.notation)}</span>` : '') +
+        `<span class="move-entry${activeW}${markW}" data-index="${i}">${escapeMoveText(w.notation)}${iconW}</span>` +
+        (b ? `<span class="move-entry${activeB}${markB}" data-index="${i + 1}">${escapeMoveText(b.notation)}${iconB}</span>` : '') +
         `</div>`;
     }
     listEl.innerHTML = html;
@@ -1130,6 +1134,64 @@ function setupProBadge() {
   btn.textContent = active ? 'PRO' : 'Activa PRO';
   btn.classList.toggle('is-pro', active);
   btn.style.display = '';
+}
+
+// Analisis post-partida (beneficio Premium): reusa el motor del bot
+// (BOT.analyzePosition en bot.js) para comparar cada jugada realmente
+// jugada contra la mejor jugada disponible en esa posicion. Corre en
+// el hilo principal en tandas cortas (no hay worker para el motor de
+// ajedrez como si lo hay para Damas) para no trabar la pagina.
+function classifyDelta(delta) {
+  if (delta >= 300) return 'blunder';
+  if (delta >= 100) return 'inaccuracy';
+  return null;
+}
+
+let _analysisRunning = false;
+
+async function analyzeGameForBlunders() {
+  const history = state.moveHistory || [];
+  const btn = document.getElementById('move-analyze-btn');
+  if (!history.length || _analysisRunning) return;
+  if (typeof BOT === 'undefined' || typeof BOT.analyzePosition !== 'function') return;
+
+  _analysisRunning = true;
+  const originalLabel = btn ? btn.textContent : '';
+  if (btn) btn.disabled = true;
+
+  const gsr = { castlingRights: { w: { kingside: true, queenside: true }, b: { kingside: true, queenside: true } } };
+  const CHUNK = 4;
+  for (let i = 0; i < history.length; i++) {
+    const entry = history[i];
+    gsr.enPassantTarget = entry.epTargetBefore || null;
+    const result = BOT.analyzePosition(entry.boardBefore, entry.piece.color, gsr, entry.from, entry.to);
+    entry.analysis = result ? { delta: result.delta, level: classifyDelta(result.delta) } : null;
+    if (btn) btn.textContent = `Analizando ${i + 1}/${history.length}...`;
+    if ((i + 1) % CHUNK === 0) await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  _analysisRunning = false;
+  if (btn) { btn.disabled = false; btn.textContent = originalLabel; btn.style.display = 'none'; }
+  renderMoveList();
+  renderAnalysisSummary();
+}
+
+function renderAnalysisSummary() {
+  const el = document.getElementById('move-analysis-summary');
+  if (!el) return;
+  const history = state.moveHistory || [];
+  const blunders = history.filter((e) => e.analysis?.level === 'blunder').length;
+  const inaccuracies = history.filter((e) => e.analysis?.level === 'inaccuracy').length;
+  el.textContent = (!blunders && !inaccuracies)
+    ? 'Sin errores graves detectados en esta partida.'
+    : `${blunders} error${blunders === 1 ? '' : 'es'} grave${blunders === 1 ? '' : 's'} · ${inaccuracies} imprecision${inaccuracies === 1 ? '' : 'es'}`;
+  el.style.display = '';
+}
+
+function setupAnalysisGate() {
+  const btn = document.getElementById('move-analyze-btn');
+  if (!btn) return;
+  btn.style.display = userIsPremiumActive() ? '' : 'none';
 }
 
 function setupPremiumThemeGate() {
@@ -1769,6 +1831,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   setupPgnExportGate();
   setupPremiumThemeGate();
   setupProBadge();
+  setupAnalysisGate();
   if (IS_BOT_MODE && restoreLocalGameSnapshot()) return;
   startNewGame();
 });

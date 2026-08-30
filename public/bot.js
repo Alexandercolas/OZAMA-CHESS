@@ -250,6 +250,38 @@ const BOT = (() => {
     return bestMove;
   }
 
+  // Analisis post-partida (beneficio Premium): compara la jugada que
+  // realmente se jugo contra la mejor jugada disponible en esa misma
+  // posicion, usando el mismo motor minimax que ya usa el bot para
+  // jugar -- no cambia en nada como juega el bot, es una lectura
+  // aparte, tipo "arbitro externo" mirando jugadas ya hechas.
+  const ANALYSIS_DEPTH = 3;
+  function analyzePosition(board, movingColor, gameState, playedFrom, playedTo) {
+    const moves = getAllMoves(board, movingColor, gameState);
+    if (!moves.length) return null;
+
+    const scoreOf = (move) => {
+      const piece = board[move.from.row][move.from.col];
+      const nextBoard = applyMove(board, move.from, move.to, gameState);
+      const nextState = nextGameState(gameState, board, move.from, move.to, piece);
+      return minimax(nextBoard, ANALYSIS_DEPTH - 1, -Infinity, Infinity, false, movingColor, nextState);
+    };
+
+    let bestScore = -Infinity;
+    for (const move of moves) {
+      const score = scoreOf(move);
+      if (score > bestScore) bestScore = score;
+    }
+
+    const playedMove = moves.find((m) =>
+      m.from.row === playedFrom.row && m.from.col === playedFrom.col &&
+      m.to.row === playedTo.row && m.to.col === playedTo.col);
+    if (!playedMove) return null;
+    const playedScore = scoreOf(playedMove);
+
+    return { bestScore, playedScore, delta: Math.max(0, bestScore - playedScore) };
+  }
+
   return {
     move(board, botColor, difficulty, gameState, callback) {
       const delay = difficulty === 'easy' ? 300 : difficulty === 'medium' ? 500 : 750;
@@ -261,6 +293,14 @@ const BOT = (() => {
           callback(null);
         }
       }, delay);
+    },
+    analyzePosition(board, movingColor, gameState, playedFrom, playedTo) {
+      try {
+        return analyzePosition(cloneBoard(board), movingColor, gameState, playedFrom, playedTo);
+      } catch (err) {
+        console.error('[BOT] Analysis error:', err);
+        return null;
+      }
     },
   };
 })();

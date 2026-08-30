@@ -41,6 +41,7 @@ function premiumCapabilities(user) {
       'Tema de tablero exclusivo (Zona Colonial)',
       'Exportar tus partidas en formato PGN',
       'Estadisticas avanzadas: color con mas victorias, duracion y aperturas',
+      'Analisis post-partida: deteccion de errores graves e imprecisiones',
     ] : [],
   };
 }
