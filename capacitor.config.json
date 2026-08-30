@@ -3,6 +3,7 @@
   "appName": "OZAMA CHESS",
   "webDir": "public",
   "server": {
+    "url": "https://ozama-chess.onrender.com",
     "androidScheme": "https",
     "cleartext": false
   },
