@@ -100,6 +100,15 @@
     .avatar-ring.premium {
       box-shadow: 0 0 0 3px rgba(200,152,60,0.85), 0 0 34px rgba(200,152,60,0.4);
     }
+    /* Marcos de perfil (Fase 13, ver /collection.html). Si ademas es
+       Premium, el marco elegido gana -- son cosas independientes. */
+    .avatar-ring[data-frame="bronce"] { box-shadow: 0 0 0 4px #8B5A2B; }
+    .avatar-ring[data-frame="plata"] { box-shadow: 0 0 0 4px #C7CCD1; }
+    .avatar-ring[data-frame="oro"] { box-shadow: 0 0 0 4px #FFD34D; }
+    .avatar-ring[data-frame="racha"] { box-shadow: 0 0 0 4px #E2571C, 0 0 14px 2px rgba(226,87,28,0.5); }
+    .avatar-ring[data-frame="tactico"] { box-shadow: 0 0 0 4px #3F7D4E; }
+    .avatar-ring[data-frame="cazador"] { box-shadow: 0 0 0 4px #7A1F2B; }
+    .avatar-ring[data-frame="centenario"] { box-shadow: 0 0 0 4px #6B4A2A; }
     .avatar-ring img,
     .avatar-choice img,
     .friend-avatar img {
@@ -747,6 +756,7 @@
   <div class="profile-tabs">
     <a href="/profile.html" class=" profile-tab is-active">Perfil</a>
     <a href="/history.html" class="profile-tab">Historial</a>
+    <a href="/collection.html" class="profile-tab">Colección</a>
     <a href="/settings.html" class="profile-tab">Ajustes</a>
   </div>
 
@@ -1094,9 +1104,10 @@
       const premiumActive = user.plan === 'premium' && (!premiumUntil || premiumUntil > new Date());
       const planLabel = premiumActive ? 'Premium' : 'Free';
       const ringClass = `avatar-ring${premiumActive ? ' premium' : ''}`;
+      const frameAttr = `data-frame="${escapeHtml(user.equippedFrame || 'ninguno')}"`;
       const heroAvatar = avatarImage
-        ? `<div class="${ringClass}" id="avatar-ring" data-initial="${initial}"><img src="${escapeHtml(avatarImage)}" alt=""></div>`
-        : `<div class="${ringClass} ${avatarClass(avatar)}" id="avatar-ring" data-initial="${initial}">${initial}</div>`;
+        ? `<div class="${ringClass}" id="avatar-ring" data-initial="${initial}" ${frameAttr}><img src="${escapeHtml(avatarImage)}" alt=""></div>`
+        : `<div class="${ringClass} ${avatarClass(avatar)}" id="avatar-ring" data-initial="${initial}" ${frameAttr}>${initial}</div>`;
 
       document.getElementById('main-content').innerHTML = `
         <!-- Hero -->

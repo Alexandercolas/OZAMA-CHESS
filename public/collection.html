@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; media-src 'self'; connect-src 'self' https://ozama-chess.onrender.com">
+  <script src="/mobile-runtime.js"></script>
+  <meta name="theme-color" content="#0D0B08"/>
+  <meta name="color-scheme" content="dark"/>
+  <title>OZAMA CHESS - Colección</title>
+  <meta name="description" content="Marcos de perfil que desbloqueás jugando y mejorando en OZAMA CHESS."/>
+  <meta name="robots" content="noindex, nofollow"/>
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="/favicon.png?v=5">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <script src="/pwa.js" defer></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--carbon); color: var(--text); font-family: var(--fb); min-height: 100vh; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; background: rgba(13,11,8,0.97); border-bottom: 1px solid rgba(200,152,60,0.18); }
+    .topbar a.brand { color: var(--gold); font-family: var(--ft); font-weight: 900; letter-spacing: 3px; text-decoration: none; font-size: 15px; }
+    .topbar a.back { color: var(--dim); text-decoration: none; font-size: 13px; }
+    .wrap { max-width: 560px; margin: 0 auto; padding: 28px 16px 60px; }
+    .eyebrow { font-family: var(--fm); font-size: 10.5px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; text-align: center; }
+    h1 { font-family: var(--ft); font-size: 26px; text-align: center; margin: 8px 0 6px; color: var(--text); }
+    .sub { text-align: center; color: var(--dim); font-size: 13px; margin-bottom: 26px; }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px; }
+    .frame-card { background: var(--s1); border: 1px solid rgba(200,152,60,0.16); border-radius: 12px; padding: 16px 10px; text-align: center; }
+    .frame-card.locked { opacity: 0.55; }
+    .frame-card.equipped { border-color: var(--gold); background: rgba(200,152,60,0.08); }
+
+    .av-preview { width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-family: var(--ft); font-weight: 900; color: var(--carbon); font-size: 26px; background: linear-gradient(135deg, var(--gold), #8B6914); box-sizing: content-box; }
+    .fr-name { font-size: 12.5px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .fr-desc { font-size: 10.5px; color: var(--dim); line-height: 1.4; min-height: 28px; }
+    .fr-btn { margin-top: 10px; padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(200,152,60,0.3); background: rgba(200,152,60,0.08); color: var(--gold); font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; width: 100%; }
+    .fr-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .fr-lock { font-size: 10.5px; color: var(--faint, var(--dim)); margin-top: 10px; }
+
+    /* Marcos: un aro alrededor del avatar circular, distinto por cosmetico. */
+    .av-preview[data-frame="bronce"] { box-shadow: 0 0 0 4px #8B5A2B; }
+    .av-preview[data-frame="plata"] { box-shadow: 0 0 0 4px #C7CCD1; }
+    .av-preview[data-frame="oro"] { box-shadow: 0 0 0 4px #FFD34D; }
+    .av-preview[data-frame="racha"] { box-shadow: 0 0 0 4px #E2571C, 0 0 14px 2px rgba(226,87,28,0.5); }
+    .av-preview[data-frame="tactico"] { box-shadow: 0 0 0 4px #3F7D4E; }
+    .av-preview[data-frame="cazador"] { box-shadow: 0 0 0 4px #7A1F2B; }
+    .av-preview[data-frame="centenario"] { box-shadow: 0 0 0 4px #6B4A2A; }
+
+    .loading, .error-msg { text-align: center; padding: 60px 20px; color: var(--dim); }
+  </style>
+</head>
+<body>
+  <nav class="topbar"><a class="brand" href="/">OZAMA CHESS</a><a class="back" href="/profile.html">← Perfil</a></nav>
+  <div class="wrap" id="content"><div class="loading">Cargando colección...</div></div>
+
+  <script>
+    let _token = '';
+    let frames = [];
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch]));
+    }
+
+    async function load() {
+      const content = document.getElementById('content');
+      try {
+        window.OZAMA_RUNTIME && await window.OZAMA_RUNTIME.ready;
+        _token = window.OZAMA_RUNTIME?.getAuthToken?.() || '';
+        let user = null;
+        try { user = JSON.parse(localStorage.getItem('ozama-user') || 'null'); } catch (_) {}
+        if (!user || (window.OZAMA_RUNTIME?.native && !_token)) {
+          content.innerHTML = `<div class="error-msg">Iniciá sesión para ver tu colección.<br><br><a href="/login.html" style="color:var(--gold);font-weight:700;text-decoration:none;">Iniciar sesión →</a></div>`;
+          return;
+        }
+        const res = await fetch('/api/user/frames', { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo cargar la colección.');
+        frames = data.frames;
+        render();
+      } catch (err) {
+        content.innerHTML = `<div class="error-msg">${escapeHtml(err.message || 'Error al cargar.')}</div>`;
+      }
+    }
+
+    function render() {
+      const cards = frames.map((f) => `
+        <div class="frame-card ${f.unlocked ? '' : 'locked'} ${f.equipped ? 'equipped' : ''}">
+          <div class="av-preview" data-frame="${f.key}">${escapeHtml((f.name || '?').charAt(0))}</div>
+          <div class="fr-name">${escapeHtml(f.name)}</div>
+          <div class="fr-desc">${escapeHtml(f.description)}</div>
+          ${f.unlocked
+            ? `<button class="fr-btn" ${f.equipped ? 'disabled' : ''} onclick="equip('${f.key}')">${f.equipped ? 'Equipado' : 'Equipar'}</button>`
+            : `<div class="fr-lock">🔒 Bloqueado</div>`}
+        </div>
+      `).join('');
+
+      document.getElementById('content').innerHTML = `
+        <div class="eyebrow">Colección</div>
+        <h1>Marcos de Perfil</h1>
+        <div class="sub">Se desbloquean jugando y mejorando -- ninguno se compra.</div>
+        <div class="grid">${cards}</div>
+      `;
+    }
+
+    async function equip(key) {
+      try {
+        const res = await fetch(`/api/user/frames/${encodeURIComponent(key)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${_token}` },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo equipar.');
+        frames = frames.map((f) => ({ ...f, equipped: f.key === key }));
+        render();
+      } catch (err) {
+        alert(err.message || 'Error al equipar.');
+      }
+    }
+
+    window.equip = equip;
+    load();
+  </script>
+</body>
+</html>

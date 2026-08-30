@@ -10,6 +10,7 @@ const Report                = require('../models/Report');
 const { requireAuth, optionalAuth, userIsAdmin } = require('../middleware/auth');
 const { ACHIEVEMENTS, levelFromXp, xpIntoLevel } = require('../services/achievements');
 const { detectOpening } = require('../services/openings');
+const { FRAMES, framesFor, isValidFrame, isUnlocked } = require('../services/cosmetics');
 
 const router = express.Router();
 
@@ -316,6 +317,32 @@ router.get('/achievements', requireAuth, async (req, res) => {
       unlockedAt: unlockedMap.get(a.key) || null,
     })),
   });
+});
+
+// GET /api/user/frames - coleccion de marcos de perfil (Fase 13).
+router.get('/frames', requireAuth, async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ frames: framesFor(req.user, levelFromXp) });
+});
+
+// PATCH /api/user/frames/:key - equipar un marco ya desbloqueado.
+router.patch('/frames/:key', requireAuth, async (req, res) => {
+  try {
+    const key = String(req.params.key || '').trim();
+    if (!isValidFrame(key)) return res.status(400).json({ error: 'Marco invalido.' });
+
+    const frame = FRAMES.find((f) => f.key === key);
+    const level = levelFromXp(req.user.xp);
+    const achievementKeys = new Set((req.user.achievements || []).map((a) => a.key));
+    if (!isUnlocked(frame, { level, achievementKeys })) {
+      return res.status(403).json({ error: 'Todavia no desbloqueaste ese marco.' });
+    }
+
+    await User.updateOne({ _id: req.user._id }, { $set: { equippedFrame: key } });
+    res.json({ equippedFrame: key });
+  } catch (err) {
+    serverError(res, 'Equip frame', err);
+  }
 });
 
 // PATCH /api/user/me - update profile
@@ -809,7 +836,7 @@ router.get('/:username', optionalAuth, async (req, res) => {
     if (!validUsername(username)) return res.status(400).json({ error: 'Usuario invalido.' });
 
     const user = await User.findOne({ username })
-      .select('username country avatar avatarImage elo damasElo stats damasStats xp achievements plan premiumUntil createdAt isActive');
+      .select('username country avatar avatarImage elo damasElo stats damasStats xp achievements plan premiumUntil createdAt isActive equippedFrame');
 
     if (!user || !user.isActive) return res.status(404).json({ error: 'Usuario no encontrado.' });
 

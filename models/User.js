@@ -99,6 +99,10 @@ const UserSchema = new mongoose.Schema(
       key: { type: String, required: true },
       unlockedAt: { type: Date, default: Date.now },
     }],
+    // Coleccion (Fase 13): marco de perfil equipado. Cual esta
+    // DESBLOQUEADO se calcula siempre a partir de xp/achievements de
+    // arriba (services/cosmetics.js) -- aca solo se guarda la eleccion.
+    equippedFrame: { type: String, default: 'ninguno' },
 
     // Entrenamiento tactico (Fase 8 del roadmap PRO). solvedKeys evita
     // repetir un puzzle ya resuelto en el modo practica; lastDailyDate
