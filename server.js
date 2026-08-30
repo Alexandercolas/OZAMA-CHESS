@@ -22,6 +22,8 @@ const Match           = require('./models/Match');
 const DamasMatch      = require('./models/DamasMatch');
 const Room            = require('./models/Room');
 const User            = require('./models/User');
+const Event           = require('./models/Event');
+const { generateNextRound } = require('./services/tournament');
 
 const authRoutes      = require('./routes/auth');
 const userRoutes      = require('./routes/user');
@@ -366,7 +368,7 @@ function startClock(code) {
       const winner = turn === 'w' ? 'b' : 'w';
       const result = winner === 'w' ? 'white_win' : 'black_win';
       io.to(code).emit('time-out', { loser: turn, winner });
-      const closed = await finishMatch(room.matchId, result, winner);
+      const closed = await finishMatch(room.matchId, result, winner, '', room);
       if (closed) await applyEloForRoom(room, result, code);
       await Room.updateOne({ roomCode: code }, { $set: { status: 'finished', lastActivityAt: new Date() } }).catch(() => {});
     }
@@ -383,7 +385,7 @@ function startCloseTimer(code) {
     if (room.matchId) {
       const winner = room.white ? 'w' : room.black ? 'b' : null;
       const result = winner ? (winner === 'w' ? 'white_win' : 'black_win') : 'abandoned';
-      const closed = await finishMatch(room.matchId, result, winner);
+      const closed = await finishMatch(room.matchId, result, winner, '', room);
       if (closed && winner) await applyEloForRoom(room, result, code);
     }
     await Room.updateOne({ roomCode: code }, { $set: { status: 'closed', lastActivityAt: new Date() } }).catch(() => {});
@@ -392,13 +394,67 @@ function startCloseTimer(code) {
   }, 30_000);
 }
 
-async function finishMatch(matchId, result, winner = null, pgn = '') {
+// Cuando una sala de torneo termina, avanza el bracket guardado en el
+// Event correspondiente. Un empate o abandono NO decide el partido --
+// se deja "ready" con roomCode en null para que se rejuegue la
+// proxima vez que cualquiera de los dos entre desde la pagina de
+// torneos (tournament:join-match arma la sala de nuevo).
+async function handleTournamentMatchFinished(tournamentMeta, winner, room) {
+  try {
+    const { eventId, round, matchIndex } = tournamentMeta || {};
+    const event = await Event.findById(eventId);
+    const match = event?.bracket?.rounds?.[round]?.matches?.[matchIndex];
+    if (!event || !match) return;
+
+    if (!winner) {
+      match.status = 'ready';
+      match.roomCode = null;
+      event.markModified('bracket');
+      await event.save({ validateModifiedOnly: true });
+      return;
+    }
+
+    const winnerUserId = winner === 'w' ? room?.playerInfo?.w?.userId : room?.playerInfo?.b?.userId;
+    match.winner = winnerUserId || null;
+    match.status = 'finished';
+    event.markModified('bracket');
+
+    const roundMatches = event.bracket.rounds[round].matches;
+    const allDecided = roundMatches.every((m) => m.status === 'finished' || m.status === 'bye');
+
+    if (allDecided) {
+      const winners = roundMatches
+        .map((m) => ({
+          userId: m.winner,
+          name: m.winner && String(m.winner) === String(m.player1) ? m.player1Name : m.player2Name,
+        }))
+        .filter((w) => w.userId);
+
+      if (winners.length <= 1) {
+        event.bracket.championId = winners[0]?.userId || null;
+        event.bracket.championName = winners[0]?.name || '';
+        event.status = 'finished';
+      } else {
+        event.bracket.rounds.push(generateNextRound(winners));
+      }
+    }
+
+    await event.save({ validateModifiedOnly: true });
+    console.log(`[Tournament] ${event.title} — ronda ${round + 1}, partido ${matchIndex + 1} decidido.`);
+  } catch (err) {
+    console.warn('[Tournament] No se pudo avanzar el bracket:', err.message);
+  }
+}
+
+async function finishMatch(matchId, result, winner = null, pgn = '', room = null) {
   if (!matchId) return false;
   const set = { result, winner, endedAt: new Date() };
   if (pgn) set.pgn = pgn;
   const update = await Match.updateOne({ _id: matchId, result: 'in_progress' }, { $set: set })
     .catch((err) => { console.warn('[DB] No se pudo cerrar match:', err.message); return null; });
-  return !!update.modifiedCount;
+  const closed = !!update?.modifiedCount;
+  if (closed && room?.tournamentMeta) await handleTournamentMatchFinished(room.tournamentMeta, winner, room);
+  return closed;
 }
 
 async function finishRoomByServerConclusion(room, code, source = 'server') {
@@ -408,7 +464,7 @@ async function finishRoomByServerConclusion(room, code, source = 'server') {
 
   stopClock(room);
   room.status = 'finished';
-  const closed = await finishMatch(room.matchId, conclusion.result, conclusion.winner);
+  const closed = await finishMatch(room.matchId, conclusion.result, conclusion.winner, '', room);
   if (!closed) return null;
 
   await Room.updateOne({ roomCode: code }, {
@@ -498,7 +554,7 @@ async function adminCloseRoom(code, reason) {
   cancelTimer(room);
   stopClock(room);
   room.status = 'closed';
-  if (room.matchId) await finishMatch(room.matchId, 'abandoned', null);
+  if (room.matchId) await finishMatch(room.matchId, 'abandoned', null, '', room);
   await Room.updateOne({ roomCode: code }, {
     $set: { status: 'closed', lastActivityAt: new Date() },
   }).catch((err) => console.warn('[Admin] No se pudo cerrar Room:', err.message));
@@ -620,6 +676,11 @@ const socketSchemas = {
   searchUser: z.object({ username: z.string().trim().min(2).max(20) }).strict(),
   challengeSend: z.object({ targetUsername: z.string().trim().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/) }).strict(),
   challengeSocket: z.object({ challengerSocketId: z.string().min(1).max(120) }).strict(),
+  tournamentJoinMatch: z.object({
+    eventId: z.string().trim().regex(/^[a-f0-9]{24}$/i),
+    round: z.number().int().min(0).max(20),
+    matchIndex: z.number().int().min(0).max(255),
+  }).strict(),
 };
 
 function createInitialBoard() {
@@ -764,6 +825,13 @@ async function getOrRestoreRoom(roomCode) {
     clockB: saved.clockB || DEFAULT_TIME_MS,
     clockInterval: null,
   };
+  if (saved.tournamentMeta?.eventId) {
+    room.tournamentMeta = {
+      eventId: String(saved.tournamentMeta.eventId),
+      round: saved.tournamentMeta.round,
+      matchIndex: saved.tournamentMeta.matchIndex,
+    };
+  }
   room.currentTurn = room.game.turn || room.currentTurn;
   rooms.set(code, room);
   return room;
@@ -1229,6 +1297,18 @@ io.on('connection', (socket) => {
     return { userId: null, name: playerName || 'Jugador', country: fallbackCountry, avatar: 0, avatarImage: '', elo: 1200 };
   }
 
+  // Igual que getPlayerInfo, pero por userId en vez de por el socket
+  // actual -- hace falta para torneos: al armar una sala de bracket
+  // conocemos a los dos jugadores de antemano, pero el rival puede no
+  // estar conectado todavia.
+  async function getPlayerInfoById(userId, fallbackName) {
+    if (userId) {
+      const u = await User.findById(userId).select('username country avatar avatarImage elo').lean().catch(() => null);
+      if (u) return { userId: u._id, name: u.username, country: u.country, avatar: u.avatar, avatarImage: u.avatarImage, elo: u.elo };
+    }
+    return { userId: userId || null, name: fallbackName || 'Jugador', country: 'DO', avatar: 0, avatarImage: '', elo: 1200 };
+  }
+
   async function createMatchBetween(wSocket, wInfo, bSocket, bInfo, code) {
     rooms.set(code, {
       white: wSocket.id, black: bSocket.id,
@@ -1596,7 +1676,7 @@ if (room.white && room.black && !room.clockInterval) {
     const winner = loser === 'w' ? 'b' : loser === 'b' ? 'w' : null;
     if (room.matchId && winner) {
       const result = winner === 'w' ? 'white_win' : 'black_win';
-      const closed = await finishMatch(room.matchId, result, winner, pgn);
+      const closed = await finishMatch(room.matchId, result, winner, pgn, room);
       if (closed) await applyEloForRoom(room, result, code);
       await Room.updateOne({ roomCode: code }, { $set: { status: 'finished', lastActivityAt: new Date() } }).catch(() => {});
     }
@@ -1724,7 +1804,7 @@ if (room.white && room.black && !room.clockInterval) {
     stopClock(room);
     room.status = 'finished';
     room.drawOfferBy = null;
-    const closed = await finishMatch(room.matchId, 'draw', null);
+    const closed = await finishMatch(room.matchId, 'draw', null, '', room);
     if (closed) await applyEloForRoom(room, 'draw', code);
     await Room.updateOne({ roomCode: code }, { $set: { status: 'finished', lastActivityAt: new Date() } }).catch(() => {});
     io.to(code).emit('draw-accepted', { playerName: socket.data.playerName });
@@ -1893,6 +1973,114 @@ if (room.white && room.black && !room.clockInterval) {
     const challengerSocket = io.sockets.sockets.get(challengerSocketId);
     if (challengerSocket) {
       challengerSocket.emit('challenge-declined', { by: socket.data.playerName || 'El jugador' });
+    }
+  });
+
+  // ── TORNEOS: entrar a tu partido del bracket ────────────────────
+  // A diferencia de create-room/join-room (donde el rival es
+  // "quien tenga el codigo"), aca los dos jugadores ya estan fijados
+  // de antemano por el bracket -- este evento solo confirma que sos
+  // uno de los dos y te arma (o te reconecta a) la sala. El primero
+  // de los dos en entrar crea la sala entera con ambos jugadores ya
+  // identificados; el segundo simplemente completa su lado.
+  socket.on('tournament:join-match', async (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.tournamentJoinMatch, payload, 'tournament:error');
+    if (!data) return;
+    if (!requireSocketAuth()) return;
+    const { eventId, round, matchIndex } = data;
+
+    const event = await Event.findById(eventId).catch(() => null);
+    if (!event || event.type !== 'tournament') { socket.emit('tournament:error', 'Torneo no encontrado.'); return; }
+    const match = event.bracket?.rounds?.[round]?.matches?.[matchIndex];
+    if (!match) { socket.emit('tournament:error', 'Partido no encontrado.'); return; }
+
+    const userId = String(socket.data.userId);
+    const isP1 = match.player1 && String(match.player1) === userId;
+    const isP2 = match.player2 && String(match.player2) === userId;
+    if (!isP1 && !isP2) { socket.emit('tournament:error', 'No sos parte de este partido.'); return; }
+    if (match.status !== 'ready' && match.status !== 'playing') {
+      socket.emit('tournament:error', 'Este partido no esta disponible ahora mismo.');
+      return;
+    }
+    const myColor = isP1 ? 'w' : 'b';
+
+    let room = match.roomCode ? rooms.get(match.roomCode) : null;
+    if (!room && match.roomCode) room = await getOrRestoreRoom(match.roomCode);
+
+    if (!room) {
+      let code;
+      do { code = generateCode(); } while (rooms.has(code));
+
+      const p1Info = await getPlayerInfoById(match.player1, match.player1Name);
+      const p2Info = await getPlayerInfoById(match.player2, match.player2Name);
+
+      room = {
+        white: myColor === 'w' ? socket.id : null,
+        black: myColor === 'b' ? socket.id : null,
+        currentTurn: 'w', rematchReady: new Set(), drawOfferBy: null,
+        timer: null, status: 'waiting', playerInfo: { w: p1Info, b: p2Info }, matchId: null,
+        tokens: { w: createRoomToken(), b: createRoomToken() },
+        game: createGameState(), moves: [],
+        clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS, clockInterval: null,
+        tournamentMeta: { eventId: String(event._id), round, matchIndex },
+      };
+      rooms.set(code, room);
+
+      match.roomCode = code;
+      event.markModified('bracket');
+      await event.save({ validateModifiedOnly: true }).catch((err) => console.warn('[Tournament] No se pudo guardar roomCode:', err.message));
+
+      await Room.findOneAndUpdate(
+        { roomCode: code },
+        { $set: {
+          roomCode: code,
+          'players.white.socketId': room.white, 'players.white.userId': p1Info.userId, 'players.white.name': p1Info.name, 'players.white.country': p1Info.country, 'players.white.avatar': p1Info.avatar, 'players.white.avatarImage': p1Info.avatarImage || '',
+          'players.black.socketId': room.black, 'players.black.userId': p2Info.userId, 'players.black.name': p2Info.name, 'players.black.country': p2Info.country, 'players.black.avatar': p2Info.avatar, 'players.black.avatarImage': p2Info.avatarImage || '',
+          fen: 'startpos', turn: 'w', gameState: createGameSnapshot(room.game),
+          'tokens.w': room.tokens.w, 'tokens.b': room.tokens.b,
+          'tournamentMeta.eventId': event._id, 'tournamentMeta.round': round, 'tournamentMeta.matchIndex': matchIndex,
+          clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS, status: 'waiting', lastActivityAt: new Date(),
+        }},
+        { upsert: true, new: true }
+      ).catch((err) => console.warn('[DB] No se pudo guardar sala de torneo:', err.message));
+
+      console.log(`[Tournament] Sala ${code} creada — ${event.title} ronda ${round + 1} (${p1Info.name} vs ${p2Info.name})`);
+    } else {
+      if (myColor === 'w') room.white = socket.id; else room.black = socket.id;
+    }
+
+    socket.join(match.roomCode);
+    socket.data.roomCode = match.roomCode;
+    socket.data.color = myColor;
+    socket.data.playerName = (myColor === 'w' ? room.playerInfo.w?.name : room.playerInfo.b?.name) || socket.data.playerName;
+    if (onlinePlayers.has(socket.id)) onlinePlayers.get(socket.id).inGame = true;
+    broadcastOnlinePlayers();
+
+    if (room.white && room.black && room.status === 'waiting') {
+      room.status = 'playing';
+      const createdMatch = await Match.create({
+        whitePlayer: playerSnapshot(room.playerInfo.w),
+        blackPlayer: playerSnapshot(room.playerInfo.b),
+        roomCode: match.roomCode, result: 'in_progress', startedAt: new Date(),
+      }).catch((err) => { console.warn('[DB] Match create error (tournament):', err.message); return null; });
+      if (createdMatch) room.matchId = createdMatch._id;
+
+      await Room.updateOne({ roomCode: match.roomCode }, {
+        $set: { match: createdMatch?._id || null, status: 'playing', lastActivityAt: new Date() },
+      }).catch(() => {});
+
+      match.status = 'playing';
+      event.markModified('bracket');
+      await event.save({ validateModifiedOnly: true }).catch(() => {});
+
+      const wSocket = io.sockets.sockets.get(room.white);
+      const bSocket = io.sockets.sockets.get(room.black);
+      wSocket?.emit('game-start', { code: match.roomCode, color: 'w', roomToken: room.tokens.w, playerInfo: { w: room.playerInfo.w, b: room.playerInfo.b }, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
+      bSocket?.emit('game-start', { code: match.roomCode, color: 'b', roomToken: room.tokens.b, playerInfo: { w: room.playerInfo.w, b: room.playerInfo.b }, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
+      startClock(match.roomCode);
+      console.log(`[Tournament] Sala ${match.roomCode} arranco — ${room.playerInfo.w.name} vs ${room.playerInfo.b.name}`);
+    } else {
+      socket.emit('game-start', { code: match.roomCode, color: myColor, roomToken: room.tokens[myColor], playerInfo: { w: room.playerInfo.w, b: room.playerInfo.b }, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
     }
   });
 

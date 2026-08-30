@@ -516,6 +516,28 @@
           await loadEvents();
         } catch (err) { showToast(err.message, 'error'); }
       }));
+
+      const hasBracket = !!event.bracket?.rounds?.length;
+      if (event.type === 'tournament' && !hasBracket && ['draft', 'published'].includes(event.status)) {
+        actions.append(actionButton('Generar bracket', 'primary', async () => {
+          if ((event.participants?.length || 0) < 2) {
+            showToast('Hacen falta al menos 2 inscritos.', 'error');
+            return;
+          }
+          if (!confirm(`Generar el bracket con ${event.participants.length} inscritos? El torneo pasa a 'Activo' y ya no se puede deshacer.`)) return;
+          try {
+            await api(`/api/admin/events/${encodeURIComponent(event._id)}/bracket/generate`, { method: 'POST' });
+            showToast('Bracket generado.', 'success');
+            await loadEvents();
+          } catch (err) { showToast(err.message, 'error'); }
+        }));
+      }
+      if (hasBracket) {
+        const roundsCount = event.bracket.rounds.length;
+        const championText = event.bracket.championName ? `Campeon: ${event.bracket.championName}` : `Bracket en curso (${roundsCount} ronda${roundsCount === 1 ? '' : 's'})`;
+        meta.appendChild(element('span', '', championText));
+      }
+
       card.append(top, description, meta, actions);
       grid.appendChild(card);
     }

@@ -8,6 +8,7 @@ const Event = require('../models/Event');
 const Match = require('../models/Match');
 const User = require('../models/User');
 const { requireAdmin, userIsAdmin } = require('../middleware/auth');
+const { generateFirstRound } = require('../services/tournament');
 
 const router = express.Router();
 const allowedEventTypes = new Set(['event', 'tournament', 'announcement', 'maintenance']);
@@ -394,6 +395,34 @@ router.patch('/events/:id', async (req, res) => {
     res.json({ event });
   } catch (err) {
     res.status(err.statusCode || 400).json({ error: err.message || 'No se pudo actualizar el evento.' });
+  }
+});
+
+// Arma el bracket de eliminacion directa (ronda 1) a partir de los
+// inscritos y pasa el torneo a 'active'. Solo se puede hacer una vez
+// -- despues hay que cancelar/borrar el evento para volver a intentar,
+// asi no se pisa un torneo que ya esta en curso.
+router.post('/events/:id/bracket/generate', async (req, res) => {
+  try {
+    if (!validObjectId(req.params.id)) return res.status(400).json({ error: 'Evento invalido.' });
+    const event = await Event.findById(req.params.id).populate('participants', 'username');
+    if (!event) return res.status(404).json({ error: 'Evento no encontrado.' });
+    if (event.type !== 'tournament') return res.status(400).json({ error: 'Solo los torneos tienen bracket.' });
+    if (event.bracket?.rounds?.length) return res.status(400).json({ error: 'Este torneo ya tiene un bracket generado.' });
+    if (event.participants.length < 2) return res.status(400).json({ error: 'Hacen falta al menos 2 inscritos.' });
+
+    const players = event.participants.map((p) => ({ userId: p._id, name: p.username }));
+    const firstRound = generateFirstRound(players);
+
+    event.bracket = { rounds: [firstRound], championId: null, championName: '' };
+    event.status = 'active';
+    await event.save({ validateModifiedOnly: true });
+
+    await writeAudit(req, 'event.bracket_generated', 'event', String(event._id), { players: players.length });
+    res.json({ event });
+  } catch (err) {
+    console.error('[Admin] Generate bracket:', err.message);
+    res.status(400).json({ error: 'No se pudo generar el bracket.' });
   }
 });
 

@@ -40,6 +40,30 @@ const EventSchema = new mongoose.Schema(
       default: null,
     },
     participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+
+    // Bracket de eliminacion directa -- solo aplica a type:'tournament'.
+    // Los nombres van duplicados aca (ademas de participants con los
+    // ObjectId) para poder mostrar el bracket publico sin tener que
+    // hacer populate() en cada consulta.
+    bracket: {
+      rounds: [{
+        matches: [{
+          player1: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+          player2: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+          player1Name: { type: String, default: '' },
+          player2Name: { type: String, default: '' },
+          winner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+          roomCode: { type: String, default: null },
+          status: {
+            type: String,
+            enum: ['pending', 'bye', 'ready', 'playing', 'finished'],
+            default: 'pending',
+          },
+        }],
+      }],
+      championId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+      championName: { type: String, default: '' },
+    },
   },
   { timestamps: true }
 );

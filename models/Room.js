@@ -39,6 +39,14 @@ const RoomSchema = new mongoose.Schema(
       enum: ['waiting', 'playing', 'finished', 'closed'],
       default: 'waiting',
     },
+    // Si esta sala pertenece a un partido de torneo, de que evento/
+    // ronda/partido -- necesario para poder seguir avanzando el
+    // bracket si el proceso se reinicia (Render) a mitad de partida.
+    tournamentMeta: {
+      eventId: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', default: null },
+      round: { type: Number, default: null },
+      matchIndex: { type: Number, default: null },
+    },
     lastActivityAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
