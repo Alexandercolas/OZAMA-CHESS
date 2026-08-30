@@ -1123,6 +1123,15 @@ function togglePremiumTheme() {
   document.getElementById('theme-toggle-btn')?.classList.toggle('is-active', active);
 }
 
+function setupProBadge() {
+  const btn = document.getElementById('hd-pro-btn');
+  if (!btn) return;
+  const active = userIsPremiumActive();
+  btn.textContent = active ? 'PRO' : 'Activa PRO';
+  btn.classList.toggle('is-pro', active);
+  btn.style.display = '';
+}
+
 function setupPremiumThemeGate() {
   const btn = document.getElementById('theme-toggle-btn');
   if (!btn) return;
@@ -1759,6 +1768,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   setupMoveNav();
   setupPgnExportGate();
   setupPremiumThemeGate();
+  setupProBadge();
   if (IS_BOT_MODE && restoreLocalGameSnapshot()) return;
   startNewGame();
 });

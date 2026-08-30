@@ -1036,6 +1036,11 @@
         localStorage.setItem('ozama-user', JSON.stringify(data.user));
         renderSettings(data.user);
         initPremiumPanel(data.user);
+        // El contenido se arma async, asi que el anchor #premium-panel del
+        // link no lo agarra el navegador solo -- lo forzamos aca.
+        if (window.location.hash === '#premium-panel') {
+          document.getElementById('premium-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
       } catch (err) {
         document.getElementById('main-content').innerHTML =
           '<div class="loading">Error cargando los ajustes. Recarga la pagina.</div>';

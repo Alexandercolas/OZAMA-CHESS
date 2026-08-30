@@ -137,6 +137,23 @@
     }
 
     .hd-turns { display: flex; }
+
+    .hd-pro-btn {
+      flex-shrink: 0;
+      display: inline-flex; align-items: center;
+      padding: 6px 12px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #2456A8, #1A3A6B);
+      border: 1px solid rgba(90,140,220,0.6);
+      color: #EAF1FF;
+      font-family: var(--fb, inherit); font-size: 10px; font-weight: 800;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      text-decoration: none;
+      box-shadow: 0 0 14px rgba(36,86,168,0.35);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .hd-pro-btn:hover { transform: translateY(-1px); box-shadow: 0 0 18px rgba(36,86,168,0.5); }
+    .hd-pro-btn.is-pro { background: linear-gradient(135deg, var(--gold), #8B6914); border-color: rgba(200,152,60,0.6); color: #0D0B08; box-shadow: 0 0 14px rgba(200,152,60,0.35); }
     .hd-turn {
       padding: 4px 14px; font-family: var(--fb); font-size: 9px; font-weight: 600;
       letter-spacing: 2px; color: var(--ghost); text-transform: uppercase;
@@ -1112,6 +1129,7 @@
       <div id="white-turn" class="hd-turn on">Blancas</div>
       <div id="black-turn" class="hd-turn">Negras</div>
     </div>
+    <a class="hd-pro-btn" id="hd-pro-btn" href="/settings.html#premium-panel" style="display:none;">Activa PRO</a>
   </header>
 
   <!-- BODY -->
@@ -1391,7 +1409,7 @@
 
 <script src="/vendor/socket.io.min.js"></script>
 <script src="bot.js?v=20260726-1"></script>
-<script src="script.js?v=20260829-premium"></script>
+<script src="script.js?v=20260829-premium2"></script>
 
 <script>
   // Sync visible clocks with hidden ones (CLOCK module updates #clock-white/black)

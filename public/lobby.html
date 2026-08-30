@@ -153,6 +153,23 @@
       font-family: var(--fm); font-size: 11px; font-weight: 700; color: var(--gold-2); letter-spacing: 1px;
     }
 
+    .hd-pro-btn {
+      flex-shrink: 0;
+      display: inline-flex; align-items: center;
+      padding: 6px 12px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #2456A8, var(--blue-do));
+      border: 1px solid rgba(90,140,220,0.6);
+      color: #EAF1FF;
+      font-family: var(--fb); font-size: 10px; font-weight: 800;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      text-decoration: none;
+      box-shadow: 0 0 14px rgba(36,86,168,0.35);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .hd-pro-btn:hover { transform: translateY(-1px); box-shadow: 0 0 18px rgba(36,86,168,0.5); }
+    .hd-pro-btn.is-pro { background: linear-gradient(135deg, var(--gold), #8B6914); border-color: rgba(200,152,60,0.6); color: var(--carbon); box-shadow: 0 0 14px rgba(200,152,60,0.35); }
+
     /* ── BODY ── */
     .body {
       display: grid;
@@ -881,6 +898,7 @@
       <span class="hd-sub">Dominican Heritage Edition</span>
     </div>
     <div class="hd-user">
+      <a class="hd-pro-btn" id="hd-pro-btn" href="/settings.html#premium-panel">Activa PRO</a>
       <div class="hd-user-info">
         <div class="hd-user-name" id="hd-username">—</div>
         <div class="hd-user-elo"  id="hd-elo">ELO —</div>
@@ -1134,6 +1152,7 @@
   const hdUsername = document.getElementById('hd-username');
   const hdElo      = document.getElementById('hd-elo');
   const hdAvatar   = document.getElementById('hd-avatar');
+  const hdProBtn   = document.getElementById('hd-pro-btn');
   const qBadge     = document.getElementById('quick-elo-badge');
 
   function renderLobbyUser() {
@@ -1144,6 +1163,12 @@
     if (user.avatarImage) hdAvatar.innerHTML = `<img src="${escapeHtml(user.avatarImage)}" alt="">`;
     else hdAvatar.textContent = initial;
     if (qBadge) qBadge.textContent = `ELO ${user.elo || 1200}`;
+    if (hdProBtn) {
+      const premiumUntil = user.premiumUntil ? new Date(user.premiumUntil) : null;
+      const premiumActive = user.plan === 'premium' && (!premiumUntil || premiumUntil > new Date());
+      hdProBtn.textContent = premiumActive ? 'PRO' : 'Activa PRO';
+      hdProBtn.classList.toggle('is-pro', premiumActive);
+    }
     // El servidor calcula isAdmin contra ADMIN_EMAILS; este toggle es solo
     // comodidad visual, el control real vive en requireAdmin() del backend.
     document.querySelectorAll('[data-admin-access]').forEach((el) => {
