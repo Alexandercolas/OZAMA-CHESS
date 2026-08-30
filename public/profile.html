@@ -203,6 +203,12 @@
     .style-item .style-value { color: var(--gold); font-weight: 700; }
     .style-item .style-value.is-empty { color: var(--dim); font-weight: 400; font-style: italic; }
 
+    #elo-chart-wrap { margin-bottom: 4px; }
+    #elo-chart-wrap svg { width: 100%; height: 90px; display: block; }
+    .elo-chart-empty { text-align: center; padding: 20px; color: var(--dim); font-size: 12px; }
+    .elo-chart-summary { display: flex; justify-content: space-between; font-size: 11px; color: var(--dim); margin-top: 4px; letter-spacing: 0.5px; }
+    .elo-chart-summary strong { color: var(--gold); }
+
     .progression-panel { padding: 20px; margin-bottom: 28px; }
     .level-row { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
     .level-badge {
@@ -850,6 +856,7 @@
       if (grid) grid.innerHTML = statCardsHtml(game, currentUser);
       loadAdvancedStats(game);
       renderIdentityPanel(game);
+      loadEloHistory(game);
     }
 
     function formatDuration(seconds) {
@@ -873,6 +880,59 @@
       }
       renderIdentityPanel(currentGame);
       renderLevelPanel();
+      loadEloHistory(currentGame);
+    }
+
+    function eloChartSvg(history) {
+      if (!history.length) return null;
+      const elos = history.map((h) => h.elo);
+      const min = Math.min(...elos), max = Math.max(...elos);
+      const range = Math.max(1, max - min);
+      const w = 300, h = 74, pad = 6;
+      const pts = history.map((entry, i) => {
+        const x = history.length === 1 ? w / 2 : pad + (i / (history.length - 1)) * (w - pad * 2);
+        const y = pad + (1 - (entry.elo - min) / range) * (h - pad * 2);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      });
+      const last = history[history.length - 1];
+      const lastX = pts[pts.length - 1].split(',')[0];
+      const lastY = pts[pts.length - 1].split(',')[1];
+      const areaPts = `${pad},${h - pad} ${pts.join(' ')} ${w - pad},${h - pad}`;
+      return `
+        <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+          <polygon points="${areaPts}" fill="rgba(200,152,60,0.12)" />
+          <polyline points="${pts.join(' ')}" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+          <circle cx="${lastX}" cy="${lastY}" r="3.2" fill="var(--gold)" />
+        </svg>
+      `;
+    }
+
+    async function loadEloHistory(game) {
+      const wrap = document.getElementById('elo-chart-wrap');
+      if (!wrap) return;
+      wrap.innerHTML = '<div class="elo-chart-empty">Cargando...</div>';
+      try {
+        const res = await fetch(`/api/user/elo-history?game=${game}`, { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const history = data.history || [];
+        if (history.length < 2) {
+          wrap.innerHTML = '<div class="elo-chart-empty">Jugá más partidas para ver tu progreso de ELO en un gráfico.</div>';
+          return;
+        }
+        const svg = eloChartSvg(history);
+        const first = history[0].elo, last = history[history.length - 1].elo;
+        const diff = last - first;
+        wrap.innerHTML = `
+          ${svg}
+          <div class="elo-chart-summary">
+            <span>Últimas ${history.length} partidas</span>
+            <span>${diff >= 0 ? '+' : ''}${diff} ELO · <strong>${last}</strong> actual</span>
+          </div>
+        `;
+      } catch (_) {
+        wrap.innerHTML = '<div class="elo-chart-empty">No se pudo cargar.</div>';
+      }
     }
 
     function renderLevelPanel() {
@@ -1065,6 +1125,8 @@
                   <div class="identity-panel oz-card oz-enter" id="identity-panel" style="--d:2">
                     <div class="section-title">Tarjeta de identidad</div>
                     <div id="identity-body"><div class="empty-msg">Cargando...</div></div>
+                    <div class="style-title" style="border-top:none;padding-top:0;">Progreso de ELO</div>
+                    <div id="elo-chart-wrap"><div class="empty-msg">Cargando...</div></div>
                     <div class="style-title">Mi estilo de juego</div>
                     <div class="style-grid" id="style-grid"></div>
                   </div>

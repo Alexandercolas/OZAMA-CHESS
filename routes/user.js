@@ -6,7 +6,7 @@ const Match                = require('../models/Match');
 const DamasMatch           = require('../models/DamasMatch');
 const Room                 = require('../models/Room');
 const Event                = require('../models/Event');
-const { requireAuth, userIsAdmin } = require('../middleware/auth');
+const { requireAuth, optionalAuth, userIsAdmin } = require('../middleware/auth');
 const { ACHIEVEMENTS, levelFromXp, xpIntoLevel } = require('../services/achievements');
 
 const router = express.Router();
@@ -453,7 +453,7 @@ router.get('/damas-history', requireAuth, async (req, res) => {
 });
 
 // GET /api/user/leaderboard - top 20 by ELO
-router.get('/leaderboard', async (req, res) => {
+router.get('/leaderboard', optionalAuth, async (req, res) => {
   try {
     res.set('Cache-Control', 'no-store');
     const players = await User.find(publicLeaderboardFilter())
@@ -461,15 +461,125 @@ router.get('/leaderboard', async (req, res) => {
       .limit(20)
       .select('username country avatar avatarImage elo stats plan premiumUntil');
 
-    res.json({ players: players.map((player) => {
+    const payload = { players: players.map((player) => {
       const json = player.toJSON();
       json.premiumActive = isPremiumActive(player);
       delete json.plan;
       delete json.premiumUntil;
       return json;
-    }) });
+    }) };
+
+    // Si el que pide el ranking esta logueado y no aparece en el top
+    // 20, le decimos igual en que puesto esta -- para eso no hace
+    // falta traer a todo el mundo, solo contar cuantos le ganan.
+    if (req.user) {
+      const isInTop = payload.players.some((p) => String(p._id) === String(req.user._id));
+      if (!isInTop) {
+        const ahead = await User.countDocuments({ ...publicLeaderboardFilter(), elo: { $gt: req.user.elo } });
+        payload.yourRank = ahead + 1;
+        payload.yourElo = req.user.elo;
+      }
+    }
+
+    res.json(payload);
   } catch (err) {
     serverError(res, 'Leaderboard', err);
+  }
+});
+
+// GET /api/user/leaderboard/climbers?period=week|month - quienes mas
+// ELO subieron en los ultimos 7/30 dias. Distinto del ranking
+// general a proposito (no es solo el top de siempre filtrado) --
+// reconstruye el ELO de arranque del periodo a partir de las partidas
+// ya guardadas, sin trackear nada nuevo por partida.
+router.get('/leaderboard/climbers', async (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    const period = req.query.period === 'month' ? 'month' : 'week';
+    const days = period === 'month' ? 30 : 7;
+    const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    async function baselinesFor(Model, isChess) {
+      const matches = await Model.find({
+        endedAt: { $gte: cutoff },
+        result: { $in: ['white_win', 'black_win', 'draw'] },
+      }).sort({ endedAt: 1 }).select('whitePlayer.userId whitePlayer.elo blackPlayer.userId blackPlayer.elo eloChange').lean();
+
+      const baseline = new Map(); // userId -> elo justo antes de su primera partida del periodo
+      for (const m of matches) {
+        for (const side of ['white', 'black']) {
+          const player = m[`${side}Player`];
+          const uid = player?.userId ? String(player.userId) : null;
+          if (!uid || baseline.has(uid)) continue;
+          const snapshotElo = Number(player.elo || 0);
+          const change = Number(m.eloChange?.[side] || 0);
+          // Ajedrez guarda el ELO YA actualizado en el snapshot de la
+          // partida; Damas guarda el de ANTES -- ver comentario en
+          // finishDamasGame(). Se normaliza aca para que ambos den la
+          // misma base: el ELO justo antes de esta partida.
+          baseline.set(uid, isChess ? snapshotElo - change : snapshotElo);
+        }
+      }
+      return baseline;
+    }
+
+    const [chessBaseline, damasBaseline] = await Promise.all([
+      baselinesFor(Match, true),
+      baselinesFor(DamasMatch, false),
+    ]);
+
+    const userIds = new Set([...chessBaseline.keys(), ...damasBaseline.keys()]);
+    if (!userIds.size) return res.json({ period, climbers: [] });
+
+    const users = await User.find({ _id: { $in: [...userIds] }, ...publicLeaderboardFilter() })
+      .select('username country avatar avatarImage elo damasElo');
+
+    const climbers = users.map((u) => {
+      const id = String(u._id);
+      const chessGain = chessBaseline.has(id) ? u.elo - chessBaseline.get(id) : null;
+      const damasGain = damasBaseline.has(id) ? u.damasElo - damasBaseline.get(id) : null;
+      const gain = Math.max(chessGain ?? -Infinity, damasGain ?? -Infinity);
+      return {
+        username: u.username, country: u.country, avatar: u.avatar, avatarImage: u.avatarImage,
+        gain, chessGain, damasGain,
+      };
+    })
+      .filter((c) => c.gain > 0)
+      .sort((a, b) => b.gain - a.gain)
+      .slice(0, 20);
+
+    res.json({ period, climbers });
+  } catch (err) {
+    serverError(res, 'Climbers leaderboard', err);
+  }
+});
+
+// GET /api/user/elo-history?game=chess|damas - serie historica para
+// graficar, reconstruida de las partidas ya guardadas (ver nota sobre
+// ajedrez vs Damas en /leaderboard/climbers -- misma logica aca).
+router.get('/elo-history', requireAuth, async (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    const game = req.query.game === 'damas' ? 'damas' : 'chess';
+    const Model = game === 'damas' ? DamasMatch : Match;
+    const userId = req.user._id;
+
+    const matches = await Model.find({
+      $or: [{ 'whitePlayer.userId': userId }, { 'blackPlayer.userId': userId }],
+      result: { $in: ['white_win', 'black_win', 'draw'] },
+    }).sort({ endedAt: 1 }).limit(200).select('whitePlayer.userId whitePlayer.elo blackPlayer.elo eloChange endedAt').lean();
+
+    const history = matches.map((m) => {
+      const isWhite = String(m.whitePlayer?.userId) === String(userId);
+      const snapshotElo = Number((isWhite ? m.whitePlayer?.elo : m.blackPlayer?.elo) || 0);
+      const change = Number((isWhite ? m.eloChange?.white : m.eloChange?.black) || 0);
+      const eloAfter = game === 'chess' ? snapshotElo : snapshotElo + change;
+      return { date: m.endedAt, elo: eloAfter, change };
+    });
+
+    res.json({ game, history });
+  } catch (err) {
+    serverError(res, 'Elo history', err);
   }
 });
 

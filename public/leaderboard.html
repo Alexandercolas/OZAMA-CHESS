@@ -194,6 +194,36 @@
       text-transform: uppercase;
     }
 
+    .period-tabs {
+      display: flex; gap: 8px; margin-bottom: 16px;
+    }
+    .period-tab {
+      padding: 9px 18px;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,0.2);
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 10.5px; font-weight: 800; letter-spacing: 1.4px;
+      text-transform: uppercase; cursor: pointer;
+    }
+    .period-tab:hover { border-color: rgba(226,185,96,0.5); color: var(--gold-2); }
+    .period-tab.is-active { background: var(--gold); color: #0A0A0A; border-color: var(--gold); }
+
+    .your-rank-card {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; margin-bottom: 16px;
+      border: 1px solid rgba(226,185,96,0.4);
+      background: rgba(200,152,60,0.08);
+      font-family: var(--mono); font-size: 12px; color: var(--warm);
+      letter-spacing: 0.5px;
+    }
+    .your-rank-card strong { color: var(--gold-2); font-size: 15px; }
+
+    .climb-gain {
+      font-family: var(--mono); font-weight: 700; color: #6fd18a;
+    }
+    .climb-gain::before { content: '+'; }
+
     .rank-panel {
       border: 1px solid var(--line);
       background:
@@ -473,8 +503,16 @@
       </aside>
     </section>
 
+    <div class="period-tabs" id="period-tabs">
+      <button class="period-tab is-active" data-period="global" onclick="switchPeriod('global')">Global</button>
+      <button class="period-tab" data-period="week" onclick="switchPeriod('week')">Esta semana</button>
+      <button class="period-tab" data-period="month" onclick="switchPeriod('month')">Este mes</button>
+    </div>
+
+    <div class="your-rank-card" id="your-rank-card" style="display:none;"></div>
+
     <section class="rank-panel">
-      <div class="rank-head">
+      <div class="rank-head" id="rank-head">
         <span>#</span>
         <span>Jugador</span>
         <span>ELO</span>
@@ -585,20 +623,91 @@
       document.getElementById('summary-wins').textContent = totals.wins;
     }
 
+    let currentPeriod = 'global';
     let rankingRefreshBusy = false;
     async function load() {
-      if (rankingRefreshBusy) return;
+      if (rankingRefreshBusy || currentPeriod !== 'global') return;
       rankingRefreshBusy = true;
       try {
-        const response = await fetch('/api/user/leaderboard', { cache: 'no-store' });
+        const response = await fetch('/api/user/leaderboard', {
+          cache: 'no-store',
+          headers: storedToken ? { Authorization: `Bearer ${storedToken}` } : {},
+        });
         if (!response.ok) throw new Error('leaderboard');
         const data = await response.json();
         render(Array.isArray(data.players) ? data.players : []);
+        renderYourRank(data);
       } catch (_) {
         const body = document.getElementById('rank-body');
         if (body) body.innerHTML = '<div class="empty">No se pudo cargar el ranking</div>';
       } finally {
         rankingRefreshBusy = false;
+      }
+    }
+
+    function renderYourRank(data) {
+      const card = document.getElementById('your-rank-card');
+      if (!card) return;
+      if (!data.yourRank) { card.style.display = 'none'; return; }
+      card.style.display = 'flex';
+      card.innerHTML = `<span>Tu posición en el ranking global</span><strong>#${data.yourRank}</strong><span>ELO ${data.yourElo}</span>`;
+    }
+
+    function climberRowHtml(c, index) {
+      const code = countryCode(c.country);
+      return `
+        <div class="rank-row">
+          <div class="rank-num">${index + 1}</div>
+          <div class="player">
+            ${avatar(c)}
+            <div>
+              <div class="player-name">${escapeHtml(c.username || 'Jugador')}</div>
+              <div class="player-country">
+                <img class="flag" src="https://flagcdn.com/40x30/${code}.png" alt="${code.toUpperCase()}" onerror="this.style.visibility='hidden'">
+                <span>${code.toUpperCase()}</span>
+              </div>
+            </div>
+          </div>
+          <div class="elo climb-gain">${c.gain}</div>
+          <div class="num"></div>
+          <div class="num"></div>
+          <div class="winrate"></div>
+          <div class="num"></div>
+        </div>
+      `;
+    }
+
+    async function loadClimbers(period) {
+      const body = document.getElementById('rank-body');
+      const head = document.getElementById('rank-head');
+      if (head) head.innerHTML = '<span>#</span><span>Jugador</span><span>Subió</span><span></span><span></span><span></span><span></span>';
+      if (body) body.innerHTML = '<div class="loading">Cargando</div>';
+      document.getElementById('your-rank-card').style.display = 'none';
+      try {
+        const res = await fetch(`/api/user/leaderboard/climbers?period=${period}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const climbers = data.climbers || [];
+        if (!climbers.length) {
+          body.innerHTML = '<div class="empty">Nadie subió de ELO en este período todavía.</div>';
+          return;
+        }
+        body.innerHTML = climbers.map((c, i) => climberRowHtml(c, i)).join('');
+      } catch (_) {
+        if (body) body.innerHTML = '<div class="empty">No se pudo cargar.</div>';
+      }
+    }
+
+    function switchPeriod(period) {
+      currentPeriod = period;
+      document.querySelectorAll('.period-tab').forEach((btn) => {
+        btn.classList.toggle('is-active', btn.dataset.period === period);
+      });
+      if (period === 'global') {
+        document.getElementById('rank-head').innerHTML = '<span>#</span><span>Jugador</span><span>ELO</span><span>Victorias</span><span>Partidas</span><span>Winrate</span><span>Racha</span>';
+        load();
+      } else {
+        loadClimbers(period);
       }
     }
 
@@ -609,6 +718,7 @@
     window.setInterval(() => {
       if (document.visibilityState === 'visible') load();
     }, 30_000);
+    window.switchPeriod = switchPeriod;
     })();
   </script>
 </body>
