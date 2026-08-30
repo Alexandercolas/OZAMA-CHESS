@@ -160,10 +160,14 @@ const PIECE_SVGS = {
 const ROOM_CODE = sessionStorage.getItem('ozama-room') || '';
 const RAW_PLAYER_COLOR = sessionStorage.getItem('ozama-color') || '';
 const BOT_SESSION_REQUESTED = sessionStorage.getItem('ozama-bot-mode') === 'true';
+// Partida local: dos personas, un mismo dispositivo, sin cuentas ni
+// servidor -- reusa el mismo tablero/reglas que ya existen, nomas sin
+// Socket.IO ni IA. Solo entra en este modo si tampoco pidieron bot.
+const IS_LOCAL_MODE = !BOT_SESSION_REQUESTED && sessionStorage.getItem('ozama-local-game') === 'true';
 let PLAYER_COLOR = RAW_PLAYER_COLOR === 'white' ? COLOR.WHITE
   : RAW_PLAYER_COLOR === 'black' ? COLOR.BLACK
   : RAW_PLAYER_COLOR;
-let IS_ONLINE = !BOT_SESSION_REQUESTED && !!(ROOM_CODE && (PLAYER_COLOR === COLOR.WHITE || PLAYER_COLOR === COLOR.BLACK));
+let IS_ONLINE = !BOT_SESSION_REQUESTED && !IS_LOCAL_MODE && !!(ROOM_CODE && (PLAYER_COLOR === COLOR.WHITE || PLAYER_COLOR === COLOR.BLACK));
 const IS_BOT_MODE = BOT_SESSION_REQUESTED;
 function readStoredUser() {
   try { return JSON.parse(localStorage.getItem('ozama-user') || 'null'); }
@@ -192,7 +196,7 @@ async function validateStoredSession() {
     return false;
   }
 }
-if (!IS_ONLINE && !IS_BOT_MODE) {
+if (!IS_ONLINE && !IS_BOT_MODE && !IS_LOCAL_MODE) {
   window.location.replace('/lobby.html');
   throw new Error('GAME_SESSION_REQUIRED');
 }
@@ -234,7 +238,21 @@ function setConfirmedPlayerColor(color) {
   return true;
 }
 
+// "Pasar el celular": en partida local, si esta prendido, el tablero
+// gira 180 grados despues de cada jugada para que quien tiene el
+// turno lo vea siempre desde su propio lado. Prendido por defecto en
+// pantallas chicas (celular), apagado en pantallas grandes (misma PC,
+// los dos ven el tablero fijo) -- el jugador lo puede cambiar con el
+// boton en los controles.
+let LOCAL_AUTO_FLIP = false;
+function initLocalAutoFlip() {
+  if (!IS_LOCAL_MODE) return;
+  const saved = sessionStorage.getItem('ozama-local-autoflip');
+  LOCAL_AUTO_FLIP = saved !== null ? saved === 'true' : window.innerWidth < 768;
+}
+
 function isBoardFlipped() {
+  if (IS_LOCAL_MODE) return LOCAL_AUTO_FLIP && state.turn === COLOR.BLACK;
   return boardViewColor() === COLOR.BLACK;
 }
 
@@ -406,11 +424,11 @@ function clearLocalGameSnapshot(){
 }
 
 function saveLocalGameSnapshot(){
-  if(!IS_BOT_MODE||state.promotionPending) return;
+  if((!IS_BOT_MODE&&!IS_LOCAL_MODE)||state.promotionPending) return;
   if(state.status===STATUS.CHECKMATE||state.status===STATUS.STALEMATE||state.status===STATUS.DRAW) return;
   const clocks=typeof CLOCK?.get==='function'?CLOCK.get():{w:600000,b:600000};
   sessionStorage.setItem(LOCAL_GAME_KEY,JSON.stringify({
-    mode:'bot',
+    mode:IS_BOT_MODE?'bot':'local',
     botColor:BOT_COLOR,
     botLevel:BOT_LEVEL,
     board:cloneBoard(state.board),
@@ -432,11 +450,13 @@ function saveLocalGameSnapshot(){
 }
 
 function restoreLocalGameSnapshot(){
-  if(!IS_BOT_MODE) return false;
+  if(!IS_BOT_MODE&&!IS_LOCAL_MODE) return false;
   let snapshot=null;
   try{snapshot=JSON.parse(sessionStorage.getItem(LOCAL_GAME_KEY)||'null');}
   catch{return false;}
-  if(!snapshot||snapshot.mode!=='bot'||snapshot.botColor!==BOT_COLOR||snapshot.botLevel!==BOT_LEVEL) return false;
+  if(!snapshot) return false;
+  if(IS_BOT_MODE&&(snapshot.mode!=='bot'||snapshot.botColor!==BOT_COLOR||snapshot.botLevel!==BOT_LEVEL)) return false;
+  if(IS_LOCAL_MODE&&snapshot.mode!=='local') return false;
   if(![STATUS.PLAYING,STATUS.CHECK].includes(snapshot.status)) {
     clearLocalGameSnapshot();
     return false;
@@ -1127,6 +1147,21 @@ function togglePremiumTheme() {
   document.getElementById('theme-toggle-btn')?.classList.toggle('is-active', active);
 }
 
+function setupLocalAutoFlipButton() {
+  const btn = document.getElementById('local-autoflip-btn');
+  if (!btn) return;
+  if (!IS_LOCAL_MODE) { btn.style.display = 'none'; return; }
+  btn.style.display = '';
+  const refresh = () => { btn.textContent = `🔄 Auto-voltear: ${LOCAL_AUTO_FLIP ? 'ON' : 'OFF'}`; };
+  refresh();
+  btn.addEventListener('click', () => {
+    LOCAL_AUTO_FLIP = !LOCAL_AUTO_FLIP;
+    sessionStorage.setItem('ozama-local-autoflip', String(LOCAL_AUTO_FLIP));
+    refresh();
+    renderBoard();
+  });
+}
+
 function setupProBadge() {
   const btn = document.getElementById('hd-pro-btn');
   if (!btn) return;
@@ -1408,12 +1443,13 @@ function updateStatusDisplay() {
 
   const gameBanner = document.getElementById('game-banner');
   if (gameBanner && IS_BOT_MODE) gameBanner.textContent = `OZAMA CHESS · VS OZAMA BOT · ${BOT_LEVEL.toUpperCase()}`;
+  else if (gameBanner && IS_LOCAL_MODE) gameBanner.textContent = 'OZAMA CHESS · JUGADOR 1 VS JUGADOR 2';
 
   document.getElementById('white-turn')?.classList.toggle('on', state.turn === COLOR.WHITE);
   document.getElementById('black-turn')?.classList.toggle('on', state.turn === COLOR.BLACK);
 
   if (
-    IS_BOT_MODE &&
+    (IS_BOT_MODE || IS_LOCAL_MODE) &&
     (state.status === STATUS.CHECKMATE || state.status === STATUS.STALEMATE || state.status === STATUS.DRAW)
   ) {
     setTimeout(() => {
@@ -1461,6 +1497,7 @@ function clearOnlineSession() {
     'ozama-bot-mode',
     'ozama-bot-color',
     'ozama-bot-difficulty',
+    'ozama-local-game',
     'ozama-time-control',
   ].forEach((key) => sessionStorage.removeItem(key));
 }
@@ -1540,7 +1577,9 @@ function resignGame() {
     'RENDIRSE',
     IS_ONLINE
       ? 'La empezaste, terminala. Rendirte cuenta como derrota y no se puede deshacer.'
-      : 'Si abandonas ahora, la partida contra el bot terminará de inmediato.',
+      : IS_LOCAL_MODE
+        ? 'Se rinde el jugador con el turno actual. La partida termina de inmediato.'
+        : 'Si abandonas ahora, la partida contra el bot terminará de inmediato.',
     completeResignation,
     'Rendirse'
   );
@@ -1832,6 +1871,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   setupPremiumThemeGate();
   setupProBadge();
   setupAnalysisGate();
-  if (IS_BOT_MODE && restoreLocalGameSnapshot()) return;
+  initLocalAutoFlip();
+  setupLocalAutoFlipButton();
+  if ((IS_BOT_MODE || IS_LOCAL_MODE) && restoreLocalGameSnapshot()) return;
   startNewGame();
 });

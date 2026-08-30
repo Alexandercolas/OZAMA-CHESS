@@ -1025,6 +1025,19 @@
           <div class="card-status" id="bot-status"></div>
         </div>
 
+        <!-- PARTIDA LOCAL (mismo dispositivo) -->
+        <div class="card oz-card oz-enter" id="card-local" style="--d:2">
+          <div class="card-corner-tr"></div><div class="card-corner-bl"></div>
+          <div class="card-top-line"></div>
+          <div class="card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm-8 20v-1c0-3 3.6-5.5 8-5.5s8 2.5 8 5.5v1H4Z"/></svg></div>
+          <div class="card-title">J1 vs J2</div>
+          <div class="card-desc">Dos personas, un mismo celular o PC. Sin cuentas, sin internet.</div>
+          <button class="btn-primary" id="start-local-btn">
+            Jugar en este dispositivo
+          </button>
+          <div class="card-status" id="local-status"></div>
+        </div>
+
         <!-- CREAR SALA -->
         <div class="card oz-card oz-enter" id="card-create" style="--d:3">
           <div class="card-corner-tr"></div><div class="card-corner-bl"></div>
@@ -1308,6 +1321,22 @@
     sessionStorage.setItem('ozama-bot-color', 'b');
     sessionStorage.setItem('ozama-bot-difficulty', difficulty);
     setStatus('bot-status', 'Preparando tablero…');
+    window.location.href = '/game.html';
+  });
+
+  // ── J1 vs J2 (partida local, mismo dispositivo) ──
+  document.getElementById('start-local-btn')?.addEventListener('click', () => {
+    sessionStorage.removeItem('ozama-room');
+    sessionStorage.removeItem('ozama-color');
+    sessionStorage.removeItem('ozama-names');
+    sessionStorage.removeItem('ozama-player-info');
+    sessionStorage.removeItem('ozama-myname');
+    sessionStorage.removeItem('ozama-room-token');
+    sessionStorage.removeItem('ozama-bot-mode');
+    sessionStorage.removeItem('ozama-bot-color');
+    sessionStorage.removeItem('ozama-bot-difficulty');
+    sessionStorage.setItem('ozama-local-game', 'true');
+    setStatus('local-status', 'Preparando tablero…');
     window.location.href = '/game.html';
   });
 

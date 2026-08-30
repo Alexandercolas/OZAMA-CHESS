@@ -1254,6 +1254,9 @@
           <button class="bc-btn premium-theme-btn" id="theme-toggle-btn" title="Tema exclusivo Premium" style="display:none;" onclick="togglePremiumTheme()">
             Tema Ébano
           </button>
+          <button class="bc-btn" id="local-autoflip-btn" title="Girar el tablero para el jugador de turno (util pasando el celular)" style="display:none;">
+            🔄 Auto-voltear
+          </button>
         </div>
       </div>
 
@@ -1424,8 +1427,8 @@
 </div>
 
 <script src="/vendor/socket.io.min.js"></script>
-<script src="bot.js?v=20260829-analysis"></script>
-<script src="script.js?v=20260829-analysis"></script>
+<script src="bot.js?v=20260830-localmode"></script>
+<script src="script.js?v=20260830-localmode"></script>
 
 <script>
   // Sync visible clocks with hidden ones (CLOCK module updates #clock-white/black)
@@ -1680,6 +1683,11 @@
         };
         const bot={name:'Ozama Bot',country:'DO',avatar:0,avatarImage:'',elo:1200};
         updatePlayerBars(humanColor==='w'?{w:human,b:bot}:{w:bot,b:human},humanColor);
+      }
+      else if(typeof IS_LOCAL_MODE!=='undefined'&&IS_LOCAL_MODE){
+        const j1={name:'Jugador 1',country:'DO',avatar:0,avatarImage:'',elo:1200};
+        const j2={name:'Jugador 2',country:'DO',avatar:1,avatarImage:'',elo:1200};
+        updatePlayerBars({w:j1,b:j2},'w');
       }
       else {
         if(names.w){document.getElementById('pp-name-white').textContent=names.w;document.getElementById('name-white').textContent=names.w;}
