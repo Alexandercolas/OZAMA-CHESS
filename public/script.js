@@ -51,6 +51,17 @@ function toggleSound() {
   if (!_soundMuted) playSound('move');
 }
 
+// Llamado desde preferences.js cuando cambia el volumen (slider en
+// Ajustes) o al cargar la pagina con una preferencia ya guardada.
+function setSoundVolumeGlobal(volume) {
+  _soundVolume = Math.max(0, Math.min(1, Number(volume)));
+  localStorage.setItem('ozama-sound-volume', String(_soundVolume));
+  if (_audioMaster && _audioCtx && !_soundMuted) {
+    _audioMaster.gain.cancelScheduledValues(_audioCtx.currentTime);
+    _audioMaster.gain.setTargetAtTime(_soundVolume, _audioCtx.currentTime, 0.015);
+  }
+}
+
 ['pointerdown','touchstart','keydown'].forEach((eventName) => {
   document.addEventListener(eventName, () => getAudioCtx(), { once: true, passive: true });
 });
@@ -1137,14 +1148,23 @@ function setupPgnExportGate() {
   btn.style.display = userIsPremiumActive() ? '' : 'none';
 }
 
-// Tema de tablero "Ebano" -- otro beneficio Premium, 100% cosmetico.
-// Si la suscripcion vence, el boton se oculta solo y el tema vuelve al
-// por defecto (no se borra la preferencia guardada, por si renueva).
-function togglePremiumTheme() {
-  if (!userIsPremiumActive()) return;
-  const active = document.body.classList.toggle('theme-ebony');
-  try { localStorage.setItem('ozama-board-theme', active ? 'ebony' : 'default'); } catch (_) {}
-  document.getElementById('theme-toggle-btn')?.classList.toggle('is-active', active);
+// Ciclar tema de tablero (preferences.js). En game.html el boton solo
+// alcanza a mostrar un tema a la vez, asi que cada click pasa al
+// siguiente disponible (los Premium se saltan solos si la suscripcion
+// no esta activa).
+function cycleBoardTheme() {
+  if (typeof OZAMA_PREFS === 'undefined') return;
+  const next = OZAMA_PREFS.cycleBoardTheme();
+  updateBoardThemeButton(next);
+}
+
+function updateBoardThemeButton(themeKey) {
+  const btn = document.getElementById('theme-toggle-btn');
+  if (!btn || typeof OZAMA_PREFS === 'undefined') return;
+  const theme = themeKey || OZAMA_PREFS.current().boardTheme;
+  const def = OZAMA_PREFS.BOARD_THEMES[theme];
+  btn.textContent = `🎨 ${def?.label || 'Tablero'}`;
+  btn.classList.toggle('is-active', theme !== 'colonial');
 }
 
 function setupLocalAutoFlipButton() {
@@ -1229,18 +1249,12 @@ function setupAnalysisGate() {
   btn.style.display = userIsPremiumActive() ? '' : 'none';
 }
 
-function setupPremiumThemeGate() {
+function setupBoardThemeButton() {
   const btn = document.getElementById('theme-toggle-btn');
-  if (!btn) return;
-  const premiumActive = userIsPremiumActive();
-  btn.style.display = premiumActive ? '' : 'none';
-  if (!premiumActive) return;
-  let saved = 'default';
-  try { saved = localStorage.getItem('ozama-board-theme') || 'default'; } catch (_) {}
-  if (saved === 'ebony') {
-    document.body.classList.add('theme-ebony');
-    btn.classList.add('is-active');
-  }
+  if (!btn || typeof OZAMA_PREFS === 'undefined') return;
+  btn.style.display = '';
+  OZAMA_PREFS.applyToDocument();
+  updateBoardThemeButton();
 }
 
 // Reconstruye moveHistory completo (con notacion, fotos de tablero,
@@ -1868,7 +1882,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   setupControls();
   setupMoveNav();
   setupPgnExportGate();
-  setupPremiumThemeGate();
+  setupBoardThemeButton();
   setupProBadge();
   setupAnalysisGate();
   initLocalAutoFlip();

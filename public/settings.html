@@ -22,6 +22,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/theme.css">
+  <script src="/preferences.js?v=20260830-fase2"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -497,6 +498,37 @@
 
     .plan-note strong { color: var(--gold); font-family: var(--ft); letter-spacing: 1px; }
 
+    .personalization-panel { padding: 20px; margin-bottom: 28px; }
+    .theme-swatch-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+    .theme-swatch {
+      position: relative;
+      width: 76px;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      cursor: pointer; background: none; border: none; padding: 0;
+      font-family: var(--fb); color: var(--dim);
+    }
+    .theme-swatch-board {
+      width: 56px; height: 56px; border-radius: 10px;
+      display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
+      overflow: hidden; border: 2px solid rgba(200,152,60,0.18);
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .theme-swatch-board span:nth-child(1), .theme-swatch-board span:nth-child(4) { background: var(--sw-light); }
+    .theme-swatch-board span:nth-child(2), .theme-swatch-board span:nth-child(3) { background: var(--sw-dark); }
+    .theme-swatch:hover .theme-swatch-board { transform: translateY(-2px); }
+    .theme-swatch.is-active .theme-swatch-board { border-color: var(--gold); box-shadow: 0 0 12px rgba(200,152,60,0.35); }
+    .theme-swatch-label { font-size: 10.5px; letter-spacing: 0.5px; text-align: center; }
+    .theme-swatch.is-active .theme-swatch-label { color: var(--gold); font-weight: 700; }
+    .theme-swatch-lock {
+      position: absolute; top: -4px; right: 6px;
+      font-size: 10px; background: var(--carbon); border-radius: 50%;
+      width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;
+      border: 1px solid rgba(200,152,60,0.4);
+    }
+    .sound-pref-row { display: flex; align-items: center; gap: 16px; margin-top: 10px; flex-wrap: wrap; }
+    .volume-row { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 140px; }
+    .volume-icon { font-size: 14px; }
+    #pref-volume-slider { flex: 1; accent-color: var(--gold); }
     .premium-panel { padding: 20px; margin-bottom: 28px; }
     .premium-benefits { list-style: none; display: grid; gap: 8px; margin: 14px 0 18px; }
     .premium-benefits li {
@@ -806,11 +838,25 @@
                       <div class="plan-note"><strong>Plan ${planLabel}</strong><br>${planNote}</div>
                     </div>
 
+                    <div class="personalization-panel oz-card oz-enter" id="personalization-panel" style="--d:5">
+                      <div class="section-title">Personalización</div>
+                      <span class="edit-label">Tema de tablero</span>
+                      <div class="theme-swatch-row" id="theme-swatch-row"></div>
+                      <span class="edit-label" style="margin-top:16px;display:block;">Sonido</span>
+                      <div class="sound-pref-row">
+                        <button class="btn-save secondary" id="pref-mute-btn" onclick="togglePrefMute()">Sonido: ON</button>
+                        <div class="volume-row">
+                          <span class="volume-icon">🔊</span>
+                          <input type="range" id="pref-volume-slider" min="0" max="100" value="82" oninput="onPrefVolumeInput(this.value)">
+                        </div>
+                      </div>
+                    </div>
+
                     <div class="premium-panel oz-card oz-enter" id="premium-panel" style="--d:6">
                       <div class="section-title">OZAMA Premium</div>
                       <ul class="premium-benefits">
                         <li>Marco dorado + insignia PREMIUM en tu avatar</li>
-                        <li>Tema de tablero exclusivo (Zona Colonial)</li>
+                        <li>Temas de tablero exclusivos (Ébano y Caoba)</li>
                         <li>Exportar tus partidas en formato PGN</li>
                         <li>Estadisticas avanzadas: color con mas victorias, duracion y aperturas</li>
                         <li>Analisis post-partida: deteccion de errores graves e imprecisiones</li>
@@ -915,6 +961,7 @@
               localStorage.setItem('ozama-user', JSON.stringify(meData.user));
               renderSettings(meData.user);
               initPremiumPanel(meData.user);
+              renderPersonalizationPanel(meData.user);
             } catch (err) {
               if (statusMsg) statusMsg.textContent = err.message || 'No se pudo confirmar la suscripcion.';
             }
@@ -1038,6 +1085,7 @@
         localStorage.setItem('ozama-user', JSON.stringify(data.user));
         renderSettings(data.user);
         initPremiumPanel(data.user);
+        renderPersonalizationPanel(data.user);
         // El contenido se arma async, asi que el anchor #premium-panel del
         // link no lo agarra el navegador solo -- lo forzamos aca.
         if (window.location.hash === '#premium-panel') {
@@ -1049,6 +1097,67 @@
       }
     }
 
+    // ── Personalizacion (Fase 2): temas de tablero + sonido ──
+    // Todo pasa por OZAMA_PREFS (public/preferences.js) -- mismo
+    // camino que usan game.html y damas.html, asi un cambio hecho aca
+    // se ve reflejado la proxima vez que se entre a jugar.
+    let _prefsUser = _user;
+    function renderPersonalizationPanel(user) {
+      if (user) _prefsUser = user;
+      const row = document.getElementById('theme-swatch-row');
+      if (!row || typeof OZAMA_PREFS === 'undefined') return;
+
+      const current = OZAMA_PREFS.current();
+      const themes = OZAMA_PREFS.availableThemes(_prefsUser);
+      row.innerHTML = themes.map((t) => `
+        <button type="button" class="theme-swatch ${t.key === current.boardTheme ? 'is-active' : ''}" onclick="selectBoardTheme('${t.key}')" title="${escapeHtml(t.label)}${t.locked ? ' (Premium)' : ''}">
+          <span class="theme-swatch-board" style="--sw-light:${swatchColor(t.key, 'light')};--sw-dark:${swatchColor(t.key, 'dark')};">
+            <span></span><span></span><span></span><span></span>
+          </span>
+          ${t.locked ? '<span class="theme-swatch-lock">🔒</span>' : ''}
+          <span class="theme-swatch-label">${escapeHtml(t.label)}</span>
+        </button>
+      `).join('');
+
+      const muteBtn = document.getElementById('pref-mute-btn');
+      if (muteBtn) muteBtn.textContent = current.soundMuted ? 'Sonido: OFF' : 'Sonido: ON';
+      const slider = document.getElementById('pref-volume-slider');
+      if (slider) slider.value = String(Math.round(current.soundVolume * 100));
+    }
+
+    function swatchColor(themeKey, which) {
+      const colors = {
+        colonial: { light: '#C9B79C', dark: '#5C3A1E' },
+        marmol:   { light: '#EDE7DC', dark: '#8B8478' },
+        ebano:    { light: '#3A3630', dark: '#14120F' },
+        caoba:    { light: '#D9B98C', dark: '#6B2E1F' },
+      };
+      return colors[themeKey]?.[which] || '#888';
+    }
+
+    async function selectBoardTheme(key) {
+      const themes = OZAMA_PREFS.availableThemes(_prefsUser);
+      const def = themes.find((t) => t.key === key);
+      if (def?.locked) {
+        alert('Ese tema de tablero es exclusivo de OZAMA Premium.');
+        return;
+      }
+      const result = await OZAMA_PREFS.save({ boardTheme: key });
+      if (!result.ok) alert(result.error || 'No se pudo guardar el tema.');
+      renderPersonalizationPanel();
+    }
+
+    function togglePrefMute() {
+      const current = OZAMA_PREFS.current();
+      OZAMA_PREFS.save({ soundMuted: !current.soundMuted });
+      renderPersonalizationPanel();
+    }
+
+    function onPrefVolumeInput(value) {
+      const volume = Math.max(0, Math.min(1, Number(value) / 100));
+      OZAMA_PREFS.save({ soundVolume: volume });
+    }
+
     init();
     Object.assign(window, {
       logout,
@@ -1058,6 +1167,9 @@
       saveProfile,
       deleteAccount,
       cancelPremium,
+      selectBoardTheme,
+      togglePrefMute,
+      onPrefVolumeInput,
     });
     })();
   </script>

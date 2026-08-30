@@ -41,11 +41,23 @@
       --sand:  #BB9A6A; /* Arena Antigua */
     }
 
-    /* Tema exclusivo Premium: "Ebano" -- tablero oscuro con contraste
-       dorado. Puramente cosmetico, no altera reglas ni piezas. */
-    body.theme-ebony {
+    /* Temas de tablero (Fase 2, personalizacion): "colonial" es el
+       default (mismo --bl/--bd definidos arriba, no hace falta
+       regla propia). "marmol" es gratis; "ebano" y "caoba" son
+       exclusivos Premium (se revalida siempre server-side, esto solo
+       cambia el color). Puramente cosmetico, no altera reglas ni
+       piezas -- ver public/preferences.js. */
+    body[data-board-theme="marmol"] {
+      --bl: #EDE7DC;
+      --bd: #8B8478;
+    }
+    body[data-board-theme="ebano"] {
       --bl: #3A3630;
       --bd: #14120F;
+    }
+    body[data-board-theme="caoba"] {
+      --bl: #D9B98C;
+      --bd: #6B2E1F;
     }
     .premium-theme-btn.is-active { color: var(--gold); border-color: rgba(200,152,60,0.5); }
 
@@ -1251,8 +1263,8 @@
           <button class="bc-btn sound-btn" id="sound-toggle-btn" onclick="toggleSound()">
             Sonido on
           </button>
-          <button class="bc-btn premium-theme-btn" id="theme-toggle-btn" title="Tema exclusivo Premium" style="display:none;" onclick="togglePremiumTheme()">
-            Tema Ébano
+          <button class="bc-btn premium-theme-btn" id="theme-toggle-btn" title="Cambiar tema de tablero (Zona Colonial, Mármol, y más con Premium)" style="display:none;" onclick="cycleBoardTheme()">
+            🎨 Zona Colonial
           </button>
           <button class="bc-btn" id="local-autoflip-btn" title="Girar el tablero para el jugador de turno (util pasando el celular)" style="display:none;">
             🔄 Auto-voltear
@@ -1427,8 +1439,9 @@
 </div>
 
 <script src="/vendor/socket.io.min.js"></script>
+<script src="preferences.js?v=20260830-fase2"></script>
 <script src="bot.js?v=20260830-localmode"></script>
-<script src="script.js?v=20260830-localmode"></script>
+<script src="script.js?v=20260830-fase2"></script>
 
 <script>
   // Sync visible clocks with hidden ones (CLOCK module updates #clock-white/black)

@@ -113,6 +113,7 @@ function publicUser(user) {
     plan:     user.plan,
     premiumUntil: user.premiumUntil,
     subscriptionStatus: user.subscriptionStatus,
+    preferences: user.preferences || {},
   };
 }
 

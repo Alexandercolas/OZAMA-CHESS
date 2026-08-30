@@ -16,6 +16,7 @@
   <script src="/checkers-engine.js"></script>
   <script src="/checkers-ai.js"></script>
   <script src="/vendor/socket.io.min.js"></script>
+  <script src="/preferences.js?v=20260830-fase2"></script>
 
   <style>
     :root {
@@ -36,6 +37,13 @@
       --dama: #D9714B;
       --dama-2: #EFA07A;
     }
+
+    /* Temas de tablero (Fase 2, personalizacion) -- mismos 4 que
+       Ajedrez, ver public/preferences.js. "colonial" es el default de
+       arriba, no necesita regla propia. */
+    body[data-board-theme="marmol"] { --bl: #EDE7DC; --bd: #8B8478; }
+    body[data-board-theme="ebano"]  { --bl: #3A3630; --bd: #14120F; }
+    body[data-board-theme="caoba"]  { --bl: #D9B98C; --bd: #6B2E1F; }
 
     body {
       min-height: 100vh;
@@ -493,6 +501,7 @@
         <div class="controls stacked" id="board-controls">
           <button class="btn-primary" type="button" id="newgame-btn" onclick="newGame()">Nueva partida</button>
           <button class="btn-resign hidden" type="button" id="resign-btn" onclick="resignOnline()">Rendirse</button>
+          <button class="btn-mode" type="button" id="theme-toggle-btn" title="Cambiar tema de tablero (Zona Colonial, Mármol, y más con Premium)" onclick="cycleBoardThemeDamas()">🎨 Zona Colonial</button>
         </div>
 
         <div class="side-label">Modo</div>
@@ -1321,6 +1330,25 @@
       document.getElementById('room-code-display').textContent = session.code;
       ensureSocket();
       socket.emit('damas:rejoin', { room: session.code, color: session.color, token: session.token });
+    }
+
+    // Tema de tablero (Fase 2, personalizacion) -- mismo picker que
+    // Ajedrez, ver public/preferences.js.
+    function updateBoardThemeButtonDamas(themeKey) {
+      const btn = document.getElementById('theme-toggle-btn');
+      if (!btn || typeof OZAMA_PREFS === 'undefined') return;
+      const theme = themeKey || OZAMA_PREFS.current().boardTheme;
+      const def = OZAMA_PREFS.BOARD_THEMES[theme];
+      btn.textContent = `🎨 ${def?.label || 'Tablero'}`;
+      btn.classList.toggle('active', theme !== 'colonial');
+    }
+    function cycleBoardThemeDamas() {
+      if (typeof OZAMA_PREFS === 'undefined') return;
+      updateBoardThemeButtonDamas(OZAMA_PREFS.cycleBoardTheme());
+    }
+    if (typeof OZAMA_PREFS !== 'undefined') {
+      OZAMA_PREFS.applyToDocument();
+      updateBoardThemeButtonDamas();
     }
 
     document.getElementById('diff-medium').classList.add('active');

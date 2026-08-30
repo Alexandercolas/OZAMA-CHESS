@@ -99,6 +99,14 @@ const UserSchema = new mongoose.Schema(
     lastSeenAt: { type: Date, default: Date.now },
     isActive:   { type: Boolean, default: true },
     isAdmin:    { type: Boolean, default: false },
+
+    // Personalizacion (Fase 2 del roadmap PRO). Mixed a proposito: la
+    // idea es poder sumar preferencias nuevas (set de piezas,
+    // intensidad de animaciones, densidad de interfaz...) sin tener
+    // que migrar el esquema cada vez -- routes/user.js valida contra
+    // una lista blanca de claves conocidas, esto solo define donde
+    // vive el dato.
+    preferences: { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
   },
   { timestamps: true }
 );

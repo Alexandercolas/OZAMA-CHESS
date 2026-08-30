@@ -38,7 +38,7 @@ function premiumCapabilities(user) {
     subscriptionStatus: user?.subscriptionStatus || 'none',
     benefits: premiumActive ? [
       'Marco dorado + insignia PREMIUM en tu avatar',
-      'Tema de tablero exclusivo (Zona Colonial)',
+      'Temas de tablero exclusivos (Ebano y Caoba)',
       'Exportar tus partidas en formato PGN',
       'Estadisticas avanzadas: color con mas victorias, duracion y aperturas',
       'Analisis post-partida: deteccion de errores graves e imprecisiones',
@@ -118,6 +118,62 @@ router.get('/me', requireAuth, async (req, res) => {
 
 router.get('/plan', requireAuth, async (req, res) => {
   res.json(premiumCapabilities(req.user));
+});
+
+// Catalogo de temas de tablero -- lista blanca a proposito (Fase 2 del
+// roadmap PRO): agregar un tema nuevo mas adelante es sumar una linea
+// aca, nunca tocar el resto de la app. free:false = requiere Premium
+// activo (se revalida siempre server-side, nunca se confia en lo que
+// mande el cliente).
+const BOARD_THEMES = {
+  colonial: { free: true },
+  marmol:   { free: true },
+  ebano:    { free: false },
+  caoba:    { free: false },
+};
+
+// PATCH /api/user/preferences - personalizacion (tablero, sonido...).
+// Whitelist explicita de claves conocidas -- una preferencia nueva se
+// agrega sumando un caso aca, nunca reescribiendo el endpoint entero.
+router.patch('/preferences', requireAuth, async (req, res) => {
+  try {
+    const body = req.body || {};
+    const updates = {};
+    const premiumActive = isPremiumActive(req.user);
+
+    if (body.boardTheme !== undefined) {
+      const theme = String(body.boardTheme || '').trim();
+      const themeDef = BOARD_THEMES[theme];
+      if (!themeDef) return res.status(400).json({ error: 'Tema de tablero invalido.' });
+      if (!themeDef.free && !premiumActive) {
+        return res.status(403).json({ error: 'Ese tema de tablero es exclusivo de OZAMA Premium.' });
+      }
+      updates['preferences.boardTheme'] = theme;
+    }
+
+    if (body.soundMuted !== undefined) {
+      if (typeof body.soundMuted !== 'boolean') return res.status(400).json({ error: 'Valor invalido para soundMuted.' });
+      updates['preferences.soundMuted'] = body.soundMuted;
+    }
+
+    if (body.soundVolume !== undefined) {
+      const volume = Number(body.soundVolume);
+      if (!Number.isFinite(volume) || volume < 0 || volume > 1) {
+        return res.status(400).json({ error: 'El volumen debe estar entre 0 y 1.' });
+      }
+      updates['preferences.soundVolume'] = volume;
+    }
+
+    if (!Object.keys(updates).length) {
+      return res.status(400).json({ error: 'Nada para actualizar.' });
+    }
+
+    await User.updateOne({ _id: req.user._id }, { $set: updates });
+    const fresh = await User.findById(req.user._id);
+    res.json({ preferences: fresh.preferences || {} });
+  } catch (err) {
+    serverError(res, 'Update preferences', err);
+  }
 });
 
 // GET /api/user/stats/advanced - beneficio Premium: color con el que
