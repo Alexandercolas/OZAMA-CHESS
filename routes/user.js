@@ -6,6 +6,7 @@ const Match                = require('../models/Match');
 const DamasMatch           = require('../models/DamasMatch');
 const Room                 = require('../models/Room');
 const Event                = require('../models/Event');
+const Report                = require('../models/Report');
 const { requireAuth, optionalAuth, userIsAdmin } = require('../middleware/auth');
 const { ACHIEVEMENTS, levelFromXp, xpIntoLevel } = require('../services/achievements');
 const { detectOpening } = require('../services/openings');
@@ -19,6 +20,18 @@ function validUsername(value) {
 function serverError(res, scope, err) {
   console.error(`[User] ${scope}:`, err.message);
   return res.status(500).json({ error: 'Error interno del servidor.' });
+}
+
+function escapeRegex(value) {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Busqueda de usuario por nombre exacto (sin importar mayus/minus).
+// Antes se repetia este mismo regex en cada endpoint que necesitaba
+// resolver un username -- factorizado aca para no seguir duplicando
+// (Fase 10 sumo 2 endpoints mas que lo necesitan).
+function findUserByUsername(username, select) {
+  return User.findOne({ username: { $regex: `^${escapeRegex(username)}$`, $options: 'i' } }).select(select);
 }
 
 // Un plan 'premium' vencido (nadie baja el campo `plan` a mano cuando
@@ -589,8 +602,7 @@ router.post('/friends/:username', requireAuth, async (req, res) => {
     if (!username) return res.status(400).json({ error: 'Usuario requerido.' });
     if (!validUsername(username)) return res.status(400).json({ error: 'Usuario invalido.' });
 
-    const friend = await User.findOne({ username: { $regex: `^${username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } })
-      .select('username country avatar avatarImage elo stats');
+    const friend = await findUserByUsername(username, 'username country avatar avatarImage elo stats');
 
     if (!friend) return res.status(404).json({ error: 'Usuario no encontrado.' });
     if (friend._id.toString() === req.user._id.toString()) {
@@ -612,7 +624,7 @@ router.delete('/friends/:username', requireAuth, async (req, res) => {
   try {
     const username = String(req.params.username || '').trim();
     if (!validUsername(username)) return res.status(400).json({ error: 'Usuario invalido.' });
-    const friend = await User.findOne({ username: { $regex: `^${username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } }).select('_id');
+    const friend = await findUserByUsername(username, '_id');
     if (!friend) return res.status(404).json({ error: 'Usuario no encontrado.' });
 
     await Promise.all([
@@ -623,6 +635,81 @@ router.delete('/friends/:username', requireAuth, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     serverError(res, 'Remove friend', err);
+  }
+});
+
+// POST /api/user/:username/report - denuncia (Fase 10). Se guarda
+// para que un admin la revise (ver routes/admin.js) -- no toma
+// ninguna accion automatica sobre la cuenta reportada.
+router.post('/:username/report', requireAuth, async (req, res) => {
+  try {
+    const username = String(req.params.username || '').trim();
+    if (!validUsername(username)) return res.status(400).json({ error: 'Usuario invalido.' });
+
+    const reported = await findUserByUsername(username, '_id');
+    if (!reported) return res.status(404).json({ error: 'Usuario no encontrado.' });
+    if (String(reported._id) === String(req.user._id)) {
+      return res.status(400).json({ error: 'No puedes reportarte a ti mismo.' });
+    }
+
+    const reason = String(req.body?.reason || '').trim();
+    if (!Report.REASONS.includes(reason)) return res.status(400).json({ error: 'Motivo invalido.' });
+    const note = String(req.body?.note || '').trim().slice(0, 500);
+
+    // Un reporte por dia por (denunciante, denunciado) -- evita spam
+    // sin bloquear a alguien que de verdad necesita reportar de nuevo
+    // otro dia.
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recent = await Report.findOne({ reporter: req.user._id, reported: reported._id, createdAt: { $gte: since } });
+    if (recent) return res.status(429).json({ error: 'Ya reportaste a este jugador recientemente.' });
+
+    await Report.create({ reporter: req.user._id, reported: reported._id, reason, note });
+    res.json({ ok: true });
+  } catch (err) {
+    serverError(res, 'Report user', err);
+  }
+});
+
+// GET /api/user/blocked - lista de jugadores que bloqueaste.
+router.get('/blocked', requireAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).populate('blockedUsers', 'username country avatar avatarImage').select('blockedUsers').lean();
+    res.json({ blocked: user?.blockedUsers || [] });
+  } catch (err) {
+    serverError(res, 'Blocked list', err);
+  }
+});
+
+// POST/DELETE /api/user/:username/block - bloqueo unidireccional
+// (Fase 10). Hoy solo impide que la persona bloqueada te desafie
+// (ver server.js, challenge-send) -- todavia no filtra emparejamiento
+// automatico ni el chat en vivo, eso queda para una pasada futura.
+router.post('/:username/block', requireAuth, async (req, res) => {
+  try {
+    const username = String(req.params.username || '').trim();
+    if (!validUsername(username)) return res.status(400).json({ error: 'Usuario invalido.' });
+    const target = await findUserByUsername(username, '_id');
+    if (!target) return res.status(404).json({ error: 'Usuario no encontrado.' });
+    if (String(target._id) === String(req.user._id)) return res.status(400).json({ error: 'No puedes bloquearte a ti mismo.' });
+
+    await User.updateOne({ _id: req.user._id }, { $addToSet: { blockedUsers: target._id } });
+    res.json({ ok: true });
+  } catch (err) {
+    serverError(res, 'Block user', err);
+  }
+});
+
+router.delete('/:username/block', requireAuth, async (req, res) => {
+  try {
+    const username = String(req.params.username || '').trim();
+    if (!validUsername(username)) return res.status(400).json({ error: 'Usuario invalido.' });
+    const target = await findUserByUsername(username, '_id');
+    if (!target) return res.status(404).json({ error: 'Usuario no encontrado.' });
+
+    await User.updateOne({ _id: req.user._id }, { $pull: { blockedUsers: target._id } });
+    res.json({ ok: true });
+  } catch (err) {
+    serverError(res, 'Unblock user', err);
   }
 });
 
@@ -710,22 +797,39 @@ router.delete('/me', requireAuth, async (req, res) => {
   }
 });
 
-router.get('/:username', async (req, res) => {
+// GET /api/user/:username - perfil publico (Fase 10 lo extendio con
+// ELO/estadisticas de Damas, nivel y logros -- el shape original con
+// solo ajedrez ya existia y quedo sin uso desde el cliente, asi que
+// se pudo ampliar sin romper a nadie). Sin auth: pensado para
+// compartir, igual que /api/matches/:id/public (Fase 6). optionalAuth
+// solo se usa para poder marcar isSelf/isBlocked cuando hay sesion.
+router.get('/:username', optionalAuth, async (req, res) => {
   try {
     const username = String(req.params.username || '').trim();
     if (!validUsername(username)) return res.status(400).json({ error: 'Usuario invalido.' });
 
     const user = await User.findOne({ username })
-      .select('username country avatar avatarImage elo stats plan premiumUntil createdAt');
+      .select('username country avatar avatarImage elo damasElo stats damasStats xp achievements plan premiumUntil createdAt isActive');
 
-    if (!user) return res.status(404).json({ error: 'Usuario no encontrado.' });
+    if (!user || !user.isActive) return res.status(404).json({ error: 'Usuario no encontrado.' });
 
     const json = user.toJSON();
     json.premiumActive = isPremiumActive(user);
+    json.rank = rankTier(user.elo);
+    json.damasRank = rankTier(user.damasElo);
+    json.level = levelFromXp(user.xp);
+    json.achievementsUnlocked = (user.achievements || []).length;
     delete json.plan;
     delete json.premiumUntil;
+    delete json.achievements;
 
-    res.json({ user: json });
+    const isBlocked = req.user ? (req.user.blockedUsers || []).some((id) => String(id) === String(user._id)) : false;
+
+    res.json({
+      user: json,
+      isSelf: req.user ? String(req.user._id) === String(user._id) : false,
+      isBlocked,
+    });
   } catch (err) {
     serverError(res, 'Public profile', err);
   }

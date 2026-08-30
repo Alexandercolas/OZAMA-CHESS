@@ -1976,6 +1976,20 @@ if (room.white && room.black && !room.clockInterval) {
       socket.emit('challenge-error', 'Tu sesion ya no es valida.');
       return;
     }
+
+    // Bloqueo (Fase 10): unidireccional -- si el objetivo bloqueo al
+    // que desafia, o al reves, no se deja mandar el desafio. No se le
+    // dice a quien bloqueo cual es el motivo exacto para no filtrar
+    // quien bloqueo a quien.
+    const targetBlocklist = await User.findById(targetSocket.data.userId).select('blockedUsers').lean();
+    const challengerBlocklist = await User.findById(socket.data.userId).select('blockedUsers').lean();
+    const blocked = (targetBlocklist?.blockedUsers || []).some((id) => String(id) === String(socket.data.userId))
+      || (challengerBlocklist?.blockedUsers || []).some((id) => String(id) === String(targetSocket.data.userId));
+    if (blocked) {
+      socket.emit('challenge-error', 'No podés desafiar a este jugador.');
+      return;
+    }
+
     if (!pendingChallenges.has(targetSocket.id)) pendingChallenges.set(targetSocket.id, new Set());
     pendingChallenges.get(targetSocket.id).add(socket.id);
 

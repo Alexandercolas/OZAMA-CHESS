@@ -587,8 +587,9 @@
         const code = countryCode(player.country);
         const username = escapeHtml(player.username || 'Jugador');
         const isMe = storedUser && player.username === storedUser.username;
+        const profileUrl = `/player.html?u=${encodeURIComponent(player.username || '')}`;
         return `
-          <div class="rank-row${isMe ? ' me' : ''}">
+          <div class="rank-row${isMe ? ' me' : ''}" onclick="location.href='${profileUrl}'" style="cursor:pointer">
             <div class="rank-num">${index + 1}</div>
             <div class="player">
               ${avatar(player)}
@@ -655,8 +656,9 @@
 
     function climberRowHtml(c, index) {
       const code = countryCode(c.country);
+      const profileUrl = `/player.html?u=${encodeURIComponent(c.username || '')}`;
       return `
-        <div class="rank-row">
+        <div class="rank-row" onclick="location.href='${profileUrl}'" style="cursor:pointer">
           <div class="rank-num">${index + 1}</div>
           <div class="player">
             ${avatar(c)}

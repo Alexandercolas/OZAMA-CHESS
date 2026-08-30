@@ -63,6 +63,11 @@ const UserSchema = new mongoose.Schema(
     },
     avatarImage: { type: String, default: '' },
     friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    // Bloqueo (Fase 10 del roadmap PRO): unidireccional a proposito --
+    // si A bloquea a B, B no puede desafiar a A, sin que B se entere
+    // ni necesite tambien bloquear a A. Ver server.js (challenge-send)
+    // para donde se hace cumplir.
+    blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 
     elo: { type: Number, default: 1200 },
     stats: {

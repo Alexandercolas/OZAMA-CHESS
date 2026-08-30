@@ -6,6 +6,7 @@ const { RateLimiterMemory } = require('rate-limiter-flexible');
 const AdminAudit = require('../models/AdminAudit');
 const Event = require('../models/Event');
 const Match = require('../models/Match');
+const Report = require('../models/Report');
 const User = require('../models/User');
 const { requireAdmin, userIsAdmin } = require('../middleware/auth');
 const { generateFirstRound } = require('../services/tournament');
@@ -345,6 +346,48 @@ router.get('/matches', async (req, res) => {
   } catch (err) {
     console.error('[Admin] Matches:', err.message);
     res.status(500).json({ error: 'No se pudieron cargar las partidas.' });
+  }
+});
+
+// GET /api/admin/reports - denuncias de jugadores (Fase 10). Por
+// defecto solo las pendientes; ?status=all trae todo.
+router.get('/reports', async (req, res) => {
+  try {
+    const status = String(req.query.status || 'pending');
+    const query = status === 'all' ? {} : { status: ['pending', 'reviewed', 'dismissed'].includes(status) ? status : 'pending' };
+    const reports = await Report.find(query)
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .populate('reporter', 'username')
+      .populate('reported', 'username isActive')
+      .populate('reviewedBy', 'username')
+      .lean();
+    res.json({ reports });
+  } catch (err) {
+    console.error('[Admin] Reports:', err.message);
+    res.status(500).json({ error: 'No se pudieron cargar las denuncias.' });
+  }
+});
+
+router.patch('/reports/:id', async (req, res) => {
+  try {
+    if (!validObjectId(req.params.id)) return res.status(400).json({ error: 'Denuncia invalida.' });
+    const status = String(req.body?.status || '');
+    if (!['reviewed', 'dismissed'].includes(status)) return res.status(400).json({ error: 'Estado invalido.' });
+
+    const report = await Report.findByIdAndUpdate(
+      req.params.id,
+      { status, reviewedBy: req.user._id, reviewedAt: new Date() },
+      { new: true }
+    );
+    if (!report) return res.status(404).json({ error: 'Denuncia no encontrada.' });
+
+    await writeAudit(req, `report_${status}`, 'report', String(report._id));
+
+    res.json({ report });
+  } catch (err) {
+    console.error('[Admin] Report update:', err.message);
+    res.status(500).json({ error: 'No se pudo actualizar la denuncia.' });
   }
 });
 
