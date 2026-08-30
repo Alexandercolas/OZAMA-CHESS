@@ -1,0 +1,41 @@
+name: Backup de MongoDB
+
+# Corre todos los dias a las 08:00 UTC (04:00 AM hora Rep. Dominicana)
+# y tambien se puede disparar a mano desde la pestana Actions
+# ("Run workflow"). El resultado queda como "artifact" descargable
+# desde esa misma pagina, sin necesidad de infra nueva.
+#
+# Requiere un secret del repo llamado MONGODB_URI (Settings > Secrets
+# and variables > Actions > New repository secret) con la misma URI
+# de conexion que usa Render. Opcionalmente MONGODB_DB_NAME si no es
+# "ozama-chess".
+on:
+  schedule:
+    - cron: '0 8 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Correr el backup
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          MONGODB_DB_NAME: ${{ secrets.MONGODB_DB_NAME }}
+        run: node scripts/backup-mongo.js --out=backup-output
+
+      - name: Subir como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ozama-mongo-backup-${{ github.run_id }}
+          path: backup-output
+          retention-days: 30

@@ -3,6 +3,11 @@ node_modules/
 .env
 npm-debug.log*
 
+# Backups de MongoDB (scripts/backup-mongo.js) -- tienen datos reales
+# de usuarios (contrasenas hasheadas incluidas), nunca deben subirse.
+backups/
+backup-output/
+
 # Android signing secrets
 *.jks
 *.keystore
