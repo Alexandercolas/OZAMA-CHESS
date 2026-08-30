@@ -399,48 +399,67 @@ function startCloseTimer(code) {
 // se deja "ready" con roomCode en null para que se rejuegue la
 // proxima vez que cualquiera de los dos entre desde la pagina de
 // torneos (tournament:join-match arma la sala de nuevo).
+// Usa updates atomicos (en vez de leer-modificar-guardar todo el
+// documento) a proposito: si un torneo tiene 4+ jugadores, dos
+// partidos de la MISMA ronda pueden terminar casi al mismo tiempo, y
+// un simple event.save() pisaria el cambio del otro (probado: dos
+// .save() concurrentes sobre el mismo Event, uno de los dos se pierde
+// en silencio, Mongoose no lo detecta por defecto). El $expr sobre el
+// tamano de bracket.rounds funciona como compare-and-swap: si dos
+// partidos de la ronda terminan a la vez y ambos ven "ronda completa",
+// solo uno de los dos updateOne/findOneAndUpdate de mas abajo
+// realmente matchea y empuja la ronda siguiente / corona al campeon.
 async function handleTournamentMatchFinished(tournamentMeta, winner, room) {
   try {
     const { eventId, round, matchIndex } = tournamentMeta || {};
-    const event = await Event.findById(eventId);
-    const match = event?.bracket?.rounds?.[round]?.matches?.[matchIndex];
-    if (!event || !match) return;
+    if (!eventId || round === undefined || round === null || matchIndex === undefined || matchIndex === null) return;
 
     if (!winner) {
-      match.status = 'ready';
-      match.roomCode = null;
-      event.markModified('bracket');
-      await event.save({ validateModifiedOnly: true });
+      await Event.updateOne({ _id: eventId }, { $set: {
+        [`bracket.rounds.${round}.matches.${matchIndex}.status`]: 'ready',
+        [`bracket.rounds.${round}.matches.${matchIndex}.roomCode`]: null,
+      }});
       return;
     }
 
     const winnerUserId = winner === 'w' ? room?.playerInfo?.w?.userId : room?.playerInfo?.b?.userId;
-    match.winner = winnerUserId || null;
-    match.status = 'finished';
-    event.markModified('bracket');
+    await Event.updateOne({ _id: eventId }, { $set: {
+      [`bracket.rounds.${round}.matches.${matchIndex}.winner`]: winnerUserId || null,
+      [`bracket.rounds.${round}.matches.${matchIndex}.status`]: 'finished',
+    }});
 
-    const roundMatches = event.bracket.rounds[round].matches;
+    // Releer el estado real (puede ya incluir el resultado de otro
+    // partido de la misma ronda que termino casi en simultaneo).
+    const event = await Event.findById(eventId).select('title bracket.rounds').lean();
+    const roundMatches = event?.bracket?.rounds?.[round]?.matches || [];
+    if (!roundMatches.length) return;
     const allDecided = roundMatches.every((m) => m.status === 'finished' || m.status === 'bye');
+    if (!allDecided) return;
 
-    if (allDecided) {
-      const winners = roundMatches
-        .map((m) => ({
-          userId: m.winner,
-          name: m.winner && String(m.winner) === String(m.player1) ? m.player1Name : m.player2Name,
-        }))
-        .filter((w) => w.userId);
+    const winners = roundMatches
+      .map((m) => ({
+        userId: m.winner,
+        name: m.winner && String(m.winner) === String(m.player1) ? m.player1Name : m.player2Name,
+      }))
+      .filter((w) => w.userId);
 
-      if (winners.length <= 1) {
-        event.bracket.championId = winners[0]?.userId || null;
-        event.bracket.championName = winners[0]?.name || '';
-        event.status = 'finished';
-      } else {
-        event.bracket.rounds.push(generateNextRound(winners));
-      }
+    const expectedRoundCount = round + 1;
+    if (winners.length <= 1) {
+      const updated = await Event.findOneAndUpdate(
+        { _id: eventId, 'bracket.championId': null, $expr: { $eq: [{ $size: '$bracket.rounds' }, expectedRoundCount] } },
+        { $set: { 'bracket.championId': winners[0]?.userId || null, 'bracket.championName': winners[0]?.name || '', status: 'finished' } },
+        { new: true }
+      ).select('title bracket.championName');
+      if (updated) console.log(`[Tournament] ${updated.title} — campeon: ${updated.bracket.championName}`);
+    } else {
+      const nextRound = generateNextRound(winners);
+      const updated = await Event.findOneAndUpdate(
+        { _id: eventId, $expr: { $eq: [{ $size: '$bracket.rounds' }, expectedRoundCount] } },
+        { $push: { 'bracket.rounds': nextRound } },
+        { new: true }
+      ).select('title bracket.rounds');
+      if (updated) console.log(`[Tournament] ${updated.title} — ronda ${expectedRoundCount + 1} generada.`);
     }
-
-    await event.save({ validateModifiedOnly: true });
-    console.log(`[Tournament] ${event.title} — ronda ${round + 1}, partido ${matchIndex + 1} decidido.`);
   } catch (err) {
     console.warn('[Tournament] No se pudo avanzar el bracket:', err.message);
   }
@@ -2027,8 +2046,12 @@ if (room.white && room.black && !room.clockInterval) {
       rooms.set(code, room);
 
       match.roomCode = code;
-      event.markModified('bracket');
-      await event.save({ validateModifiedOnly: true }).catch((err) => console.warn('[Tournament] No se pudo guardar roomCode:', err.message));
+      // Update atomico de un solo campo (no event.save() de todo el
+      // documento) -- asi no pisa cambios concurrentes de OTRO partido
+      // de la misma ronda que se este resolviendo al mismo tiempo.
+      await Event.updateOne({ _id: event._id }, {
+        $set: { [`bracket.rounds.${round}.matches.${matchIndex}.roomCode`]: code },
+      }).catch((err) => console.warn('[Tournament] No se pudo guardar roomCode:', err.message));
 
       await Room.findOneAndUpdate(
         { roomCode: code },
@@ -2070,8 +2093,9 @@ if (room.white && room.black && !room.clockInterval) {
       }).catch(() => {});
 
       match.status = 'playing';
-      event.markModified('bracket');
-      await event.save({ validateModifiedOnly: true }).catch(() => {});
+      await Event.updateOne({ _id: event._id }, {
+        $set: { [`bracket.rounds.${round}.matches.${matchIndex}.status`]: 'playing' },
+      }).catch(() => {});
 
       const wSocket = io.sockets.sockets.get(room.white);
       const bSocket = io.sockets.sockets.get(room.black);

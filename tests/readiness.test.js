@@ -52,7 +52,9 @@ test('public and private pages publish the intended index policy', () => {
 });
 
 test('account deletion is available in-app and requires reauthentication', () => {
-  const profile = read('public/profile.html');
+  // Vive en settings.html (no profile.html) desde que Perfil/Historial/
+  // Ajustes se separaron en pestanas propias.
+  const profile = read('public/settings.html');
   const route = read('routes/user.js');
   assert.match(profile, /function deleteAccount\(\)/);
   assert.match(profile, /currentPassword/);
@@ -112,7 +114,7 @@ test('Google sign-in is feature-gated and verified by the backend', () => {
   assert.match(model, /select: false/);
   assert.match(login, /fetch\('\/api\/auth\/providers'/);
   assert.match(login, /fetch\('\/api\/auth\/google'/);
-  assert.match(login, /if \(window\.OZAMA_RUNTIME\?\.native\) return/);
+  assert.match(login, /if \(window\.OZAMA_RUNTIME\?\.native\) \{/);
   assert.doesNotMatch(login, /GOOGLE_ANDROID_CLIENT_ID|GOOGLE_CLIENT_IDS/);
   assert.match(server, /googleLoginEnabled/);
   assert.match(server, /same-origin-allow-popups/);
