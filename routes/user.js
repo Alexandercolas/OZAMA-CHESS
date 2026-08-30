@@ -243,6 +243,85 @@ router.get('/stats/advanced', requireAuth, async (req, res) => {
   }
 });
 
+// Rango cosmetico segun ELO -- mismos nombres que ya usan los niveles
+// del bot, para que el ladder de rangos se sienta parte de la misma
+// familia (Centinela es el nivel de bot por defecto Y el rango de
+// arranque, con el ELO inicial de 1200). Puramente de exhibicion, no
+// cambia ningun calculo de ELO real.
+const RANK_TIERS = [
+  { min: 1800, name: 'Alcázar' },
+  { min: 1400, name: 'Maestro' },
+  { min: 1000, name: 'Centinela' },
+  { min: -Infinity, name: 'Aprendiz' },
+];
+function rankTier(elo) {
+  return (RANK_TIERS.find((t) => elo >= t.min) || RANK_TIERS[RANK_TIERS.length - 1]).name;
+}
+
+// GET /api/user/profile-stats - tarjeta de identidad del jugador
+// (Fase 3 del roadmap PRO). A diferencia de /stats/advanced, esto es
+// gratis para todos -- son datos de identidad del perfil, no un
+// beneficio Premium.
+router.get('/profile-stats', requireAuth, async (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    const userId = req.user._id;
+    const finishedFilter = {
+      $or: [{ 'whitePlayer.userId': userId }, { 'blackPlayer.userId': userId }],
+      result: { $in: ['white_win', 'black_win', 'draw'] },
+    };
+
+    const [chessMatches, damasMatches] = await Promise.all([
+      Match.find(finishedFilter).select('startedAt endedAt moves').lean(),
+      DamasMatch.find(finishedFilter).select('startedAt endedAt').lean(),
+    ]);
+
+    function durationSecOf(list) {
+      let totalMs = 0;
+      for (const m of list) {
+        if (!m.startedAt || !m.endedAt) continue;
+        const ms = new Date(m.endedAt) - new Date(m.startedAt);
+        if (ms > 0 && ms < 24 * 60 * 60 * 1000) totalMs += ms;
+      }
+      return totalMs / 1000;
+    }
+
+    const chessTimeSec = durationSecOf(chessMatches);
+    const damasTimeSec = durationSecOf(damasMatches);
+    const totalGames = chessMatches.length + damasMatches.length;
+
+    const avgMoves = chessMatches.length
+      ? Math.round(chessMatches.reduce((sum, m) => sum + (Array.isArray(m.moves) ? m.moves.length : 0), 0) / chessMatches.length)
+      : null;
+
+    let favoriteMode = null;
+    if (chessMatches.length || damasMatches.length) {
+      favoriteMode = chessMatches.length === damasMatches.length ? 'parejo' : (chessMatches.length > damasMatches.length ? 'chess' : 'damas');
+    }
+
+    res.json({
+      rank: rankTier(req.user.elo),
+      damasRank: rankTier(req.user.damasElo),
+      totalGames,
+      totalTimePlayedSec: Math.round(chessTimeSec + damasTimeSec),
+      favoriteMode,
+      chessGames: chessMatches.length,
+      damasGames: damasMatches.length,
+      style: {
+        avgMovesPerGame: avgMoves,
+        // Todavia no se trackea posicion/complejidad por jugada, asi
+        // que en vez de inventar un numero, esto queda explicitamente
+        // sin dato -- el frontend muestra "Sin datos suficientes".
+        aggressiveness: null,
+        endgamePerformance: null,
+        timePressurePerformance: null,
+      },
+    });
+  } catch (err) {
+    serverError(res, 'Profile stats', err);
+  }
+});
+
 // PATCH /api/user/me - update profile
 router.patch('/me', requireAuth, async (req, res) => {
   try {

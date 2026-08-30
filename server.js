@@ -288,15 +288,16 @@ async function finishDamasGame(room, code, { winner, reason }) {
 
         if (result === 'white_win') {
           wUser.damasStats.wins++; bUser.damasStats.losses++;
-          wUser.damasStats.streak = Number(wUser.damasStats.streak || 0) + 1;
-          bUser.damasStats.streak = 0;
+          bumpStreak(wUser.damasStats, true);
+          bumpStreak(bUser.damasStats, false);
         } else if (result === 'black_win') {
           bUser.damasStats.wins++; wUser.damasStats.losses++;
-          bUser.damasStats.streak = Number(bUser.damasStats.streak || 0) + 1;
-          wUser.damasStats.streak = 0;
+          bumpStreak(bUser.damasStats, true);
+          bumpStreak(wUser.damasStats, false);
         } else {
           wUser.damasStats.draws++; bUser.damasStats.draws++;
-          wUser.damasStats.streak = 0; bUser.damasStats.streak = 0;
+          bumpStreak(wUser.damasStats, false);
+          bumpStreak(bUser.damasStats, false);
         }
 
         eloChange.white = wUser.damasElo - wBefore;
@@ -499,6 +500,15 @@ async function finishRoomByServerConclusion(room, code, source = 'server') {
   });
   console.log(`[G] Partida ${code} finalizada por servidor: ${conclusion.result}${conclusion.winner ? ` (${conclusion.winner})` : ''}`);
   return conclusion;
+}
+
+// Actualiza racha actual + mejor racha de siempre (Fase 3 del roadmap
+// PRO, tarjeta de perfil) -- un solo lugar para ajedrez y Damas, en
+// vez de repetir la logica en cada bloque que cierra una partida.
+function bumpStreak(statsObj, won) {
+  if (!statsObj) return;
+  statsObj.streak = won ? Number(statsObj.streak || 0) + 1 : 0;
+  if (statsObj.streak > Number(statsObj.bestStreak || 0)) statsObj.bestStreak = statsObj.streak;
 }
 
 function playerSnapshot(info) {
@@ -1138,18 +1148,18 @@ async function applyEloForRoom(room, result, code) {
     if (result === 'white_win') {
       wUser.stats.wins++;
       bUser.stats.losses++;
-      wUser.stats.streak = Number(wUser.stats.streak || 0) + 1;
-      bUser.stats.streak = 0;
+      bumpStreak(wUser.stats, true);
+      bumpStreak(bUser.stats, false);
     } else if (result === 'black_win') {
       bUser.stats.wins++;
       wUser.stats.losses++;
-      bUser.stats.streak = Number(bUser.stats.streak || 0) + 1;
-      wUser.stats.streak = 0;
+      bumpStreak(bUser.stats, true);
+      bumpStreak(wUser.stats, false);
     } else {
       wUser.stats.draws++;
       bUser.stats.draws++;
-      wUser.stats.streak = 0;
-      bUser.stats.streak = 0;
+      bumpStreak(wUser.stats, false);
+      bumpStreak(bUser.stats, false);
     }
 
     await Promise.all([

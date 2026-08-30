@@ -70,6 +70,7 @@ const UserSchema = new mongoose.Schema(
       losses: { type: Number, default: 0 },
       draws:  { type: Number, default: 0 },
       streak: { type: Number, default: 0 },
+      bestStreak: { type: Number, default: 0 },
     },
 
     // ELO y estadisticas de Damas, separados de los de ajedrez -- son
@@ -80,6 +81,7 @@ const UserSchema = new mongoose.Schema(
       losses: { type: Number, default: 0 },
       draws:  { type: Number, default: 0 },
       streak: { type: Number, default: 0 },
+      bestStreak: { type: Number, default: 0 },
     },
 
     // The paid plan must never provide competitive advantages.

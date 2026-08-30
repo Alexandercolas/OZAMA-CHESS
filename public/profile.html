@@ -166,12 +166,49 @@
       box-shadow: 0 0 18px rgba(200,152,60,0.16);
     }
 
+    .rank-badge {
+      font-family: var(--ft);
+      font-size: 13px; font-weight: 700; letter-spacing: 1.5px;
+      color: var(--gold-2, var(--gold));
+    }
+    .rank-badge::before { content: '\2726  '; }
+
+    .identity-panel { padding: 20px; margin-bottom: 28px; }
+    .identity-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .identity-item { text-align: center; }
+    .identity-value {
+      font-family: var(--ft); font-size: 20px; font-weight: 800; color: var(--text);
+    }
+    .identity-label {
+      font-size: 10px; font-weight: 600; letter-spacing: 1.5px; color: var(--dim);
+      text-transform: uppercase; margin-top: 4px;
+    }
+    .style-title {
+      font-family: var(--ft); font-size: 15px; font-weight: 700; color: var(--gold);
+      letter-spacing: 1px; margin: 6px 0 12px;
+      padding-top: 16px; border-top: 1px solid rgba(200,152,60,0.1);
+    }
+    .style-grid { display: grid; gap: 8px; }
+    .style-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 12px; border-radius: 8px; background: var(--surface2);
+      font-size: 12.5px;
+    }
+    .style-item .style-name { color: var(--text); }
+    .style-item .style-value { color: var(--gold); font-weight: 700; }
+    .style-item .style-value.is-empty { color: var(--dim); font-weight: 400; font-style: italic; }
+
     /* Stats grid */
     .container { max-width: 800px; margin: 0 auto; padding: 28px 20px 0; }
 
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(3, 1fr);
       gap: 12px;
       margin-bottom: 28px;
     }
@@ -726,7 +763,7 @@
         }
 
     function statCardsHtml(game, user) {
-      const stats = (game === 'damas' ? user.damasStats : user.stats) || { wins: 0, losses: 0, draws: 0 };
+      const stats = (game === 'damas' ? user.damasStats : user.stats) || { wins: 0, losses: 0, draws: 0, streak: 0, bestStreak: 0 };
       const wins = stats.wins || 0, losses = stats.losses || 0, draws = stats.draws || 0;
       const gamesPlayed = wins + losses + draws;
       const winRate = gamesPlayed > 0 ? Math.round(wins / gamesPlayed * 100) : 0;
@@ -747,6 +784,14 @@
           <div class="stat-value">${winRate}%</div>
           <div class="stat-label">% Victorias</div>
         </div>
+        <div class="stat-card oz-card">
+          <div class="stat-value">${stats.streak || 0}</div>
+          <div class="stat-label">Racha actual</div>
+        </div>
+        <div class="stat-card oz-card">
+          <div class="stat-value">${stats.bestStreak || 0}</div>
+          <div class="stat-label">Mejor racha</div>
+        </div>
       `;
     }
 
@@ -765,6 +810,7 @@
       const grid = document.getElementById('estadisticas');
       if (grid) grid.innerHTML = statCardsHtml(game, currentUser);
       loadAdvancedStats(game);
+      renderIdentityPanel(game);
     }
 
     function formatDuration(seconds) {
@@ -775,6 +821,68 @@
       const h = Math.floor(m / 60);
       const rem = m % 60;
       return `${h}h ${rem}min`;
+    }
+
+    let _identityData = null;
+    async function loadIdentityStats() {
+      try {
+        const res = await fetch('/api/user/profile-stats', { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' });
+        if (!res.ok) throw new Error();
+        _identityData = await res.json();
+      } catch (_) {
+        _identityData = null;
+      }
+      renderIdentityPanel(currentGame);
+    }
+
+    function favoriteModeLabel(data) {
+      if (!data || !data.totalGames) return 'Sin datos suficientes';
+      if (data.favoriteMode === 'chess') return 'Ajedrez';
+      if (data.favoriteMode === 'damas') return 'Damas';
+      return 'Parejo entre los dos';
+    }
+
+    function styleRow(name, value) {
+      const hasValue = value !== null && value !== undefined;
+      return `
+        <div class="style-item">
+          <span class="style-name">${escapeHtml(name)}</span>
+          <span class="style-value ${hasValue ? '' : 'is-empty'}">${hasValue ? escapeHtml(String(value)) : 'Sin datos suficientes'}</span>
+        </div>
+      `;
+    }
+
+    function renderIdentityPanel(game) {
+      const rankEl = document.getElementById('hero-rank');
+      const body = document.getElementById('identity-body');
+      const styleGrid = document.getElementById('style-grid');
+      if (!body || !styleGrid) return;
+      const data = _identityData;
+
+      if (rankEl) rankEl.textContent = data ? (game === 'damas' ? data.damasRank : data.rank) : '';
+
+      if (!data) {
+        body.innerHTML = '<div class="empty-msg">No se pudieron cargar los datos.</div>';
+        styleGrid.innerHTML = '';
+        return;
+      }
+
+      const totalTime = formatDuration(data.totalTimePlayedSec) || 'Sin datos suficientes';
+      body.innerHTML = `
+        <div class="identity-row">
+          <div class="identity-item"><div class="identity-value">${game === 'damas' ? data.damasRank : data.rank}</div><div class="identity-label">Rango</div></div>
+          <div class="identity-item"><div class="identity-value">${data.totalGames}</div><div class="identity-label">Partidas totales</div></div>
+          <div class="identity-item"><div class="identity-value">${totalTime}</div><div class="identity-label">Tiempo jugado</div></div>
+          <div class="identity-item"><div class="identity-value">${favoriteModeLabel(data)}</div><div class="identity-label">Modalidad favorita</div></div>
+        </div>
+      `;
+
+      styleGrid.innerHTML = [
+        styleRow('Promedio de movimientos por partida', data.style.avgMovesPerGame),
+        styleRow('Agresividad', data.style.aggressiveness),
+        styleRow('Rendimiento en finales', data.style.endgamePerformance),
+        styleRow('Rendimiento con poco tiempo', data.style.timePressurePerformance),
+      ].join('');
     }
 
     async function loadAdvancedStats(game) {
@@ -864,6 +972,7 @@
                     <span>${user.country || 'DO'}</span>
                   </div>
                   <div class="elo-display" id="hero-elo">ELO ${heroEloValue(currentGame, user)}</div>
+                  <div class="rank-badge" id="hero-rank"></div>
                   <div class="plan-badge ${premiumActive ? 'premium' : ''}">${planLabel}</div>
                 </div>
 
@@ -877,7 +986,14 @@
           <!-- Stats -->
                   <div class="stats-grid oz-enter" id="estadisticas" style="--d:1">${statCardsHtml(currentGame, user)}</div>
 
-                  <div class="adv-stats-panel oz-card oz-enter" id="adv-stats-panel" style="--d:2">
+                  <div class="identity-panel oz-card oz-enter" id="identity-panel" style="--d:2">
+                    <div class="section-title">Tarjeta de identidad</div>
+                    <div id="identity-body"><div class="empty-msg">Cargando...</div></div>
+                    <div class="style-title">Mi estilo de juego</div>
+                    <div class="style-grid" id="style-grid"></div>
+                  </div>
+
+                  <div class="adv-stats-panel oz-card oz-enter" id="adv-stats-panel" style="--d:3">
                     <div class="adv-stats-title">
                       <div class="section-title">Estadisticas avanzadas</div>
                       <span class="adv-pro-tag">PREMIUM</span>
@@ -982,6 +1098,7 @@
         renderProfile(data.user);
         loadFriends();
         loadAdvancedStats(currentGame);
+        loadIdentityStats();
       } catch (_) {}
     }
 
@@ -1002,6 +1119,7 @@
         profileInitialized = true;
         loadFriends();
         loadAdvancedStats(currentGame);
+        loadIdentityStats();
       } catch (err) {
         document.getElementById('main-content').innerHTML =
           '<div class="loading">Error cargando el perfil. Recarga la pagina.</div>';
