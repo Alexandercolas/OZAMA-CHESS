@@ -40,8 +40,60 @@ function premiumCapabilities(user) {
       'Marco dorado + insignia PREMIUM en tu avatar',
       'Tema de tablero exclusivo (Zona Colonial)',
       'Exportar tus partidas en formato PGN',
+      'Estadisticas avanzadas: color con mas victorias, duracion y aperturas',
     ] : [],
   };
+}
+
+// Libro de aperturas reducido -- alcanza para reconocer las aperturas
+// mas jugadas sin necesitar una base ECO completa. Se matchea contra
+// el prefijo de jugadas de la partida (mas jugadas coincidentes =
+// nombre mas especifico gana).
+const OPENING_BOOK = [
+  { moves: ['e4', 'e5', 'Nf3', 'Nc6', 'Bb5'], name: 'Ruy Lopez' },
+  { moves: ['e4', 'e5', 'Nf3', 'Nc6', 'Bc4'], name: 'Italiana' },
+  { moves: ['e4', 'e5', 'Nf3', 'Nf6'], name: 'Petrov' },
+  { moves: ['e4', 'e5', 'Nc3'], name: 'Vienesa' },
+  { moves: ['e4', 'e5'], name: 'Apertura Abierta (1.e4 e5)' },
+  { moves: ['e4', 'c5'], name: 'Siciliana' },
+  { moves: ['e4', 'e6'], name: 'Francesa' },
+  { moves: ['e4', 'c6'], name: 'Caro-Kann' },
+  { moves: ['e4', 'd5'], name: 'Escandinava' },
+  { moves: ['e4', 'd6'], name: 'Pirc / Moderna' },
+  { moves: ['e4', 'Nf6'], name: 'Alekhine' },
+  { moves: ['e4', 'g6'], name: 'Moderna' },
+  { moves: ['e4'], name: 'Apertura de Rey (1.e4)' },
+  { moves: ['d4', 'd5', 'c4', 'e6'], name: 'Gambito de Dama Rehusado' },
+  { moves: ['d4', 'd5', 'c4'], name: 'Gambito de Dama' },
+  { moves: ['d4', 'Nf6', 'c4', 'g6'], name: 'India del Rey' },
+  { moves: ['d4', 'Nf6', 'c4', 'e6'], name: 'Nimzoindia / India' },
+  { moves: ['d4', 'f5'], name: 'Holandesa' },
+  { moves: ['d4', 'd5'], name: 'Apertura de Dama Cerrada' },
+  { moves: ['d4', 'Nf6'], name: 'Defensa India' },
+  { moves: ['d4'], name: 'Apertura de Dama (1.d4)' },
+  { moves: ['Nf3'], name: 'Apertura Reti' },
+  { moves: ['c4'], name: 'Apertura Inglesa' },
+  { moves: ['g3'], name: 'Fianchetto' },
+  { moves: ['b3'], name: 'Nimzowitsch-Larsen' },
+  { moves: ['f4'], name: 'Gambito Bird' },
+];
+
+function detectOpening(pgnText) {
+  const tokens = String(pgnText || '')
+    .split(/\s+/)
+    .filter((t) => t && !/^\d+\.$/.test(t) && !/^(1-0|0-1|1\/2-1\/2|\*)$/.test(t))
+    .slice(0, 6);
+  if (!tokens.length) return null;
+  let best = null;
+  for (const entry of OPENING_BOOK) {
+    if (entry.moves.length > tokens.length) continue;
+    let ok = true;
+    for (let i = 0; i < entry.moves.length; i++) {
+      if (tokens[i] !== entry.moves[i]) { ok = false; break; }
+    }
+    if (ok && (!best || entry.moves.length > best.moves.length)) best = entry;
+  }
+  return best ? best.name : null;
 }
 
 function publicLeaderboardFilter() {
@@ -65,6 +117,73 @@ router.get('/me', requireAuth, async (req, res) => {
 
 router.get('/plan', requireAuth, async (req, res) => {
   res.json(premiumCapabilities(req.user));
+});
+
+// GET /api/user/stats/advanced - beneficio Premium: color con el que
+// mas gana, duracion promedio de partida y aperturas mas jugadas.
+// Todo se calcula de partidas ya guardadas, no hace falta trackear
+// nada nuevo por partida.
+router.get('/stats/advanced', requireAuth, async (req, res) => {
+  try {
+    if (!isPremiumActive(req.user)) {
+      return res.status(403).json({ error: 'Las estadisticas avanzadas son un beneficio Premium.', premiumRequired: true });
+    }
+
+    res.set('Cache-Control', 'no-store');
+    const game = req.query.game === 'damas' ? 'damas' : 'chess';
+    const userId = req.user._id;
+    const Model = game === 'damas' ? DamasMatch : Match;
+    const filter = {
+      $or: [{ 'whitePlayer.userId': userId }, { 'blackPlayer.userId': userId }],
+      result: { $in: ['white_win', 'black_win', 'draw'] },
+    };
+    const projection = game === 'damas'
+      ? 'whitePlayer.userId blackPlayer.userId result startedAt endedAt'
+      : 'whitePlayer.userId blackPlayer.userId result pgn startedAt endedAt';
+
+    const matches = await Model.find(filter).select(projection).lean();
+
+    const asWhite = { wins: 0, losses: 0, draws: 0 };
+    const asBlack = { wins: 0, losses: 0, draws: 0 };
+    let totalDurationMs = 0;
+    let durationSamples = 0;
+    const openingCounts = new Map();
+
+    for (const m of matches) {
+      const isWhite = String(m.whitePlayer?.userId) === String(userId);
+      const bucket = isWhite ? asWhite : asBlack;
+      if (m.result === 'draw') bucket.draws++;
+      else if ((m.result === 'white_win' && isWhite) || (m.result === 'black_win' && !isWhite)) bucket.wins++;
+      else bucket.losses++;
+
+      if (m.startedAt && m.endedAt) {
+        const ms = new Date(m.endedAt) - new Date(m.startedAt);
+        if (ms > 0 && ms < 24 * 60 * 60 * 1000) { totalDurationMs += ms; durationSamples++; }
+      }
+
+      if (game === 'chess' && isWhite && m.pgn) {
+        const name = detectOpening(m.pgn);
+        if (name) openingCounts.set(name, (openingCounts.get(name) || 0) + 1);
+      }
+    }
+
+    const rate = (b) => (b.wins + b.losses + b.draws) ? Math.round((b.wins / (b.wins + b.losses + b.draws)) * 100) : 0;
+    const topOpenings = [...openingCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, count]) => ({ name, count }));
+
+    res.json({
+      game,
+      totalGames: matches.length,
+      asWhite: { ...asWhite, winRate: rate(asWhite) },
+      asBlack: { ...asBlack, winRate: rate(asBlack) },
+      avgDurationSec: durationSamples ? Math.round(totalDurationMs / durationSamples / 1000) : null,
+      topOpenings,
+    });
+  } catch (err) {
+    serverError(res, 'Advanced stats', err);
+  }
 });
 
 // PATCH /api/user/me - update profile

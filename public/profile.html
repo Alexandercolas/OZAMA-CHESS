@@ -197,6 +197,54 @@
     .stat-card.losses .stat-value { color: var(--danger); }
     .stat-card.draws  .stat-value { color: var(--dim); }
 
+    /* Estadisticas avanzadas (beneficio Premium) */
+    .adv-stats-panel { padding: 20px; margin-bottom: 28px; }
+    .adv-stats-title {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px; gap: 10px; flex-wrap: wrap;
+    }
+    .adv-stats-title .section-title { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+    .adv-pro-tag {
+      padding: 2px 8px; border-radius: 4px;
+      border: 1px solid rgba(200,152,60,0.44);
+      background: rgba(200,152,60,0.1);
+      color: var(--gold); font-size: 9px; font-weight: 800;
+      letter-spacing: 1.5px;
+    }
+    .adv-color-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      margin-bottom: 16px;
+    }
+    .adv-color-card {
+      padding: 14px; border-radius: 10px;
+      background: var(--surface2);
+      border: 1px solid rgba(200,152,60,0.1);
+    }
+    .adv-color-label {
+      font-size: 10px; font-weight: 800; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--dim); margin-bottom: 8px;
+    }
+    .adv-color-rate {
+      font-family: var(--ft); font-size: 24px; font-weight: 800; color: var(--gold);
+      line-height: 1;
+    }
+    .adv-color-detail { font-size: 11px; color: var(--dim); margin-top: 4px; }
+    .adv-duration { font-size: 12px; color: var(--dim); margin-bottom: 14px; }
+    .adv-duration strong { color: var(--gold); }
+    .adv-openings-title { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: var(--dim); text-transform: uppercase; margin-bottom: 8px; }
+    .adv-opening-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 0; border-bottom: 1px solid rgba(200,152,60,0.06);
+      font-size: 13px;
+    }
+    .adv-opening-row:last-child { border-bottom: none; }
+    .adv-opening-count { color: var(--gold); font-weight: 700; font-family: var(--fm); }
+    .adv-locked {
+      display: flex; flex-direction: column; align-items: center; text-align: center;
+      gap: 10px; padding: 20px 10px; color: var(--dim); font-size: 12.5px; line-height: 1.6;
+    }
+    .adv-locked a { color: var(--gold); font-weight: 700; text-decoration: none; }
+
     /* Seccion historial */
     .section-title {
       font-family: var(--ft);
@@ -716,6 +764,78 @@
       if (eloEl) eloEl.textContent = `ELO ${heroEloValue(game, currentUser)}`;
       const grid = document.getElementById('estadisticas');
       if (grid) grid.innerHTML = statCardsHtml(game, currentUser);
+      loadAdvancedStats(game);
+    }
+
+    function formatDuration(seconds) {
+      if (!seconds) return null;
+      const m = Math.round(seconds / 60);
+      if (m < 1) return '<1 min';
+      if (m < 60) return `${m} min`;
+      const h = Math.floor(m / 60);
+      const rem = m % 60;
+      return `${h}h ${rem}min`;
+    }
+
+    async function loadAdvancedStats(game) {
+      const body = document.getElementById('adv-stats-body');
+      if (!body || !currentUser) return;
+
+      const premiumUntil = currentUser.premiumUntil ? new Date(currentUser.premiumUntil) : null;
+      const premiumActive = currentUser.plan === 'premium' && (!premiumUntil || premiumUntil > new Date());
+      if (!premiumActive) {
+        body.innerHTML = `
+          <div class="adv-locked">
+            <div>Desbloquea tu color con mas victorias, duracion promedio de partida y tus aperturas mas jugadas.</div>
+            <a href="/settings.html#premium-panel">Activar OZAMA Premium →</a>
+          </div>
+        `;
+        return;
+      }
+
+      body.innerHTML = '<div class="empty-msg">Cargando...</div>';
+      try {
+        const res = await fetch(`/api/user/stats/advanced?game=${game}`, {
+          headers: { Authorization: `Bearer ${_token}` },
+          cache: 'no-store',
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+
+        if (!data.totalGames) {
+          body.innerHTML = '<div class="empty-msg">Todavia no hay partidas terminadas para analizar.</div>';
+          return;
+        }
+
+        const duration = formatDuration(data.avgDurationSec);
+        const openingsHtml = (data.topOpenings || []).length
+          ? data.topOpenings.map((o) => `
+              <div class="adv-opening-row">
+                <span>${escapeHtml(o.name)}</span>
+                <span class="adv-opening-count">${o.count}</span>
+              </div>
+            `).join('')
+          : '';
+
+        body.innerHTML = `
+          <div class="adv-color-grid">
+            <div class="adv-color-card">
+              <div class="adv-color-label">Con Blancas</div>
+              <div class="adv-color-rate">${data.asWhite.winRate}%</div>
+              <div class="adv-color-detail">${data.asWhite.wins}V / ${data.asWhite.losses}D / ${data.asWhite.draws}T</div>
+            </div>
+            <div class="adv-color-card">
+              <div class="adv-color-label">Con Negras</div>
+              <div class="adv-color-rate">${data.asBlack.winRate}%</div>
+              <div class="adv-color-detail">${data.asBlack.wins}V / ${data.asBlack.losses}D / ${data.asBlack.draws}T</div>
+            </div>
+          </div>
+          ${duration ? `<div class="adv-duration">Duracion promedio de partida: <strong>${duration}</strong></div>` : ''}
+          ${openingsHtml ? `<div class="adv-openings-title">Aperturas mas jugadas (con Blancas)</div>${openingsHtml}` : ''}
+        `;
+      } catch (_) {
+        body.innerHTML = '<div class="empty-msg">No se pudieron cargar las estadisticas avanzadas.</div>';
+      }
     }
 
     function renderProfile(user) {
@@ -756,6 +876,14 @@
 
           <!-- Stats -->
                   <div class="stats-grid oz-enter" id="estadisticas" style="--d:1">${statCardsHtml(currentGame, user)}</div>
+
+                  <div class="adv-stats-panel oz-card oz-enter" id="adv-stats-panel" style="--d:2">
+                    <div class="adv-stats-title">
+                      <div class="section-title">Estadisticas avanzadas</div>
+                      <span class="adv-pro-tag">PREMIUM</span>
+                    </div>
+                    <div id="adv-stats-body"><div class="empty-msg">Cargando...</div></div>
+                  </div>
 
                   <div class="friends-panel oz-card oz-enter" id="amigos" style="--d:6">
                     <div class="section-title">Amigos</div>
@@ -853,6 +981,7 @@
         localStorage.setItem('ozama-user', JSON.stringify(data.user));
         renderProfile(data.user);
         loadFriends();
+        loadAdvancedStats(currentGame);
       } catch (_) {}
     }
 
@@ -872,6 +1001,7 @@
         renderProfile(data.user);
         profileInitialized = true;
         loadFriends();
+        loadAdvancedStats(currentGame);
       } catch (err) {
         document.getElementById('main-content').innerHTML =
           '<div class="loading">Error cargando el perfil. Recarga la pagina.</div>';
