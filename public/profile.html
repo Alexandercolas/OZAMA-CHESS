@@ -652,6 +652,7 @@
       font-size: 12px; font-weight: 600; cursor: pointer;
       transition: all 0.2s;
     }
+    a.page-btn { text-decoration: none; display: inline-block; }
     .page-btn:hover, .page-btn.active {
       border-color: var(--gold); color: var(--gold);
       background: rgba(200,152,60,0.08);
@@ -1208,6 +1209,7 @@
               <div class="friend-name">${getFlag(friend.country)} ${name}</div>
               <div class="friend-meta">ELO ${friend.elo || 1200} · ${games} partidas</div>
             </div>
+            <a class="page-btn" href="/lobby.html?challenge=${encodeURIComponent(friend.username || '')}">Desafiar</a>
             <button class="page-btn" onclick="removeFriend('${name}')">Quitar</button>
           </div>
         `;

@@ -185,7 +185,7 @@
         </div>
         ${meta.isSelf ? '' : `
           <div class="actions">
-            <a class="btn" href="/lobby.html#desafios">Desafiar</a>
+            <a class="btn" href="/lobby.html?challenge=${encodeURIComponent(profile.username || '')}">Desafiar</a>
             <div class="btn" onclick="togglePanel('report')">Reportar</div>
             <div class="btn danger" id="block-btn" onclick="toggleBlock()">${meta.isBlocked ? 'Desbloquear' : 'Bloquear'}</div>
           </div>

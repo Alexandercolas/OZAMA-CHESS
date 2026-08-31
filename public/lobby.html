@@ -1518,6 +1518,13 @@
   window.challengePlayer = challengePlayer;
   window.addFriendFromLobby = addFriendFromLobby;
   navigateLobbyHash();
+
+  // Entrada directa desde "Desafiar" en la lista de amigos del perfil
+  // (Fase K, roadmap PRO 2.0) -- reusa exactamente challengePlayer(),
+  // no manda el desafio solo para evitar reenvios si la pagina se
+  // recarga con el mismo link.
+  const challengeParam = new URLSearchParams(window.location.search).get('challenge');
+  if (challengeParam) challengePlayer(challengeParam);
   })();
 </script>
 </body>
