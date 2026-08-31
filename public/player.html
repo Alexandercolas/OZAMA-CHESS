@@ -38,6 +38,7 @@
     .av[data-frame="centenario"] { box-shadow: 0 0 0 4px #6B4A2A; }
     .name { font-family: var(--ft); font-size: 24px; color: var(--text); }
     .name .pro { font-size: 10px; vertical-align: middle; margin-left: 8px; padding: 2px 7px; border-radius: 5px; background: rgba(200,152,60,0.16); color: var(--gold); font-weight: 800; letter-spacing: 1px; }
+    .title-tag { font-family: var(--fm); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--gold-2, var(--gold)); margin-top: 4px; }
     .cc { color: var(--dim); font-size: 12.5px; margin-top: 4px; }
     .since { color: var(--faint, var(--dim)); font-size: 11px; margin-top: 4px; }
 
@@ -145,6 +146,7 @@
         <div class="hero">
           <div class="av" data-frame="${escapeHtml(profile.equippedFrame || 'ninguno')}">${avatarHtml(profile)}</div>
           <div class="name">${escapeHtml(profile.username)}${profile.premiumActive ? '<span class="pro">PRO</span>' : ''}</div>
+          <div class="title-tag">${escapeHtml(profile.globalTitle || 'Novato')}</div>
           <div class="cc"><img src="${flagUrl(profile.country)}" alt="" style="width:16px;vertical-align:middle;margin-right:4px;">${escapeHtml(profile.country || '')}</div>
           <div class="since">Nivel ${profile.level} · ${profile.achievementsUnlocked} logros · Miembro desde ${new Date(profile.createdAt).toLocaleDateString('es-DO', { month: 'long', year: 'numeric' })}</div>
         </div>

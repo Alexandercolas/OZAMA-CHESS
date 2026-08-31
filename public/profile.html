@@ -955,6 +955,7 @@
         <div class="level-row">
           <div class="level-badge"><span class="lv-num">${data.level}</span><span class="lv-lbl">NIVEL</span></div>
           <div class="level-info">
+            <div class="level-xp-text" style="color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:1px;font-size:11px;">${escapeHtml(data.globalTitle || 'Novato')}</div>
             <div class="level-xp-text">${data.xp} XP total · ${data.xpIntoLevel}/100 para el nivel ${data.level + 1} · ${data.achievementsUnlocked}/${data.achievementsTotal} logros</div>
             <div class="xp-bar-track"><div class="xp-bar-fill" style="width:${pct}%"></div></div>
           </div>

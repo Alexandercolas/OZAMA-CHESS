@@ -156,7 +156,7 @@
           <div class="av" data-frame="${escapeHtml(me.equippedFrame || 'ninguno')}">${avatarHtml(me)}</div>
           <div>
             <div class="hero-name">${escapeHtml(me.username)}${me.premiumActive ? '<span class="pro">PRO</span>' : ''}</div>
-            <div class="level-line">Nivel ${level} · ${xpPct}/100 XP</div>
+            <div class="level-line">${escapeHtml(me.globalTitle || 'Novato')} · Nivel ${level} · ${xpPct}/100 XP</div>
             <div class="xp-bar-track"><div class="xp-bar-fill" style="width:${xpPct}%"></div></div>
           </div>
         </div>

@@ -9,6 +9,7 @@ const Event                = require('../models/Event');
 const Report                = require('../models/Report');
 const { requireAuth, optionalAuth, userIsAdmin } = require('../middleware/auth');
 const { ACHIEVEMENTS, ACHIEVEMENT_MAP, levelFromXp, xpIntoLevel } = require('../services/achievements');
+const { titleForLevel } = require('../services/titles');
 const { detectOpening } = require('../services/openings');
 const { FRAMES, framesFor, isValidFrame, isUnlocked } = require('../services/cosmetics');
 
@@ -88,7 +89,13 @@ router.get('/me', requireAuth, async (req, res) => {
   // isAdmin se calcula server-side contra ADMIN_EMAILS (env), nunca se
   // almacena en el documento del usuario: solo el dueno del servidor
   // puede otorgar este flag, cambiando esa variable de entorno.
-  res.json({ user: { ...req.user.toJSON(), isAdmin: userIsAdmin(req.user) } });
+  res.json({
+    user: {
+      ...req.user.toJSON(),
+      isAdmin: userIsAdmin(req.user),
+      globalTitle: titleForLevel(levelFromXp(req.user.xp)),
+    },
+  });
 });
 
 router.get('/plan', requireAuth, async (req, res) => {
@@ -322,6 +329,7 @@ router.get('/profile-stats', requireAuth, async (req, res) => {
       xp: req.user.xp || 0,
       level: levelFromXp(req.user.xp),
       xpIntoLevel: xpIntoLevel(req.user.xp),
+      globalTitle: titleForLevel(levelFromXp(req.user.xp)),
       achievementsUnlocked: (req.user.achievements || []).length,
       achievementsTotal: ACHIEVEMENTS.length,
       style: {
@@ -883,6 +891,7 @@ router.get('/:username', optionalAuth, async (req, res) => {
     json.rank = rankTier(user.elo);
     json.damasRank = rankTier(user.damasElo);
     json.level = levelFromXp(user.xp);
+    json.globalTitle = titleForLevel(json.level);
     json.achievementsUnlocked = (user.achievements || []).length;
     // Insignias para la tarjeta de jugador (Fase C del roadmap PRO
     // 2.0) -- los logros en si no son informacion privada (son para
