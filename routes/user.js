@@ -214,8 +214,8 @@ router.get('/stats/advanced', requireAuth, async (req, res) => {
       result: { $in: ['white_win', 'black_win', 'draw'] },
     };
     const projection = game === 'damas'
-      ? 'whitePlayer.userId blackPlayer.userId result startedAt endedAt'
-      : 'whitePlayer.userId blackPlayer.userId result pgn startedAt endedAt';
+      ? 'whitePlayer.userId blackPlayer.userId result reason startedAt endedAt'
+      : 'whitePlayer.userId blackPlayer.userId result endReason pgn startedAt endedAt';
 
     const matches = await Model.find(filter).select(projection).lean();
 
@@ -224,13 +224,42 @@ router.get('/stats/advanced', requireAuth, async (req, res) => {
     let totalDurationMs = 0;
     let durationSamples = 0;
     const openingCounts = new Map();
+    const winReasonCounts = new Map();
+    let winsWithReason = 0;
+    let totalWins = 0;
+
+    // Damas: 'no-pieces'/'no-moves' son las dos formas reales de ganar
+    // (le quitaste todas las piezas / se quedo sin jugada legal) --
+    // 'admin-closed' se excluye del desglose (no es un resultado real
+    // de juego). Ajedrez: 'fifty_move'/'stalemate'/'draw_agreed' son
+    // razones de TABLAS, no de victoria, se excluyen aca.
+    const WIN_REASON_LABELS = {
+      checkmate: 'Jaque mate',
+      timeout: 'Tiempo agotado',
+      resign: 'Abandono del rival',
+      abandoned: 'Rival desconectado',
+      'no-pieces': 'Capturaste todas las piezas',
+      'no-moves': 'Rival sin jugadas',
+      'opponent-left': 'Rival desconectado',
+    };
 
     for (const m of matches) {
       const isWhite = String(m.whitePlayer?.userId) === String(userId);
       const bucket = isWhite ? asWhite : asBlack;
+      const won = (m.result === 'white_win' && isWhite) || (m.result === 'black_win' && !isWhite);
       if (m.result === 'draw') bucket.draws++;
-      else if ((m.result === 'white_win' && isWhite) || (m.result === 'black_win' && !isWhite)) bucket.wins++;
+      else if (won) bucket.wins++;
       else bucket.losses++;
+
+      if (won) {
+        totalWins++;
+        const reasonKey = game === 'damas' ? m.reason : m.endReason;
+        const label = WIN_REASON_LABELS[reasonKey];
+        if (label) {
+          winsWithReason++;
+          winReasonCounts.set(label, (winReasonCounts.get(label) || 0) + 1);
+        }
+      }
 
       if (m.startedAt && m.endedAt) {
         const ms = new Date(m.endedAt) - new Date(m.startedAt);
@@ -249,6 +278,13 @@ router.get('/stats/advanced', requireAuth, async (req, res) => {
       .slice(0, 5)
       .map(([name, count]) => ({ name, count }));
 
+    // No inventar: si casi ninguna victoria tiene una razon guardada
+    // (partidas de antes de que se empezara a trackear endReason en
+    // Ajedrez), no se muestra el desglose como si fuera confiable.
+    const winReasons = winsWithReason >= 5
+      ? [...winReasonCounts.entries()].sort((a, b) => b[1] - a[1]).map(([label, count]) => ({ label, count }))
+      : null;
+
     res.json({
       game,
       totalGames: matches.length,
@@ -256,6 +292,8 @@ router.get('/stats/advanced', requireAuth, async (req, res) => {
       asBlack: { ...asBlack, winRate: rate(asBlack) },
       avgDurationSec: durationSamples ? Math.round(totalDurationMs / durationSamples / 1000) : null,
       topOpenings,
+      winReasons,
+      totalWins,
     });
   } catch (err) {
     serverError(res, 'Advanced stats', err);

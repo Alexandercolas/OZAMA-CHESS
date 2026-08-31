@@ -1072,6 +1072,18 @@
             `).join('')
           : '';
 
+        const winReasonsHtml = data.winReasons
+          ? data.winReasons.map((r) => {
+              const pct = data.totalWins ? Math.round((r.count / data.totalWins) * 100) : 0;
+              return `
+                <div class="adv-opening-row">
+                  <span>${escapeHtml(r.label)}</span>
+                  <span class="adv-opening-count">${r.count} (${pct}%)</span>
+                </div>
+              `;
+            }).join('')
+          : `<div class="empty-msg" style="padding:8px 0;">Necesitamos más partidas para calcular esta estadística.</div>`;
+
         body.innerHTML = `
           <div class="adv-color-grid">
             <div class="adv-color-card">
@@ -1087,6 +1099,8 @@
           </div>
           ${duration ? `<div class="adv-duration">Duracion promedio de partida: <strong>${duration}</strong></div>` : ''}
           ${openingsHtml ? `<div class="adv-openings-title">Aperturas mas jugadas (con Blancas)</div>${openingsHtml}` : ''}
+          <div class="adv-openings-title">Cómo ganas tus partidas</div>
+          ${winReasonsHtml}
         `;
       } catch (_) {
         body.innerHTML = '<div class="empty-msg">No se pudieron cargar las estadisticas avanzadas.</div>';

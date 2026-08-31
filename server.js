@@ -399,7 +399,7 @@ function startClock(code) {
       const winner = turn === 'w' ? 'b' : 'w';
       const result = winner === 'w' ? 'white_win' : 'black_win';
       io.to(code).emit('time-out', { loser: turn, winner });
-      const closed = await finishMatch(room.matchId, result, winner, '', room);
+      const closed = await finishMatch(room.matchId, result, winner, '', room, 'timeout');
       if (closed) await applyEloForRoom(room, result, code);
       await Room.updateOne({ roomCode: code }, { $set: { status: 'finished', lastActivityAt: new Date() } }).catch(() => {});
     }
@@ -416,7 +416,7 @@ function startCloseTimer(code) {
     if (room.matchId) {
       const winner = room.white ? 'w' : room.black ? 'b' : null;
       const result = winner ? (winner === 'w' ? 'white_win' : 'black_win') : 'abandoned';
-      const closed = await finishMatch(room.matchId, result, winner, '', room);
+      const closed = await finishMatch(room.matchId, result, winner, '', room, 'abandoned');
       if (closed && winner) await applyEloForRoom(room, result, code);
     }
     await Room.updateOne({ roomCode: code }, { $set: { status: 'closed', lastActivityAt: new Date() } }).catch(() => {});
@@ -496,10 +496,11 @@ async function handleTournamentMatchFinished(tournamentMeta, winner, room) {
   }
 }
 
-async function finishMatch(matchId, result, winner = null, pgn = '', room = null) {
+async function finishMatch(matchId, result, winner = null, pgn = '', room = null, endReason = null) {
   if (!matchId) return false;
   const set = { result, winner, endedAt: new Date() };
   if (pgn) set.pgn = pgn;
+  if (endReason) set.endReason = endReason;
   const update = await Match.updateOne({ _id: matchId, result: 'in_progress' }, { $set: set })
     .catch((err) => { console.warn('[DB] No se pudo cerrar match:', err.message); return null; });
   const closed = !!update?.modifiedCount;
@@ -514,7 +515,7 @@ async function finishRoomByServerConclusion(room, code, source = 'server') {
 
   stopClock(room);
   room.status = 'finished';
-  const closed = await finishMatch(room.matchId, conclusion.result, conclusion.winner, '', room);
+  const closed = await finishMatch(room.matchId, conclusion.result, conclusion.winner, '', room, conclusion.reason);
   if (!closed) return null;
 
   await Room.updateOne({ roomCode: code }, {
@@ -1775,7 +1776,7 @@ if (room.white && room.black && !room.clockInterval) {
     const winner = loser === 'w' ? 'b' : loser === 'b' ? 'w' : null;
     if (room.matchId && winner) {
       const result = winner === 'w' ? 'white_win' : 'black_win';
-      const closed = await finishMatch(room.matchId, result, winner, pgn, room);
+      const closed = await finishMatch(room.matchId, result, winner, pgn, room, 'resign');
       if (closed) await applyEloForRoom(room, result, code);
       await Room.updateOne({ roomCode: code }, { $set: { status: 'finished', lastActivityAt: new Date() } }).catch(() => {});
     }
@@ -1903,7 +1904,7 @@ if (room.white && room.black && !room.clockInterval) {
     stopClock(room);
     room.status = 'finished';
     room.drawOfferBy = null;
-    const closed = await finishMatch(room.matchId, 'draw', null, '', room);
+    const closed = await finishMatch(room.matchId, 'draw', null, '', room, 'draw_agreed');
     if (closed) await applyEloForRoom(room, 'draw', code);
     await Room.updateOne({ roomCode: code }, { $set: { status: 'finished', lastActivityAt: new Date() } }).catch(() => {});
     io.to(code).emit('draw-accepted', { playerName: socket.data.playerName });

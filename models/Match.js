@@ -47,6 +47,17 @@ const MatchSchema = new mongoose.Schema(
     },
     winner: { type: String, enum: ['w', 'b', null], default: null },
 
+    // Como termino exactamente (Fase E del roadmap PRO 2.0 --
+    // estadisticas de "victorias por jaque mate" vs "por tiempo", etc).
+    // null en partidas viejas, de antes de que se empezara a guardar
+    // esto -- las estadisticas que lo usan lo tratan como dato
+    // faltante, no como cero.
+    endReason: {
+      type: String,
+      enum: ['checkmate', 'stalemate', 'resign', 'timeout', 'abandoned', 'draw_agreed', 'fifty_move', null],
+      default: null,
+    },
+
     eloChange: {
       white: { type: Number, default: null },
       black: { type: Number, default: null },
