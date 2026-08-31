@@ -17,21 +17,21 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="OZAMA CHESS"/>
-  <title>OZAMA CHESS - Ajedrez Online Dominicano</title>
-  <meta name="description" content="Juega ajedrez online en tiempo real, reta jugadores, crea salas privadas y compite por ELO en OZAMA CHESS, una experiencia de ajedrez con identidad dominicana."/>
+  <title>OZAMA CHESS - Ajedrez y Damas Online Dominicano</title>
+  <meta name="description" content="Jugá ajedrez y damas online en tiempo real, retá jugadores, creá salas privadas y competí por ELO en OZAMA, una plataforma de juegos de tablero con identidad dominicana."/>
   <meta name="robots" content="index, follow, max-image-preview:large"/>
   <link rel="canonical" href="https://ozama-chess.onrender.com/"/>
   <meta property="og:type" content="website"/>
   <meta property="og:locale" content="es_DO"/>
   <meta property="og:site_name" content="OZAMA CHESS"/>
-  <meta property="og:title" content="OZAMA CHESS - Ajedrez Online Dominicano"/>
-  <meta property="og:description" content="Partidas online, salas privadas, desafíos, ranking ELO y OZAMA Bot en una experiencia de ajedrez con identidad dominicana."/>
+  <meta property="og:title" content="OZAMA CHESS - Ajedrez y Damas Online Dominicano"/>
+  <meta property="og:description" content="Partidas online, salas privadas, desafíos, ranking ELO y bot en ajedrez y damas, con identidad dominicana."/>
   <meta property="og:url" content="https://ozama-chess.onrender.com/"/>
   <meta property="og:image" content="https://ozama-chess.onrender.com/assets/brand/ozama-hero-brutal.jpg"/>
-  <meta property="og:image:alt" content="OZAMA CHESS, ajedrez online con identidad dominicana"/>
+  <meta property="og:image:alt" content="OZAMA, ajedrez y damas online con identidad dominicana"/>
   <meta name="twitter:card" content="summary_large_image"/>
-  <meta name="twitter:title" content="OZAMA CHESS - Ajedrez Online Dominicano"/>
-  <meta name="twitter:description" content="Juega online, crea salas, reta jugadores y sube tu ELO."/>
+  <meta name="twitter:title" content="OZAMA CHESS - Ajedrez y Damas Online Dominicano"/>
+  <meta name="twitter:description" content="Jugá online, creá salas, retá jugadores y subí tu ELO en ajedrez y damas."/>
   <meta name="twitter:image" content="https://ozama-chess.onrender.com/assets/brand/ozama-hero-brutal.jpg"/>
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/favicon.png?v=5">
@@ -49,7 +49,7 @@
     "@type": "WebApplication",
     "name": "OZAMA CHESS",
     "url": "https://ozama-chess.onrender.com/",
-    "description": "Plataforma dominicana de ajedrez online en tiempo real con salas privadas, desafíos y ranking ELO.",
+    "description": "Plataforma dominicana de ajedrez y damas online en tiempo real con salas privadas, desafíos y ranking ELO.",
     "applicationCategory": "GameApplication",
     "operatingSystem": "Web",
     "inLanguage": "es-DO",
@@ -432,6 +432,40 @@
       gap: 14px;
       margin-top: 36px;
     }
+
+    .game-select-label {
+      font: 800 11px/1 var(--body);
+      letter-spacing: 2.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 36px 0 14px;
+    }
+    .game-select { display: flex; gap: 14px; flex-wrap: wrap; }
+    .game-card {
+      flex: 1;
+      min-width: 200px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 26px 18px;
+      text-decoration: none;
+      border: 1px solid rgba(200,152,60,0.28);
+      background: linear-gradient(180deg, rgba(200,152,60,0.07), transparent 70%);
+      transition:
+        transform var(--dur-fast) var(--ease-out),
+        border-color var(--dur-base) var(--ease-out),
+        box-shadow var(--dur-base) var(--ease-out);
+    }
+    .game-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(226,185,96,0.75);
+      box-shadow: 0 12px 30px rgba(200,152,60,0.18);
+    }
+    .game-card .g-icon { font-size: 34px; line-height: 1; }
+    .game-card .g-name { font: 800 14px/1 var(--body); letter-spacing: 3px; text-transform: uppercase; color: var(--gold-2); }
+    .game-card .g-tag { font-size: 11.5px; color: var(--muted); text-align: center; line-height: 1.5; }
+    .register-row { margin-top: 18px; }
 
     .hero-meta {
       display: flex;
@@ -1298,6 +1332,7 @@
       }
       .hero-actions { flex-direction: column; align-items: stretch; }
       .btn-primary, .btn-secondary { width: 100%; }
+      .game-select { flex-direction: column; }
       .hero-meta { gap: 12px; }
       .hero-feature-strip { grid-template-columns: 1fr; }
       .hero-feature { min-height: 116px; border-right: none; border-bottom: 1px solid rgba(200,152,60,0.16); }
@@ -1335,16 +1370,29 @@
             <span class="oz-enter" style="--d:2;display:block">OZAMA</span>
             <span class="oz-enter" style="--d:2.35;display:block">CHESS</span>
           </h1>
-          <p class="hero-subtitle oz-enter" style="--d:3">Ajedrez online en tiempo real</p>
+          <p class="hero-subtitle oz-enter" style="--d:3">Ajedrez y Damas online en tiempo real</p>
           <p class="hero-text oz-enter" style="--d:4">
             Entra a una sala, reta a un rival y juega con reloj, chat, ELO y partidas guardadas.
-            Una plataforma de ajedrez con energia dominicana: estrategia pura, duelo rapido y una identidad visual sobria.
+            Una plataforma de juegos de tablero con energia dominicana: estrategia pura, duelo rapido y una identidad visual sobria.
           </p>
-          <div class="hero-actions">
-            <a class="btn-primary oz-enter" href="/login.html" id="cta-play" style="--d:5;--s:0">Jugar ahora</a>
-            <a class="btn-secondary oz-enter" href="/login.html" id="cta-bot" style="--d:5;--s:1">VS OZAMA BOT</a>
-            <a class="btn-secondary oz-enter" href="/login.html" id="cta-register" style="--d:5;--s:2">Crear cuenta</a>
+
+          <p class="game-select-label oz-enter" style="--d:5">¿Qué querés jugar?</p>
+          <div class="game-select oz-enter" style="--d:5.2">
+            <a class="game-card" href="/login.html" id="cta-play">
+              <span class="g-icon" aria-hidden="true">♟</span>
+              <span class="g-name">Ajedrez</span>
+              <span class="g-tag">Online, bot, torneos y ranking ELO</span>
+            </a>
+            <a class="game-card" href="/damas.html" id="cta-damas">
+              <span class="g-icon" aria-hidden="true">⚫</span>
+              <span class="g-name">Damas</span>
+              <span class="g-tag">Online, bot y modo local -- sin necesidad de cuenta</span>
+            </a>
           </div>
+          <div class="register-row hero-actions oz-enter" style="--d:5.4">
+            <a class="btn-secondary" href="/login.html" id="cta-register">Crear cuenta</a>
+          </div>
+
           <div class="hero-meta oz-enter" aria-label="Funciones principales" style="--d:6">
             <span>Partidas en tiempo real</span>
             <span>Ranking competitivo</span>
@@ -1597,7 +1645,6 @@
       const navProfile = document.getElementById('nav-profile');
       const navCta = document.getElementById('nav-cta');
       const ctaPlay = document.getElementById('cta-play');
-      const ctaBot = document.getElementById('cta-bot');
       const ctaRegister = document.getElementById('cta-register');
       const rankingRegister = document.getElementById('ranking-register');
       const finalPlay = document.getElementById('final-play');
@@ -1621,7 +1668,6 @@
         navCta.href = '/lobby.html';
       }
       if (ctaPlay) ctaPlay.href = '/lobby.html';
-      if (ctaBot) ctaBot.href = '/lobby.html#bot';
       if (ctaRegister) {
         ctaRegister.textContent = 'Ver perfil';
         ctaRegister.href = '/profile.html';
