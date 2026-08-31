@@ -32,8 +32,12 @@
     .game-tab { flex: 1; text-align: center; padding: 10px; border-radius: 8px; cursor: pointer; background: var(--s1); border: 1px solid rgba(200,152,60,0.16); color: var(--dim); font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
     .game-tab.active { color: var(--gold); border-color: rgba(200,152,60,0.45); background: rgba(200,152,60,0.08); }
 
-    .locked { text-align: center; padding: 40px 20px; color: var(--dim); background: var(--s1); border: 1px solid rgba(200,152,60,0.16); border-radius: 10px; }
-    .locked a { color: var(--gold); text-decoration: none; font-weight: 700; }
+    .locked { text-align: center; padding: 36px 24px; color: var(--dim); background: var(--s1); border: 1px solid rgba(200,152,60,0.16); border-radius: 10px; }
+    .locked .lk-icon { font-size: 30px; margin-bottom: 8px; }
+    .locked .lk-title { font-family: var(--ft); font-size: 18px; color: var(--text); margin-bottom: 4px; }
+    .locked .lk-badge { margin-bottom: 12px; }
+    .locked .lk-desc { font-size: 13px; line-height: 1.6; max-width: 340px; margin: 0 auto 18px; }
+    .locked a.btn-primary { text-decoration: none; display: inline-flex; align-items: center; }
     .loading, .empty-msg { text-align: center; padding: 30px 20px; color: var(--dim); font-size: 13px; }
 
     section { margin-bottom: 22px; }
@@ -138,8 +142,11 @@
       if (currentUser && !premiumActive) {
         body.innerHTML = `
           <div class="locked">
-            Mi Análisis es un beneficio Premium.<br>
-            <a href="/settings.html#premium-panel">Activar OZAMA Premium →</a>
+            <div class="lk-icon">🔍</div>
+            <div class="lk-title">Mi Análisis</div>
+            <div class="lk-badge"><span class="oz-badge is-pro">PRO</span></div>
+            <div class="lk-desc">Encuentra tus partidas con más errores, tu entrenador personal con consejos reales basados en tus propias partidas, y tu evolución en el tiempo.</div>
+            <a class="btn-primary" href="/settings.html#premium-panel">Activar OZAMA Premium</a>
           </div>
         `;
         return;
