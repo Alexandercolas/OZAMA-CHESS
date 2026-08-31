@@ -8,7 +8,7 @@ const Room                 = require('../models/Room');
 const Event                = require('../models/Event');
 const Report                = require('../models/Report');
 const { requireAuth, optionalAuth, userIsAdmin } = require('../middleware/auth');
-const { ACHIEVEMENTS, levelFromXp, xpIntoLevel } = require('../services/achievements');
+const { ACHIEVEMENTS, ACHIEVEMENT_MAP, levelFromXp, xpIntoLevel } = require('../services/achievements');
 const { detectOpening } = require('../services/openings');
 const { FRAMES, framesFor, isValidFrame, isUnlocked } = require('../services/cosmetics');
 
@@ -884,6 +884,17 @@ router.get('/:username', optionalAuth, async (req, res) => {
     json.damasRank = rankTier(user.damasElo);
     json.level = levelFromXp(user.xp);
     json.achievementsUnlocked = (user.achievements || []).length;
+    // Insignias para la tarjeta de jugador (Fase C del roadmap PRO
+    // 2.0) -- los logros en si no son informacion privada (son para
+    // mostrar), asi que se resuelven nombre/icono contra el catalogo y
+    // se mandan los mas recientes. La FECHA de cada logro no se manda
+    // (no aporta nada publico y es un dato mas para filtrar).
+    json.badges = [...(user.achievements || [])]
+      .sort((a, b) => new Date(b.unlockedAt) - new Date(a.unlockedAt))
+      .slice(0, 8)
+      .map((a) => ACHIEVEMENT_MAP.get(a.key))
+      .filter(Boolean)
+      .map((a) => ({ key: a.key, name: a.name, icon: a.icon }));
     delete json.plan;
     delete json.premiumUntil;
     delete json.achievements;
