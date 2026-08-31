@@ -854,6 +854,8 @@
                       <div class="theme-swatch-row" id="theme-swatch-row"></div>
                       <span class="edit-label" style="margin-top:16px;display:block;">Piezas de Ajedrez</span>
                       <div class="theme-swatch-row" id="piece-set-row"></div>
+                      <span class="edit-label" style="margin-top:16px;display:block;">Fichas de Damas</span>
+                      <div class="theme-swatch-row" id="damas-piece-set-row"></div>
                       <span class="edit-label" style="margin-top:16px;display:block;">Sonido</span>
                       <div class="sound-pref-row">
                         <button class="btn-save secondary" id="pref-mute-btn" onclick="togglePrefMute()">Sonido: ON</button>
@@ -869,7 +871,7 @@
                       <ul class="premium-benefits">
                         <li>Marco dorado + insignia PREMIUM en tu avatar</li>
                         <li>Temas de tablero exclusivos (Ébano y Caoba)</li>
-                        <li>Set de piezas Dorado en Ajedrez</li>
+                        <li>Set de piezas Dorado en Ajedrez y fichas Bronce Real en Damas</li>
                         <li>Exportar tus partidas en formato PGN</li>
                         <li>Estadisticas avanzadas: color con mas victorias, duracion y aperturas</li>
                         <li>Analisis post-partida en Ajedrez y Damas: deteccion de errores graves e imprecisiones</li>
@@ -1144,10 +1146,35 @@
         `).join('');
       }
 
+      const damasPieceRow = document.getElementById('damas-piece-set-row');
+      if (damasPieceRow) {
+        const damasPieceSets = OZAMA_PREFS.availableDamasPieceSets(_prefsUser);
+        damasPieceRow.innerHTML = damasPieceSets.map((p) => `
+          <button type="button" class="theme-swatch ${p.key === current.damasPieceSet ? 'is-active' : ''}" onclick="selectDamasPieceSet('${p.key}')" title="${escapeHtml(p.label)}${p.locked ? ' (Premium)' : ''}">
+            <span class="piece-swatch-preview">${damasPieceSetPreview(p.key)}</span>
+            ${p.locked ? '<span class="theme-swatch-lock">🔒</span>' : ''}
+            <span class="theme-swatch-label">${escapeHtml(p.label)}</span>
+          </button>
+        `).join('');
+      }
+
       const muteBtn = document.getElementById('pref-mute-btn');
       if (muteBtn) muteBtn.textContent = current.soundMuted ? 'Sonido: OFF' : 'Sonido: ON';
       const slider = document.getElementById('pref-volume-slider');
       if (slider) slider.value = String(Math.round(current.soundVolume * 100));
+    }
+
+    // Mismos colores que las reglas body[data-damas-piece-set=...] de
+    // damas.html, para que la vista previa combine con lo que se ve
+    // de verdad en el tablero.
+    function damasPieceSetPreview(key) {
+      const colors = {
+        clasico: { w: 'radial-gradient(circle at 35% 28%, #FBF3DE, #C8983C 78%)', b: 'radial-gradient(circle at 35% 28%, #4a4038, #050403 82%)' },
+        marmol:  { w: 'radial-gradient(circle at 35% 28%, #FFFFFF, #8B8478 80%)', b: 'radial-gradient(circle at 35% 28%, #5C5850, #0D0B08 82%)' },
+        bronce:  { w: 'radial-gradient(circle at 35% 28%, #F6D9A0, #6B4712 78%)', b: 'radial-gradient(circle at 35% 28%, #5A2A2A, #100505 82%)' },
+      };
+      const c = colors[key] || colors.clasico;
+      return `<span style="display:flex;gap:4px;"><span style="width:20px;height:20px;border-radius:50%;background:${c.w};box-shadow:0 1px 3px rgba(0,0,0,0.4);"></span><span style="width:20px;height:20px;border-radius:50%;background:${c.b};box-shadow:0 1px 3px rgba(0,0,0,0.4);"></span></span>`;
     }
 
     // Vista previa de cada set -- 'clasico'/'dorado' son el set 3D de
@@ -1194,6 +1221,18 @@
       renderPersonalizationPanel();
     }
 
+    async function selectDamasPieceSet(key) {
+      const pieceSets = OZAMA_PREFS.availableDamasPieceSets(_prefsUser);
+      const def = pieceSets.find((p) => p.key === key);
+      if (def?.locked) {
+        alert('Ese set de fichas es exclusivo de OZAMA Premium.');
+        return;
+      }
+      const result = await OZAMA_PREFS.save({ damasPieceSet: key });
+      if (!result.ok) alert(result.error || 'No se pudo guardar el set de fichas.');
+      renderPersonalizationPanel();
+    }
+
     function togglePrefMute() {
       const current = OZAMA_PREFS.current();
       OZAMA_PREFS.save({ soundMuted: !current.soundMuted });
@@ -1216,6 +1255,7 @@
       cancelPremium,
       selectBoardTheme,
       selectPieceSet,
+      selectDamasPieceSet,
       togglePrefMute,
       onPrefVolumeInput,
     });

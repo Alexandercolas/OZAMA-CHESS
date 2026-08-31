@@ -42,6 +42,18 @@ const OZAMA_PREFS = (() => {
   const DEFAULT_PIECE_SET = 'clasico';
   const PIECE_SET_CACHE_KEY = 'ozama-piece-set';
 
+  // Fichas de Damas -- concepto separado de PIECE_SETS de arriba (son
+  // discos de CSS, no piezas 3D/SVG), asi que llave y catalogo propios
+  // en vez de reusar 'pieceSet' para dos cosas distintas.
+  const DAMAS_PIECE_SETS = {
+    clasico: { free: true,  label: 'Clásico' },
+    marmol:  { free: true,  label: 'Mármol' },
+    bronce:  { free: false, label: 'Bronce Real' },
+  };
+  const DAMAS_PIECE_SET_ORDER = ['clasico', 'marmol', 'bronce'];
+  const DEFAULT_DAMAS_PIECE_SET = 'clasico';
+  const DAMAS_PIECE_SET_CACHE_KEY = 'ozama-damas-piece-set';
+
   function readStoredUser() {
     try { return JSON.parse(localStorage.getItem('ozama-user') || 'null'); }
     catch { return null; }
@@ -80,6 +92,10 @@ const OZAMA_PREFS = (() => {
     const pieceSetDef = PIECE_SETS[pieceSet];
     if (!pieceSetDef || (!pieceSetDef.free && !isPremiumActive(user))) pieceSet = DEFAULT_PIECE_SET;
 
+    let damasPieceSet = localStorage.getItem(DAMAS_PIECE_SET_CACHE_KEY) || fromServer.damasPieceSet || DEFAULT_DAMAS_PIECE_SET;
+    const damasPieceSetDef = DAMAS_PIECE_SETS[damasPieceSet];
+    if (!damasPieceSetDef || (!damasPieceSetDef.free && !isPremiumActive(user))) damasPieceSet = DEFAULT_DAMAS_PIECE_SET;
+
     const soundMuted = localStorage.getItem(SOUND_MUTED_KEY) !== null
       ? localStorage.getItem(SOUND_MUTED_KEY) === 'true'
       : !!fromServer.soundMuted;
@@ -88,12 +104,13 @@ const OZAMA_PREFS = (() => {
       ? Math.max(0, Math.min(1, Number(storedVolume)))
       : (Number.isFinite(fromServer.soundVolume) ? fromServer.soundVolume : DEFAULT_VOLUME);
 
-    return { boardTheme, pieceSet, soundMuted, soundVolume };
+    return { boardTheme, pieceSet, damasPieceSet, soundMuted, soundVolume };
   }
 
   function applyToDocument(prefs) {
     const p = prefs || current();
     document.body?.setAttribute('data-board-theme', p.boardTheme);
+    document.body?.setAttribute('data-damas-piece-set', p.damasPieceSet);
     if (typeof window.setSoundMuted === 'function') window.setSoundMuted(p.soundMuted);
     if (typeof window.setSoundVolumeGlobal === 'function') window.setSoundVolumeGlobal(p.soundVolume);
   }
@@ -101,6 +118,7 @@ const OZAMA_PREFS = (() => {
   async function save(partial) {
     if (partial.boardTheme !== undefined) localStorage.setItem(THEME_CACHE_KEY, partial.boardTheme);
     if (partial.pieceSet !== undefined) localStorage.setItem(PIECE_SET_CACHE_KEY, partial.pieceSet);
+    if (partial.damasPieceSet !== undefined) localStorage.setItem(DAMAS_PIECE_SET_CACHE_KEY, partial.damasPieceSet);
     if (partial.soundMuted !== undefined) localStorage.setItem(SOUND_MUTED_KEY, String(partial.soundMuted));
     if (partial.soundVolume !== undefined) localStorage.setItem(SOUND_VOLUME_KEY, String(partial.soundVolume));
     applyToDocument(current());
@@ -148,9 +166,15 @@ const OZAMA_PREFS = (() => {
     return PIECE_SET_ORDER.map((key) => ({ key, ...PIECE_SETS[key], locked: !PIECE_SETS[key].free && !premiumActive }));
   }
 
+  function availableDamasPieceSets(user) {
+    const premiumActive = isPremiumActive(user || readStoredUser());
+    return DAMAS_PIECE_SET_ORDER.map((key) => ({ key, ...DAMAS_PIECE_SETS[key], locked: !DAMAS_PIECE_SETS[key].free && !premiumActive }));
+  }
+
   return {
     current, applyToDocument, save, availableThemes, cycleBoardTheme, BOARD_THEMES, THEME_ORDER, isPremiumActive,
     availablePieceSets, PIECE_SETS, PIECE_SET_ORDER,
+    availableDamasPieceSets, DAMAS_PIECE_SETS, DAMAS_PIECE_SET_ORDER,
   };
 })();
 

@@ -55,7 +55,7 @@ function premiumCapabilities(user) {
     benefits: premiumActive ? [
       'Marco dorado + insignia PREMIUM en tu avatar',
       'Temas de tablero exclusivos (Ebano y Caoba)',
-      'Set de piezas Dorado en Ajedrez',
+      'Set de piezas Dorado en Ajedrez y fichas Bronce Real en Damas',
       'Exportar tus partidas en formato PGN',
       'Estadisticas avanzadas: color con mas victorias, duracion y aperturas',
       'Analisis post-partida en Ajedrez y Damas: deteccion de errores graves e imprecisiones',
@@ -117,6 +117,13 @@ const PIECE_SETS = {
   dorado:      { free: false },
 };
 
+// Fichas de Damas -- catalogo propio, ver public/preferences.js.
+const DAMAS_PIECE_SETS = {
+  clasico: { free: true },
+  marmol:  { free: true },
+  bronce:  { free: false },
+};
+
 // PATCH /api/user/preferences - personalizacion (tablero, sonido...).
 // Whitelist explicita de claves conocidas -- una preferencia nueva se
 // agrega sumando un caso aca, nunca reescribiendo el endpoint entero.
@@ -144,6 +151,16 @@ router.patch('/preferences', requireAuth, async (req, res) => {
         return res.status(403).json({ error: 'Ese set de piezas es exclusivo de OZAMA Premium.' });
       }
       updates['preferences.pieceSet'] = pieceSet;
+    }
+
+    if (body.damasPieceSet !== undefined) {
+      const damasPieceSet = String(body.damasPieceSet || '').trim();
+      const damasPieceSetDef = DAMAS_PIECE_SETS[damasPieceSet];
+      if (!damasPieceSetDef) return res.status(400).json({ error: 'Set de fichas invalido.' });
+      if (!damasPieceSetDef.free && !premiumActive) {
+        return res.status(403).json({ error: 'Ese set de fichas es exclusivo de OZAMA Premium.' });
+      }
+      updates['preferences.damasPieceSet'] = damasPieceSet;
     }
 
     if (body.soundMuted !== undefined) {
