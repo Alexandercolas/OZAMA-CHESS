@@ -50,13 +50,18 @@
     .m-metric { font-family: var(--fm); font-size: 12.5px; color: var(--gold); }
 
     .analyzed-hint { text-align: center; font-size: 11.5px; color: var(--faint, var(--dim)); margin-top: -8px; margin-bottom: 18px; }
+
+    /* Entrenador personal (Fase G) */
+    .coach-card { display: flex; gap: 10px; align-items: flex-start; background: linear-gradient(135deg, rgba(200,152,60,0.08), var(--s1)); border: 1px solid rgba(200,152,60,0.22); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
+    .coach-card .c-icon { font-size: 18px; flex-shrink: 0; }
+    .coach-card .c-text { font-size: 12.5px; line-height: 1.5; color: var(--text); }
   </style>
 </head>
 <body>
   <nav class="topbar"><a class="brand" href="/">OZAMA CHESS</a><a class="back" href="/dashboard.html">← Panel</a></nav>
   <div class="wrap">
     <h1>Mi Análisis</h1>
-    <p class="sub">Un resumen honesto de tus partidas online: solo se muestra lo que realmente jugaste.</p>
+    <p class="sub">Tu entrenador personal y un resumen honesto de tus partidas online: solo se muestra lo que realmente jugaste.</p>
     <div class="game-tabs">
       <div class="game-tab active" id="tab-chess" onclick="switchGame('chess')">♟ Ajedrez</div>
       <div class="game-tab" id="tab-damas" onclick="switchGame('damas')">⚫ Damas</div>
@@ -128,16 +133,33 @@
       }
 
       try {
-        const res = await fetch(`/api/user/my-analysis?game=${currentGame}`, {
-          headers: _token ? { Authorization: `Bearer ${_token}` } : {},
-          credentials: 'include',
-          cache: 'no-store',
-        });
+        const [res, coachRes] = await Promise.all([
+          fetch(`/api/user/my-analysis?game=${currentGame}`, {
+            headers: _token ? { Authorization: `Bearer ${_token}` } : {},
+            credentials: 'include',
+            cache: 'no-store',
+          }),
+          fetch(`/api/user/coach-insights?game=${currentGame}`, {
+            headers: _token ? { Authorization: `Bearer ${_token}` } : {},
+            credentials: 'include',
+            cache: 'no-store',
+          }),
+        ]);
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'No se pudo cargar el análisis.');
 
+        const coachData = coachRes.ok ? await coachRes.json() : { insights: [] };
+        const coachHtml = (coachData.insights || []).length ? `
+          <section>
+            <div class="sec-title">Tu entrenador</div>
+            ${coachData.insights.map((i) => `
+              <div class="coach-card"><span class="c-icon">${i.icon}</span><span class="c-text">${escapeHtml(i.text)}</span></div>
+            `).join('')}
+          </section>
+        ` : '';
+
         if (!data.totalGames) {
-          body.innerHTML = `<div class="empty-msg">Todavía no tenés partidas online de ${currentGame === 'damas' ? 'Damas' : 'Ajedrez'} terminadas para analizar.</div>`;
+          body.innerHTML = coachHtml + `<div class="empty-msg">Todavía no tenés partidas online de ${currentGame === 'damas' ? 'Damas' : 'Ajedrez'} terminadas para analizar.</div>`;
           return;
         }
 
@@ -155,7 +177,7 @@
           ? `<div class="analyzed-hint">Basado en ${data.analyzedCount} partida${data.analyzedCount === 1 ? '' : 's'} que analizaste con "Analizar partida".</div>`
           : `<div class="analyzed-hint">Usá "Analizar partida" al terminar una partida online para que aparezca aquí como partida con errores detectados.</div>`;
 
-        body.innerHTML = sections + hint;
+        body.innerHTML = coachHtml + sections + hint;
       } catch (err) {
         body.innerHTML = `<div class="empty-msg">${escapeHtml(err.message || 'No se pudo cargar el análisis.')}</div>`;
       }

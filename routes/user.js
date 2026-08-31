@@ -300,6 +300,117 @@ router.get('/stats/advanced', requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/user/coach-insights?game=chess|damas - "Entrenador personal"
+// (Fase G, roadmap PRO 2.0). Reglas de la fase: nada de recomendaciones
+// inventadas -- cada insight sale de datos que YA se guardan (mismo
+// query base que /stats/advanced, mas razones de DERROTA y el
+// analysisSummary de Fase F) y cada uno tiene su propio umbral minimo
+// de muestra antes de mostrarse. Si no hay suficiente, no se inventa
+// texto generico: simplemente ese insight no aparece.
+router.get('/coach-insights', requireAuth, async (req, res) => {
+  try {
+    if (!isPremiumActive(req.user)) {
+      return res.status(403).json({ error: 'El entrenador personal es un beneficio Premium.', premiumRequired: true });
+    }
+    res.set('Cache-Control', 'no-store');
+    const game = req.query.game === 'damas' ? 'damas' : 'chess';
+    const userId = req.user._id;
+    const Model = game === 'damas' ? DamasMatch : Match;
+    const filter = {
+      $or: [{ 'whitePlayer.userId': userId }, { 'blackPlayer.userId': userId }],
+      result: { $in: ['white_win', 'black_win', 'draw'] },
+    };
+    const projection = game === 'damas'
+      ? 'whitePlayer.userId blackPlayer.userId result reason startedAt endedAt analysisSummary'
+      : 'whitePlayer.userId blackPlayer.userId result endReason pgn startedAt endedAt analysisSummary';
+    const matches = await Model.find(filter).select(projection).lean();
+
+    const LOSS_REASON_LABELS = game === 'damas'
+      ? { 'no-pieces': 'te capturaron todas las piezas', 'no-moves': 'te quedaste sin jugadas', resign: 'te rendiste', 'opponent-left': null }
+      : { checkmate: 'jaque mate', timeout: 'se te acabó el tiempo', resign: 'te rendiste', abandoned: null };
+
+    const asWhite = { wins: 0, losses: 0, draws: 0 };
+    const asBlack = { wins: 0, losses: 0, draws: 0 };
+    const lossReasonCounts = new Map();
+    let lossesWithReason = 0, totalLosses = 0;
+    let errorSum = 0, analyzedCount = 0;
+
+    for (const m of matches) {
+      const isWhite = String(m.whitePlayer?.userId) === String(userId);
+      const bucket = isWhite ? asWhite : asBlack;
+      const won = (m.result === 'white_win' && isWhite) || (m.result === 'black_win' && !isWhite);
+      const lost = !won && m.result !== 'draw';
+      if (m.result === 'draw') bucket.draws++;
+      else if (won) bucket.wins++;
+      else bucket.losses++;
+
+      if (lost) {
+        totalLosses++;
+        const reasonKey = game === 'damas' ? m.reason : m.endReason;
+        const label = LOSS_REASON_LABELS[reasonKey];
+        if (label) { lossesWithReason++; lossReasonCounts.set(label, (lossReasonCounts.get(label) || 0) + 1); }
+      }
+
+      if (m.analysisSummary?.blunders != null) {
+        analyzedCount++;
+        errorSum += (m.analysisSummary.blunders + (m.analysisSummary.inaccuracies || 0));
+      }
+    }
+
+    const rate = (b) => (b.wins + b.losses + b.draws) ? Math.round((b.wins / (b.wins + b.losses + b.draws)) * 100) : 0;
+    const whiteGames = asWhite.wins + asWhite.losses + asWhite.draws;
+    const blackGames = asBlack.wins + asBlack.losses + asBlack.draws;
+    const whiteRate = rate(asWhite), blackRate = rate(asBlack);
+
+    const insights = [];
+
+    // Desequilibrio de color: solo si hay muestra decente de ambos
+    // lados Y la diferencia es real (no ruido de pocas partidas).
+    if (whiteGames >= 5 && blackGames >= 5 && Math.abs(whiteRate - blackRate) >= 15) {
+      const better = whiteRate > blackRate ? 'blancas' : 'negras';
+      const worse = whiteRate > blackRate ? 'negras' : 'blancas';
+      const betterRate = Math.max(whiteRate, blackRate);
+      const worseRate = Math.min(whiteRate, blackRate);
+      insights.push({
+        icon: '⚖️',
+        text: `Jugás bastante mejor con ${better} (${betterRate}% de efectividad) que con ${worse} (${worseRate}%). Practicá más partidas con ${worse} para parejar tu nivel.`,
+      });
+    }
+
+    // Razon de derrota mas comun: mismo umbral que winReasons en
+    // /stats/advanced (>=5), por la misma razon (partidas viejas sin
+    // endReason guardado no deben inflar ni faltar en el conteo).
+    if (lossesWithReason >= 5) {
+      const [topLabel, topCount] = [...lossReasonCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+      const pct = Math.round((topCount / lossesWithReason) * 100);
+      if (pct >= 40) {
+        insights.push({
+          icon: '📉',
+          text: `En el ${pct}% de tus derrotas con razón registrada, ${topLabel}. ${topLabel.includes('tiempo') ? 'Practicá jugar con más ritmo para no quedarte corto de reloj.' : 'Prestale atención a ese patrón en tus próximas partidas.'}`,
+        });
+      }
+    }
+
+    // Errores promedio en partidas analizadas: solo si el jugador ya
+    // uso "Analizar partida" lo suficiente como para que el promedio
+    // signifique algo.
+    if (analyzedCount >= 3) {
+      const avg = Math.round((errorSum / analyzedCount) * 10) / 10;
+      insights.push({
+        icon: '🔍',
+        text: `En tus últimas ${analyzedCount} partidas analizadas, promediás ${avg} error${avg === 1 ? '' : 'es'} grave${avg === 1 ? '' : 's'} e imprecisiones por partida. Seguí usando "Analizar partida" para ver si ese número baja con el tiempo.`,
+      });
+    }
+
+    if (!insights.length) {
+      return res.json({ game, insights: [], needMoreData: true });
+    }
+    res.json({ game, insights, needMoreData: false });
+  } catch (err) {
+    serverError(res, 'Coach insights', err);
+  }
+});
+
 // POST /api/user/analysis/:game/:roomCode - guarda el resultado del
 // analisis post-partida (Premium) sobre la partida ya jugada, para
 // que "Mi Analisis" (Fase F) pueda mostrar "partidas con mas errores"
