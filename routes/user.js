@@ -300,6 +300,107 @@ router.get('/stats/advanced', requireAuth, async (req, res) => {
   }
 });
 
+// POST /api/user/analysis/:game/:roomCode - guarda el resultado del
+// analisis post-partida (Premium) sobre la partida ya jugada, para
+// que "Mi Analisis" (Fase F) pueda mostrar "partidas con mas errores"
+// de verdad -- antes de esto el analisis se perdia apenas se cerraba
+// la pagina. Solo online: bot/local nunca tienen un Match guardado al
+// que atarlo. Se identifica por roomCode (lo unico que el cliente
+// conoce) y se toma la partida MAS RECIENTE de ese codigo donde el
+// usuario jugo -- correcto porque el analisis siempre corre justo
+// despues de que esa partida termino, antes de que el codigo de sala
+// se reuse en una revancha.
+router.post('/analysis/:game/:roomCode', requireAuth, async (req, res) => {
+  try {
+    if (!isPremiumActive(req.user)) {
+      return res.status(403).json({ error: 'El analisis post-partida es un beneficio Premium.' });
+    }
+    const game = req.params.game === 'damas' ? 'damas' : 'chess';
+    const roomCode = String(req.params.roomCode || '').toUpperCase().trim();
+    if (!roomCode) return res.status(400).json({ error: 'Partida invalida.' });
+    const blunders = Number(req.body?.blunders);
+    const inaccuracies = Number(req.body?.inaccuracies);
+    if (!Number.isInteger(blunders) || blunders < 0 || !Number.isInteger(inaccuracies) || inaccuracies < 0) {
+      return res.status(400).json({ error: 'Datos de analisis invalidos.' });
+    }
+
+    const Model = game === 'damas' ? DamasMatch : Match;
+    const userId = req.user._id;
+    const match = await Model.findOne({
+      roomCode,
+      result: { $ne: 'in_progress' },
+      $or: [{ 'whitePlayer.userId': userId }, { 'blackPlayer.userId': userId }],
+    }).sort({ endedAt: -1, createdAt: -1 }).select('_id');
+    if (!match) return res.status(404).json({ error: 'Partida no encontrada.' });
+
+    await Model.updateOne({ _id: match._id }, { $set: {
+      analysisSummary: { blunders, inaccuracies, analyzedAt: new Date() },
+    }});
+    res.json({ ok: true });
+  } catch (err) {
+    serverError(res, 'Save analysis', err);
+  }
+});
+
+// GET /api/user/my-analysis?game=chess|damas - "Mi Analisis" (Fase F):
+// listas honestas construidas a partir de datos que YA existen --
+// nunca se inventa una evaluacion. "Con mas errores" solo mira
+// partidas que el jugador (o su rival) realmente analizo.
+router.get('/my-analysis', requireAuth, async (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    const game = req.query.game === 'damas' ? 'damas' : 'chess';
+    const userId = req.user._id;
+    const Model = game === 'damas' ? DamasMatch : Match;
+    const filter = {
+      $or: [{ 'whitePlayer.userId': userId }, { 'blackPlayer.userId': userId }],
+      result: { $in: ['white_win', 'black_win', 'draw'] },
+    };
+    const projection = game === 'damas'
+      ? 'whitePlayer blackPlayer result winner startedAt endedAt analysisSummary'
+      : 'whitePlayer blackPlayer result winner moves startedAt endedAt analysisSummary';
+
+    const matches = await Model.find(filter).select(projection).sort({ endedAt: -1 }).limit(300).lean();
+
+    function summarize(m) {
+      const isWhite = String(m.whitePlayer?.userId) === String(userId);
+      const opponent = isWhite ? m.blackPlayer : m.whitePlayer;
+      const outcome = m.result === 'draw' ? 'draw'
+        : ((m.result === 'white_win' && isWhite) || (m.result === 'black_win' && !isWhite)) ? 'win' : 'loss';
+      const durationSec = (m.startedAt && m.endedAt) ? Math.round((new Date(m.endedAt) - new Date(m.startedAt)) / 1000) : null;
+      return {
+        id: m._id,
+        opponentName: opponent?.name || 'Jugador',
+        outcome,
+        moveCount: game === 'chess' ? (Array.isArray(m.moves) ? m.moves.length : 0) : null,
+        durationSec: (durationSec && durationSec > 0 && durationSec < 24 * 3600) ? durationSec : null,
+        endedAt: m.endedAt,
+        errors: m.analysisSummary?.blunders != null ? (m.analysisSummary.blunders + (m.analysisSummary.inaccuracies || 0)) : null,
+      };
+    }
+
+    const summarized = matches.map(summarize);
+    const recent = summarized.slice(0, 8);
+    const withDuration = summarized.filter((m) => m.durationSec != null);
+    const longest = [...withDuration].sort((a, b) => b.durationSec - a.durationSec).slice(0, 5);
+    const shortest = [...withDuration].sort((a, b) => a.durationSec - b.durationSec).slice(0, 5);
+    const analyzed = summarized.filter((m) => m.errors != null);
+    const mostErrors = [...analyzed].sort((a, b) => b.errors - a.errors).slice(0, 5);
+
+    res.json({
+      game,
+      totalGames: summarized.length,
+      recent,
+      longest,
+      shortest,
+      mostErrors,
+      analyzedCount: analyzed.length,
+    });
+  } catch (err) {
+    serverError(res, 'My analysis', err);
+  }
+});
+
 // Rango cosmetico segun ELO -- mismos nombres que ya usan los niveles
 // del bot, para que el ladder de rangos se sienta parte de la misma
 // familia (Centinela es el nivel de bot por defecto Y el rango de

@@ -40,6 +40,14 @@ const DamasMatchSchema = new mongoose.Schema(
       black: { type: Number, default: null },
     },
 
+    // Ver el mismo campo en models/Match.js -- misma logica, mismo
+    // "no analizada" != "cero errores".
+    analysisSummary: {
+      blunders: { type: Number, default: null },
+      inaccuracies: { type: Number, default: null },
+      analyzedAt: { type: Date, default: null },
+    },
+
     startedAt: { type: Date, default: Date.now },
     endedAt:   { type: Date, default: Date.now },
   },

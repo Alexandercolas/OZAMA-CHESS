@@ -1246,6 +1246,26 @@ async function analyzeGameForBlunders() {
   if (btn) { btn.disabled = false; btn.textContent = originalLabel; btn.style.display = 'none'; }
   renderMoveList();
   renderAnalysisSummary();
+  persistAnalysisSummary();
+}
+
+// Guarda el resumen (solo numeros, nunca las jugadas) en la partida
+// guardada en la DB, para que "Mi Analisis" (Fase F) la pueda listar.
+// Solo tiene sentido en partidas online: bot/local nunca se guardan
+// como Match, asi que ahi no hay nada que persistir.
+async function persistAnalysisSummary() {
+  if (!IS_ONLINE || !ROOM_CODE) return;
+  const history = state.moveHistory || [];
+  const blunders = history.filter((e) => e.analysis?.level === 'blunder').length;
+  const inaccuracies = history.filter((e) => e.analysis?.level === 'inaccuracy').length;
+  try {
+    await fetch(`/api/user/analysis/chess/${encodeURIComponent(ROOM_CODE)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ blunders, inaccuracies }),
+    });
+  } catch (_) { /* no critico: si falla, el jugador solo pierde la entrada en "Mi Analisis" */ }
 }
 
 function renderAnalysisSummary() {

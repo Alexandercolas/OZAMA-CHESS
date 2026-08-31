@@ -58,6 +58,18 @@ const MatchSchema = new mongoose.Schema(
       default: null,
     },
 
+    // Resumen del analisis post-partida (Fase F, Centro de Analisis)
+    // -- se guarda UNA vez, cuando el jugador corre "Analizar partida"
+    // (beneficio Premium). No se recalcula solo: si ninguno de los dos
+    // jugadores la analizo nunca, este campo queda null para siempre,
+    // y las estadisticas que lo usan lo tratan como "no analizada",
+    // nunca como "cero errores".
+    analysisSummary: {
+      blunders: { type: Number, default: null },
+      inaccuracies: { type: Number, default: null },
+      analyzedAt: { type: Date, default: null },
+    },
+
     eloChange: {
       white: { type: Number, default: null },
       black: { type: Number, default: null },

@@ -944,6 +944,23 @@
         const levelLabel = f.level === 'blunder' ? 'Error grave' : 'Imprecisión';
         return `<div class="analysis-flag ${f.level}">Jugada ${moveNo} (${colorLabel}): ${levelLabel}</div>`;
       }).join('');
+
+      persistDamasAnalysisSummary(blunders, inaccuracies);
+    }
+
+    // Igual que persistAnalysisSummary() en script.js (ajedrez): solo
+    // tiene sentido en partidas online, porque solo esas se guardan
+    // como DamasMatch. "Mi Analisis" (Fase F) lee esto despues.
+    async function persistDamasAnalysisSummary(blunders, inaccuracies) {
+      if (mode !== 'online' || !onlineRoomCode) return;
+      try {
+        await fetch(`/api/user/analysis/damas/${encodeURIComponent(onlineRoomCode)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ blunders, inaccuracies }),
+        });
+      } catch (_) { /* no critico */ }
     }
 
     const STATS_KEY = 'ozama-damas-stats';

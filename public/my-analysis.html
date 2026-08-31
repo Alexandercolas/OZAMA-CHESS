@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://flagcdn.com; media-src 'self'; connect-src 'self' https://ozama-chess.onrender.com">
+  <script src="/mobile-runtime.js"></script>
+  <meta name="theme-color" content="#0D0B08"/>
+  <meta name="color-scheme" content="dark"/>
+  <title>OZAMA CHESS - Mi Análisis</title>
+  <meta name="robots" content="noindex, nofollow"/>
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="/favicon.png?v=5">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <script src="/pwa.js" defer></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--carbon); color: var(--text); font-family: var(--fb); min-height: 100vh; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; background: rgba(13,11,8,0.97); border-bottom: 1px solid rgba(200,152,60,0.18); }
+    .topbar a.brand { color: var(--gold); font-family: var(--ft); font-weight: 900; letter-spacing: 3px; text-decoration: none; font-size: 15px; }
+    .topbar a.back { color: var(--dim); text-decoration: none; font-size: 13px; }
+    .wrap { max-width: 640px; margin: 0 auto; padding: 28px 16px 60px; }
+
+    h1 { font-family: var(--ft); font-size: 22px; color: var(--gold); margin: 0 0 4px; }
+    .sub { color: var(--dim); font-size: 12.5px; margin: 0 0 20px; }
+
+    .game-tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+    .game-tab { flex: 1; text-align: center; padding: 10px; border-radius: 8px; cursor: pointer; background: var(--s1); border: 1px solid rgba(200,152,60,0.16); color: var(--dim); font-size: 12.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .game-tab.active { color: var(--gold); border-color: rgba(200,152,60,0.45); background: rgba(200,152,60,0.08); }
+
+    .locked { text-align: center; padding: 40px 20px; color: var(--dim); background: var(--s1); border: 1px solid rgba(200,152,60,0.16); border-radius: 10px; }
+    .locked a { color: var(--gold); text-decoration: none; font-weight: 700; }
+    .loading, .empty-msg { text-align: center; padding: 30px 20px; color: var(--dim); font-size: 13px; }
+
+    section { margin-bottom: 22px; }
+    .sec-title { font-family: var(--fm); font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
+    .match-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--s1); border: 1px solid rgba(200,152,60,0.14); border-radius: 8px; padding: 10px 12px; margin-bottom: 6px; }
+    .match-row .m-left { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .match-row .m-opp { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .match-row .m-date { font-size: 10.5px; color: var(--dim); }
+    .match-row .m-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .outcome { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 3px 8px; border-radius: 999px; }
+    .outcome.win { color: #7FD98A; background: rgba(46,160,67,0.14); }
+    .outcome.loss { color: #E39494; background: rgba(200,60,60,0.12); }
+    .outcome.draw { color: var(--dim); background: rgba(255,255,255,0.06); }
+    .m-metric { font-family: var(--fm); font-size: 12.5px; color: var(--gold); }
+
+    .analyzed-hint { text-align: center; font-size: 11.5px; color: var(--faint, var(--dim)); margin-top: -8px; margin-bottom: 18px; }
+  </style>
+</head>
+<body>
+  <nav class="topbar"><a class="brand" href="/">OZAMA CHESS</a><a class="back" href="/dashboard.html">← Panel</a></nav>
+  <div class="wrap">
+    <h1>Mi Análisis</h1>
+    <p class="sub">Un resumen honesto de tus partidas online: solo se muestra lo que realmente jugaste.</p>
+    <div class="game-tabs">
+      <div class="game-tab active" id="tab-chess" onclick="switchGame('chess')">♟ Ajedrez</div>
+      <div class="game-tab" id="tab-damas" onclick="switchGame('damas')">⚫ Damas</div>
+    </div>
+    <div id="content"><div class="loading">Cargando...</div></div>
+  </div>
+
+  <script>
+    let _token = '';
+    let currentGame = 'chess';
+    let currentUser = null;
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch]));
+    }
+    function formatDuration(sec) {
+      if (!sec) return null;
+      const m = Math.floor(sec / 60), s = sec % 60;
+      return `${m}:${String(s).padStart(2, '0')}`;
+    }
+    function outcomeLabel(o) { return o === 'win' ? 'Ganada' : o === 'loss' ? 'Perdida' : 'Tablas'; }
+
+    function switchGame(game) {
+      currentGame = game;
+      document.getElementById('tab-chess').classList.toggle('active', game === 'chess');
+      document.getElementById('tab-damas').classList.toggle('active', game === 'damas');
+      load();
+    }
+
+    function matchRow(m, metric) {
+      const date = m.endedAt ? new Date(m.endedAt).toLocaleDateString('es-DO', { day: '2-digit', month: 'short' }) : '';
+      return `
+        <div class="match-row">
+          <div class="m-left">
+            <div class="m-opp">vs ${escapeHtml(m.opponentName)}</div>
+            <div class="m-date">${date}</div>
+          </div>
+          <div class="m-right">
+            ${metric ? `<span class="m-metric">${metric}</span>` : ''}
+            <span class="outcome ${m.outcome}">${outcomeLabel(m.outcome)}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSection(title, matches, metricFn) {
+      if (!matches || !matches.length) return '';
+      return `
+        <section>
+          <div class="sec-title">${title}</div>
+          ${matches.map((m) => matchRow(m, metricFn ? metricFn(m) : null)).join('')}
+        </section>
+      `;
+    }
+
+    async function load() {
+      const body = document.getElementById('content');
+      if (!currentUser) { body.innerHTML = '<div class="loading">Cargando...</div>'; }
+      const premiumUntil = currentUser?.premiumUntil ? new Date(currentUser.premiumUntil) : null;
+      const premiumActive = currentUser?.plan === 'premium' && (!premiumUntil || premiumUntil > new Date());
+      if (currentUser && !premiumActive) {
+        body.innerHTML = `
+          <div class="locked">
+            Mi Análisis es un beneficio Premium.<br>
+            <a href="/settings.html#premium-panel">Activar OZAMA Premium →</a>
+          </div>
+        `;
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/user/my-analysis?game=${currentGame}`, {
+          headers: _token ? { Authorization: `Bearer ${_token}` } : {},
+          credentials: 'include',
+          cache: 'no-store',
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo cargar el análisis.');
+
+        if (!data.totalGames) {
+          body.innerHTML = `<div class="empty-msg">Todavía no tenés partidas online de ${currentGame === 'damas' ? 'Damas' : 'Ajedrez'} terminadas para analizar.</div>`;
+          return;
+        }
+
+        const durationMetric = (m) => formatDuration(m.durationSec);
+        const errorsMetric = (m) => `${m.errors} error${m.errors === 1 ? '' : 'es'}`;
+
+        const sections = [
+          renderSection('Partidas recientes', data.recent, null),
+          renderSection('Partidas más largas', data.longest, durationMetric),
+          renderSection('Partidas más rápidas', data.shortest, durationMetric),
+          renderSection('Con más errores detectados', data.mostErrors, errorsMetric),
+        ].join('');
+
+        const hint = data.analyzedCount
+          ? `<div class="analyzed-hint">Basado en ${data.analyzedCount} partida${data.analyzedCount === 1 ? '' : 's'} que analizaste con "Analizar partida".</div>`
+          : `<div class="analyzed-hint">Usá "Analizar partida" al terminar una partida online para que aparezca aquí como partida con errores detectados.</div>`;
+
+        body.innerHTML = sections + hint;
+      } catch (err) {
+        body.innerHTML = `<div class="empty-msg">${escapeHtml(err.message || 'No se pudo cargar el análisis.')}</div>`;
+      }
+    }
+
+    async function init() {
+      window.OZAMA_RUNTIME && await window.OZAMA_RUNTIME.ready;
+      _token = window.OZAMA_RUNTIME?.getAuthToken?.() || '';
+      try {
+        const res = await fetch('/api/user/me', {
+          headers: _token ? { Authorization: `Bearer ${_token}` } : {},
+          credentials: 'include',
+          cache: 'no-store',
+        });
+        if (!res.ok) { window.location.href = '/login.html'; return; }
+        const data = await res.json();
+        currentUser = data.user;
+        load();
+      } catch (_) {
+        document.getElementById('content').innerHTML = '<div class="empty-msg">No se pudo cargar tu sesión.</div>';
+      }
+    }
+
+    window.switchGame = switchGame;
+    init();
+  </script>
+</body>
+</html>
