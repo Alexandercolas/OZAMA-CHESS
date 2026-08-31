@@ -66,7 +66,12 @@
       <div class="game-tab active" id="tab-chess" onclick="switchGame('chess')">♟ Ajedrez</div>
       <div class="game-tab" id="tab-damas" onclick="switchGame('damas')">⚫ Damas</div>
     </div>
-    <div id="content"><div class="loading">Cargando...</div></div>
+    <div id="content">
+      <div class="skeleton skeleton-line w-60" style="height:16px;margin-bottom:12px;"></div>
+      <div class="skeleton" style="height:64px;border-radius:10px;margin-bottom:8px;"></div>
+      <div class="skeleton" style="height:64px;border-radius:10px;margin-bottom:8px;"></div>
+      <div class="skeleton" style="height:64px;border-radius:10px;"></div>
+    </div>
   </div>
 
   <script>
@@ -119,7 +124,15 @@
 
     async function load() {
       const body = document.getElementById('content');
-      if (!currentUser) { body.innerHTML = '<div class="loading">Cargando...</div>'; }
+      // Skeleton en cada carga (no solo la primera) -- cambiar de
+      // pestaña Ajedrez/Damas tambien dispara un fetch, y sin esto se
+      // sentia congelado un instante mientras responde.
+      body.innerHTML = `
+        <div class="skeleton skeleton-line w-60" style="height:16px;margin-bottom:12px;"></div>
+        <div class="skeleton" style="height:64px;border-radius:10px;margin-bottom:8px;"></div>
+        <div class="skeleton" style="height:64px;border-radius:10px;margin-bottom:8px;"></div>
+        <div class="skeleton" style="height:64px;border-radius:10px;"></div>
+      `;
       const premiumUntil = currentUser?.premiumUntil ? new Date(currentUser.premiumUntil) : null;
       const premiumActive = currentUser?.plan === 'premium' && (!premiumUntil || premiumUntil > new Date());
       if (currentUser && !premiumActive) {
