@@ -31,16 +31,31 @@
     .sub { text-align: center; color: var(--dim); font-size: 13px; margin-bottom: 26px; }
 
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px; }
-    .frame-card { background: var(--s1); border: 1px solid rgba(200,152,60,0.16); border-radius: 12px; padding: 16px 10px; text-align: center; }
-    .frame-card.locked { opacity: 0.55; }
+    .frame-card {
+      background: var(--s1); border: 1px solid rgba(200,152,60,0.16); border-radius: 12px; padding: 16px 10px; text-align: center;
+      transition: transform var(--dur-base) var(--ease-out), border-color var(--dur-base), box-shadow var(--dur-base), opacity var(--dur-base);
+    }
+    .frame-card:hover { transform: translateY(-3px); border-color: rgba(200,152,60,0.45); box-shadow: 0 10px 24px rgba(0,0,0,0.4); }
+    .frame-card.locked { opacity: 0.62; }
+    .frame-card.locked:hover { opacity: 0.85; }
     .frame-card.equipped { border-color: var(--gold); background: rgba(200,152,60,0.08); }
+
+    .fr-rarity { margin-bottom: 6px; }
 
     .av-preview { width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-family: var(--ft); font-weight: 900; color: var(--carbon); font-size: 26px; background: linear-gradient(135deg, var(--gold), #8B6914); box-sizing: content-box; }
     .fr-name { font-size: 12.5px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
     .fr-desc { font-size: 10.5px; color: var(--dim); line-height: 1.4; min-height: 28px; }
-    .fr-btn { margin-top: 10px; padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(200,152,60,0.3); background: rgba(200,152,60,0.08); color: var(--gold); font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; width: 100%; }
+    .fr-btn {
+      margin-top: 10px; padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(200,152,60,0.3); background: rgba(200,152,60,0.08); color: var(--gold);
+      font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; width: 100%;
+      transition: border-color var(--dur-base), background var(--dur-base), transform var(--dur-fast);
+    }
+    .fr-btn:hover:not(:disabled) { border-color: rgba(200,152,60,0.6); background: rgba(200,152,60,0.16); }
+    .fr-btn:active:not(:disabled) { transform: scale(0.97); }
     .fr-btn:disabled { opacity: 0.4; cursor: not-allowed; }
     .fr-lock { font-size: 10.5px; color: var(--faint, var(--dim)); margin-top: 10px; }
+    .fr-progress { margin-top: 10px; }
+    .fr-progress-text { font-size: 9.5px; color: var(--dim); margin-top: 4px; }
 
     /* Marcos: un aro alrededor del avatar circular, distinto por cosmetico. */
     .av-preview[data-frame="bronce"] { box-shadow: 0 0 0 4px #8B5A2B; }
@@ -97,15 +112,32 @@
       }
     }
 
+    const RARITY_LABELS = { comun: 'Común', 'poco-comun': 'Poco Común', raro: 'Raro', epico: 'Épico', legendario: 'Legendario', pro: 'PRO' };
+
+    // Barra de progreso (Fase 14) -- solo si el backend calculo un
+    // progreso real (services/cosmetics.js: progressFor()). Nunca se
+    // inventa un numero aca en el cliente.
+    function progressHtml(progress) {
+      if (!progress) return '';
+      const pct = progress.target ? Math.min(100, Math.round((progress.current / progress.target) * 100)) : 0;
+      return `
+        <div class="fr-progress">
+          <div class="oz-progress-track"><div class="oz-progress-fill" style="width:${pct}%"></div></div>
+          <div class="fr-progress-text">${progress.current} / ${progress.target}</div>
+        </div>
+      `;
+    }
+
     function render() {
       const cards = frames.map((f) => `
         <div class="frame-card ${f.unlocked ? '' : 'locked'} ${f.equipped ? 'equipped' : ''}">
+          ${f.rarity ? `<div class="fr-rarity"><span class="oz-rarity ${f.rarity}">${RARITY_LABELS[f.rarity] || f.rarity}</span></div>` : ''}
           <div class="av-preview" data-frame="${f.key}">${escapeHtml((f.name || '?').charAt(0))}</div>
           <div class="fr-name">${escapeHtml(f.name)}</div>
           <div class="fr-desc">${escapeHtml(f.description)}</div>
           ${f.unlocked
             ? `<button class="fr-btn" ${f.equipped ? 'disabled' : ''} onclick="equip('${f.key}')">${f.equipped ? 'Equipado' : 'Equipar'}</button>`
-            : `<div class="fr-lock">🔒 Bloqueado</div>`}
+            : `<div class="fr-lock">🔒 Bloqueado</div>${progressHtml(f.progress)}`}
         </div>
       `).join('');
 
@@ -144,7 +176,7 @@
             <div class="fr-name">${escapeHtml(t.label)}</div>
             <div class="fr-desc">${t.free ? 'Gratis' : 'Exclusivo de Premium'}</div>
             ${t.locked
-              ? `<div class="fr-lock">🔒 Premium</div>`
+              ? `<a class="fr-btn" href="/settings.html#premium-panel" style="text-decoration:none;display:block;">🔒 Con OZAMA Premium</a>`
               : `<button class="fr-btn" ${t.key === current.boardTheme ? 'disabled' : ''} onclick="equipCosmetic('boardTheme','${t.key}')">${t.key === current.boardTheme ? 'Activo' : 'Usar'}</button>`}
           </div>
         `).join('');
@@ -158,7 +190,7 @@
             <div class="fr-name">${escapeHtml(p.label)}</div>
             <div class="fr-desc">${p.free ? 'Gratis' : 'Exclusivo de Premium'}</div>
             ${p.locked
-              ? `<div class="fr-lock">🔒 Premium</div>`
+              ? `<a class="fr-btn" href="/settings.html#premium-panel" style="text-decoration:none;display:block;">🔒 Con OZAMA Premium</a>`
               : `<button class="fr-btn" ${p.key === current.pieceSet ? 'disabled' : ''} onclick="equipCosmetic('pieceSet','${p.key}')">${p.key === current.pieceSet ? 'Activo' : 'Usar'}</button>`}
           </div>
         `).join('');
@@ -172,7 +204,7 @@
             <div class="fr-name">${escapeHtml(p.label)}</div>
             <div class="fr-desc">${p.free ? 'Gratis' : 'Exclusivo de Premium'}</div>
             ${p.locked
-              ? `<div class="fr-lock">🔒 Premium</div>`
+              ? `<a class="fr-btn" href="/settings.html#premium-panel" style="text-decoration:none;display:block;">🔒 Con OZAMA Premium</a>`
               : `<button class="fr-btn" ${p.key === current.damasPieceSet ? 'disabled' : ''} onclick="equipCosmetic('damasPieceSet','${p.key}')">${p.key === current.damasPieceSet ? 'Activo' : 'Usar'}</button>`}
           </div>
         `).join('');
