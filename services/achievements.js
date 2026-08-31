@@ -103,6 +103,13 @@ const ACHIEVEMENTS = [
     icon: '🔮',
     check: (ctx) => ctx.totalPuzzlesSolved >= 50,
   },
+  {
+    key: 'primera_coronacion',
+    name: 'Primera Coronación',
+    description: 'Corona una dama en Damas.',
+    icon: '👑',
+    check: (ctx) => ctx.game === 'damas' && ctx.justPromoted,
+  },
 ];
 
 const ACHIEVEMENT_MAP = new Map(ACHIEVEMENTS.map((a) => [a.key, a]));
@@ -138,7 +145,7 @@ function xpIntoLevel(xp) {
 // User ya actualizado (stats/streak/elo ya deberian estar aplicados
 // ANTES de llamar esto) y de datos puntuales de la partida que recien
 // termino.
-function buildContext({ user, game, outcome, opponentElo, moveCount, endedAt, totalPuzzlesSolved }) {
+function buildContext({ user, game, outcome, opponentElo, moveCount, endedAt, totalPuzzlesSolved, justPromoted }) {
   const stats = game === 'damas' ? user.damasStats : user.stats;
   const totalWins = stats?.wins || 0;
   const totalGames = (stats?.wins || 0) + (stats?.losses || 0) + (stats?.draws || 0);
@@ -156,6 +163,7 @@ function buildContext({ user, game, outcome, opponentElo, moveCount, endedAt, to
     // proposito -- no distinguen ajedrez de Damas, asi que suman los
     // dos catalogos salvo que el llamador pase un total ya calculado.
     totalPuzzlesSolved: totalPuzzlesSolved ?? ((user.puzzles?.totalSolved || 0) + (user.damasPuzzles?.totalSolved || 0)),
+    justPromoted: !!justPromoted,
   };
 }
 

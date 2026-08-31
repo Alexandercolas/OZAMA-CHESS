@@ -316,6 +316,7 @@ async function finishDamasGame(room, code, { winner, reason }) {
           wEloBefore: wBefore, bEloBefore: bBefore,
           moveCount: 0,
           game: 'damas',
+          promotions: room.hadPromotion,
         });
 
         eloChange.white = wUser.damasElo - wBefore;
@@ -545,11 +546,14 @@ function bumpStreak(statsObj, won) {
 // stats/streak/elo de cada usuario (buildContext necesita los totales
 // ya actualizados) y ANTES de guardarlos -- no agrega un save() extra,
 // reusa el que ya iba a pasar para cerrar la partida.
-function applyProgressionForMatch({ wUser, bUser, wOutcome, bOutcome, wEloBefore, bEloBefore, moveCount, game }) {
-  for (const [user, outcome, opponentElo] of [[wUser, wOutcome, bEloBefore], [bUser, bOutcome, wEloBefore]]) {
+function applyProgressionForMatch({ wUser, bUser, wOutcome, bOutcome, wEloBefore, bEloBefore, moveCount, game, promotions }) {
+  for (const [user, outcome, opponentElo, justPromoted] of [
+    [wUser, wOutcome, bEloBefore, promotions?.w],
+    [bUser, bOutcome, wEloBefore, promotions?.b],
+  ]) {
     if (!user) continue;
     user.xp = Number(user.xp || 0) + xpForResult(outcome);
-    const ctx = buildContext({ user, game, outcome, opponentElo, moveCount, endedAt: new Date() });
+    const ctx = buildContext({ user, game, outcome, opponentElo, moveCount, endedAt: new Date(), justPromoted: !!justPromoted });
     const newKeys = checkNewAchievements(user, ctx);
     if (newKeys.length) {
       user.achievements = [...(user.achievements || []), ...newKeys.map((key) => ({ key, unlockedAt: new Date() }))];
@@ -2446,6 +2450,10 @@ if (room.white && room.black && !room.clockInterval) {
     const result = OzamaCheckers.applyMove(room.board, fromR, fromC, matched);
     room.board = result.board;
     room.turn = OzamaCheckers.otherColor(room.turn);
+    // Guardado para el logro "Primera Coronacion" -- se lee al cerrar
+    // la partida (finishDamasGame), no hace falta nada mas alla de
+    // este flag por color.
+    if (result.promoted) { room.hadPromotion = room.hadPromotion || {}; room.hadPromotion[myColor] = true; }
     const status = OzamaCheckers.checkGameOver(room.board, room.turn);
     if (status.over) room.status = 'finished';
 
