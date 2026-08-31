@@ -337,6 +337,17 @@ async function finishDamasGame(room, code, { winner, reason }) {
       startedAt: room.startedAt || new Date(),
       endedAt: new Date(),
     });
+
+    // Avanza el bracket si esta partida era de un torneo de Damas.
+    // Guardia en memoria (no hay un "match en curso" contra el cual
+    // hacer compare-and-swap como en ajedrez, ya que el DamasMatch se
+    // crea de una sola vez arriba, recien al terminar) -- room es el
+    // mismo objeto en memoria para todos los call-sites de esta
+    // partida, asi que alcanza para no avanzar el bracket dos veces.
+    if (room.tournamentMeta && !room._tournamentAdvanced) {
+      room._tournamentAdvanced = true;
+      await handleTournamentMatchFinished(room.tournamentMeta, winner, room);
+    }
   } catch (err) {
     console.warn('[DAMAS] No se pudo guardar el resultado:', err.message);
   }
@@ -2484,6 +2495,105 @@ if (room.white && room.black && !room.clockInterval) {
     socket.emit('damas:game-start', { code, color, board: room.board, turn: room.turn, playerInfo: room.playerInfo, roomToken: token });
     socket.to(code).emit('damas:opponent-reconnected');
     console.log(`[DAMAS] Reconexion en sala ${code} (${color})`);
+  });
+
+  // ── TORNEOS DE DAMAS: entrar a tu partido del bracket ───────────
+  // Mismo bracket/Event que ajedrez (services/tournament.js es
+  // agnostico al juego) pero la sala se arma en damasRooms/DamasMatch,
+  // nunca en `rooms`/Match. Reusa el mismo esquema de payload que la
+  // version de ajedrez (eventId/round/matchIndex, sin nada especifico
+  // de un juego). En vez de reimplementar el flujo de "unirse", arma
+  // la sala YA lista (status:'playing', ambos tokens) y le dice al
+  // cliente que la reconstruya con el mismo camino que ya usa
+  // damas.html para reconectarse (attemptAutoRejoin -> damas:rejoin)
+  // -- cero codigo nuevo del lado del cliente para "entrar" de cero.
+  socket.on('tournament:join-match-damas', async (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.tournamentJoinMatch, payload, 'tournament:error');
+    if (!data) return;
+    if (!requireSocketAuth()) return;
+    const { eventId, round, matchIndex } = data;
+
+    const event = await Event.findById(eventId).catch(() => null);
+    if (!event || event.type !== 'tournament') { socket.emit('tournament:error', 'Torneo no encontrado.'); return; }
+    if (event.gameType !== 'checkers') { socket.emit('tournament:error', 'Este torneo no es de Damas.'); return; }
+    const match = event.bracket?.rounds?.[round]?.matches?.[matchIndex];
+    if (!match) { socket.emit('tournament:error', 'Partido no encontrado.'); return; }
+
+    const userId = String(socket.data.userId);
+    const isP1 = match.player1 && String(match.player1) === userId;
+    const isP2 = match.player2 && String(match.player2) === userId;
+    if (!isP1 && !isP2) { socket.emit('tournament:error', 'No sos parte de este partido.'); return; }
+    if (match.status !== 'ready' && match.status !== 'playing') {
+      socket.emit('tournament:error', 'Este partido no esta disponible ahora mismo.');
+      return;
+    }
+    const myColor = isP1 ? 'w' : 'b';
+
+    let roomCode = match.roomCode || null;
+    let room = roomCode ? damasRooms.get(roomCode) : null;
+
+    if (!room) {
+      let code;
+      do { code = generateCode(); } while (rooms.has(code) || damasRooms.has(code));
+
+      // Igual que getPlayerInfoById, pero con el ELO de Damas -- ese
+      // helper devuelve el de ajedrez, y aca hace falta el otro.
+      async function damasPlayerInfoById(pUserId, fallbackName) {
+        if (pUserId) {
+          const u = await User.findById(pUserId).select('username country avatar avatarImage damasElo').lean().catch(() => null);
+          if (u) return { userId: u._id, name: u.username, country: u.country, avatar: u.avatar, avatarImage: u.avatarImage, elo: u.damasElo };
+        }
+        return { userId: pUserId || null, name: fallbackName || 'Jugador', country: 'DO', avatar: 0, avatarImage: '', elo: 1200 };
+      }
+      const p1Info = await damasPlayerInfoById(match.player1, match.player1Name);
+      const p2Info = await damasPlayerInfoById(match.player2, match.player2Name);
+
+      const candidateRoom = {
+        white: null, black: null,
+        board: OzamaCheckers.createInitialBoard(),
+        turn: OzamaCheckers.COLOR.WHITE,
+        status: 'playing',
+        playerInfo: { w: p1Info, b: p2Info },
+        tokens: { w: createRoomToken(), b: createRoomToken() },
+        closeTimer: null, createdAt: Date.now(), startedAt: new Date(),
+        tournamentMeta: { eventId: String(event._id), round, matchIndex },
+      };
+
+      // Reclamo atomico del roomCode -- si los dos jugadores llaman
+      // este handler casi al mismo tiempo, sin esto cada uno podria
+      // ver roomCode=null y crear su PROPIA sala (confirmado con un
+      // test real: ambos terminaban con codigos de sala distintos
+      // para el mismo partido). Concurrencia optimista sobre __v en
+      // vez de filtrar por el valor de un campo dentro de un array
+      // doblemente anidado (bracket.rounds.N.matches.M.campo) -- se
+      // probo a mano y ESE filtro no funciona como cabria esperar en
+      // Mongo (matchea aunque el valor no sea el buscado); __v es un
+      // campo plano, sin esa trampa.
+      const claim = await Event.updateOne(
+        { _id: event._id, __v: event.__v },
+        { $set: {
+          [`bracket.rounds.${round}.matches.${matchIndex}.roomCode`]: code,
+          [`bracket.rounds.${round}.matches.${matchIndex}.status`]: 'playing',
+        }, $inc: { __v: 1 } },
+      ).catch((err) => { console.warn('[Tournament] No se pudo reclamar la sala (damas):', err.message); return null; });
+      const claimed = !!claim?.modifiedCount;
+
+      if (claimed) {
+        room = candidateRoom;
+        roomCode = code;
+        damasRooms.set(code, room);
+        console.log(`[Tournament] Sala de Damas ${code} creada — ${event.title} ronda ${round + 1} (${p1Info.name} vs ${p2Info.name})`);
+      } else {
+        // Perdi la carrera: otro socket ya reclamo el partido. Releo
+        // cual sala quedo y me sumo a esa en vez de la mia.
+        const fresh = await Event.findById(event._id).select('bracket.rounds').lean();
+        roomCode = fresh?.bracket?.rounds?.[round]?.matches?.[matchIndex]?.roomCode || null;
+        room = roomCode ? damasRooms.get(roomCode) : null;
+        if (!room) { socket.emit('tournament:error', 'No se pudo entrar al partido, intenta de nuevo.'); return; }
+      }
+    }
+
+    socket.emit('tournament:damas-match-ready', { code: roomCode, color: myColor, roomToken: room.tokens[myColor] });
   });
 
   socket.on('disconnect', () => {

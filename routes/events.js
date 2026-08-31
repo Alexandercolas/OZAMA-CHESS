@@ -15,7 +15,7 @@ router.get('/', async (_req, res) => {
     const events = await Event.find({ status: { $in: ['published', 'active'] } })
       .sort({ startsAt: 1, createdAt: -1 })
       .limit(20)
-      .select('title type description startsAt endsAt maxPlayers participants createdAt')
+      .select('title type gameType description startsAt endsAt maxPlayers participants createdAt')
       .lean();
 
     res.json({ events: events.map((e) => ({ ...e, participantCount: (e.participants || []).length, participants: undefined })) });

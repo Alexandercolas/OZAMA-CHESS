@@ -15,6 +15,16 @@ const EventSchema = new mongoose.Schema(
       enum: ['event', 'tournament', 'announcement', 'maintenance'],
       default: 'event',
     },
+    // Solo aplica a type:'tournament' -- que juego se juega en este
+    // torneo. services/tournament.js (el armado del bracket en si) ya
+    // es agnostico al juego; esto es lo que le dice a server.js que
+    // camino de salas usar (rooms/Match para ajedrez, damasRooms/
+    // DamasMatch para damas) al confirmar cada partido.
+    gameType: {
+      type: String,
+      enum: ['chess', 'checkers'],
+      default: 'chess',
+    },
     status: {
       type: String,
       enum: ['draft', 'active', 'finished', 'cancelled', 'published', 'closed'],

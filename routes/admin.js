@@ -79,6 +79,11 @@ function eventPayload(body, { partial = false } = {}) {
     if (!allowedEventStatuses.has(status)) throw Object.assign(new Error('Estado de evento invalido.'), { statusCode: 400 });
     payload.status = status;
   }
+  if (!partial || body.gameType !== undefined) {
+    const gameType = String(body.gameType || 'chess');
+    if (!['chess', 'checkers'].includes(gameType)) throw Object.assign(new Error('Juego invalido.'), { statusCode: 400 });
+    payload.gameType = gameType;
+  }
   if (!partial || body.description !== undefined) payload.description = cleanString(body.description, 1200);
   if (!partial || body.startsAt !== undefined) payload.startsAt = parseDateField(body.startsAt, 'Fecha inicial');
   if (!partial || body.endsAt !== undefined) payload.endsAt = parseDateField(body.endsAt, 'Fecha final');

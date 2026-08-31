@@ -493,6 +493,7 @@
       meta.style.marginTop = '14px';
       meta.append(
         element('span', '', `Tipo: ${event.type}`),
+        ...(event.type === 'tournament' ? [element('span', '', `Juego: ${event.gameType === 'checkers' ? 'Damas' : 'Ajedrez'}`)] : []),
         element('span', '', `Inicio: ${formatDate(event.startsAt, 'Sin fecha')}`),
         element('span', '', `${event.participants?.length || 0}/${event.maxPlayers || 16} inscritos`),
       );
@@ -578,6 +579,7 @@
     const payload = {
       title: $('#event-title').value.trim(),
       type: $('#event-type').value,
+      gameType: $('#event-game-type').value,
       status: $('#event-status').value,
       startsAt: $('#event-start').value || null,
       endsAt: $('#event-end').value || null,
