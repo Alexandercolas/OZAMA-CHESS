@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://flagcdn.com; media-src 'self'; connect-src 'self' https://ozama-chess.onrender.com">
+  <script src="/mobile-runtime.js"></script>
+  <meta name="theme-color" content="#0D0B08"/>
+  <meta name="color-scheme" content="dark"/>
+  <title>OZAMA - Panel de Jugador</title>
+  <meta name="robots" content="noindex, nofollow"/>
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="/favicon.png?v=5">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <script src="/pwa.js" defer></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--carbon); color: var(--text); font-family: var(--fb); min-height: 100vh; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; background: rgba(13,11,8,0.97); border-bottom: 1px solid rgba(200,152,60,0.18); }
+    .topbar a.brand { color: var(--gold); font-family: var(--ft); font-weight: 900; letter-spacing: 3px; text-decoration: none; font-size: 15px; }
+    .topbar a.back { color: var(--dim); text-decoration: none; font-size: 13px; }
+    .wrap { max-width: 680px; margin: 0 auto; padding: 28px 16px 60px; }
+
+    .hero { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+    .av { width: 64px; height: 64px; border-radius: 50%; overflow: hidden; flex-shrink: 0; background: linear-gradient(135deg, var(--gold), #8B6914); display: flex; align-items: center; justify-content: center; font-family: var(--ft); font-weight: 900; color: var(--carbon); font-size: 26px; box-sizing: content-box; }
+    .av img { width: 100%; height: 100%; object-fit: cover; }
+    .av[data-frame="bronce"] { box-shadow: 0 0 0 4px #8B5A2B; }
+    .av[data-frame="plata"] { box-shadow: 0 0 0 4px #C7CCD1; }
+    .av[data-frame="oro"] { box-shadow: 0 0 0 4px #FFD34D; }
+    .av[data-frame="racha"] { box-shadow: 0 0 0 4px #E2571C, 0 0 14px 2px rgba(226,87,28,0.5); }
+    .av[data-frame="tactico"] { box-shadow: 0 0 0 4px #3F7D4E; }
+    .av[data-frame="cazador"] { box-shadow: 0 0 0 4px #7A1F2B; }
+    .av[data-frame="centenario"] { box-shadow: 0 0 0 4px #6B4A2A; }
+    .hero-name { font-family: var(--ft); font-size: 22px; color: var(--text); }
+    .hero-name .pro { font-size: 9px; vertical-align: middle; margin-left: 8px; padding: 2px 6px; border-radius: 5px; background: rgba(200,152,60,0.16); color: var(--gold); font-weight: 800; letter-spacing: 1px; }
+    .level-line { font-family: var(--fm); font-size: 11.5px; color: var(--dim); margin-top: 4px; }
+    .xp-bar-track { width: 100%; max-width: 220px; height: 6px; border-radius: 3px; background: var(--s2); overflow: hidden; margin-top: 6px; }
+    .xp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-2, #E2B960)); }
+
+    .games-row { display: flex; gap: 12px; margin-bottom: 20px; }
+    .game-summary { flex: 1; background: var(--s1); border: 1px solid rgba(200,152,60,0.16); border-radius: 10px; padding: 14px; text-align: center; }
+    .game-summary .g-label { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .game-summary .g-elo { font-family: var(--fm); font-weight: 700; font-size: 22px; color: var(--gold); }
+    .game-summary .g-rank { font-size: 11px; color: var(--dim); margin-top: 2px; }
+    .game-summary .g-record { font-size: 10.5px; color: var(--faint, var(--dim)); margin-top: 6px; }
+
+    .section-title { font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--dim); margin: 24px 0 10px; }
+
+    .daily-row { display: flex; gap: 12px; margin-bottom: 8px; }
+    .daily-card { flex: 1; display: flex; align-items: center; gap: 10px; background: var(--s1); border: 1px solid rgba(200,152,60,0.16); border-radius: 10px; padding: 12px 14px; text-decoration: none; color: var(--text); }
+    .daily-card .d-icon { font-size: 22px; }
+    .daily-card .d-name { font-size: 12.5px; font-weight: 700; }
+    .daily-card .d-status { font-size: 10.5px; color: var(--dim); margin-top: 2px; }
+    .daily-card.done { border-color: rgba(46,160,67,0.35); }
+    .daily-card.done .d-status { color: #7FD98A; }
+
+    .achv-strip { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+    .achv-chip { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; background: var(--s1); border: 1px solid rgba(200,152,60,0.16); border-radius: 10px; padding: 10px 14px; min-width: 76px; }
+    .achv-chip .a-icon { font-size: 22px; }
+    .achv-chip .a-name { font-size: 9.5px; color: var(--dim); text-align: center; line-height: 1.3; }
+    .achv-empty { color: var(--dim); font-size: 12px; padding: 10px 0; }
+
+    .quick-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .quick-tile { display: flex; flex-direction: column; align-items: center; gap: 6px; background: var(--s1); border: 1px solid rgba(200,152,60,0.16); border-radius: 10px; padding: 16px 8px; text-decoration: none; color: var(--text); text-align: center; }
+    .quick-tile:hover { border-color: rgba(200,152,60,0.4); }
+    .quick-tile .q-icon { font-size: 24px; }
+    .quick-tile .q-label { font-size: 11px; font-weight: 700; }
+
+    .login-gate { text-align: center; padding: 60px 20px; color: var(--dim); }
+    .login-gate a { color: var(--gold); font-weight: 700; text-decoration: none; }
+    .loading { text-align: center; padding: 40px 20px; color: var(--dim); }
+  </style>
+</head>
+<body>
+  <nav class="topbar"><a class="brand" href="/">OZAMA</a><a class="back" href="/lobby.html">← Lobby</a></nav>
+  <div class="wrap" id="content"><div class="loading">Cargando panel...</div></div>
+
+  <script>
+    let _token = '';
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch]));
+    }
+    function levelFromXp(xp) { return 1 + Math.floor(Number(xp || 0) / 100); }
+    function xpIntoLevel(xp) { return Number(xp || 0) % 100; }
+    function rankTier(elo) {
+      if (elo >= 1800) return 'Alcázar';
+      if (elo >= 1400) return 'Maestro';
+      if (elo >= 1000) return 'Centinela';
+      return 'Aprendiz';
+    }
+    function avatarHtml(u) {
+      if (u.avatarImage) return `<img src="${escapeHtml(u.avatarImage)}" alt="">`;
+      return escapeHtml((u.username || '?').charAt(0).toUpperCase());
+    }
+    function record(stats) {
+      const s = stats || { wins: 0, losses: 0, draws: 0 };
+      return `${s.wins}V ${s.losses}D ${s.draws}T`;
+    }
+
+    async function fetchJson(url) {
+      try {
+        const res = await fetch(url, { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' });
+        if (!res.ok) return null;
+        return await res.json();
+      } catch (_) { return null; }
+    }
+
+    function dailyCardHtml({ href, icon, name, done }) {
+      return `
+        <a class="daily-card ${done ? 'done' : ''}" href="${href}">
+          <span class="d-icon">${icon}</span>
+          <span>
+            <span class="d-name">${escapeHtml(name)}</span>
+            <div class="d-status">${done ? '✓ Resuelto hoy' : 'Desafío disponible'}</div>
+          </span>
+        </a>
+      `;
+    }
+
+    async function init() {
+      const content = document.getElementById('content');
+      window.OZAMA_RUNTIME && await window.OZAMA_RUNTIME.ready;
+      _token = window.OZAMA_RUNTIME?.getAuthToken?.() || '';
+      let user = null;
+      try { user = JSON.parse(localStorage.getItem('ozama-user') || 'null'); } catch (_) {}
+
+      if (!user || (window.OZAMA_RUNTIME?.native && !_token)) {
+        content.innerHTML = `
+          <div class="login-gate">
+            Iniciá sesión para ver tu panel de jugador.<br><br>
+            <a href="/login.html">Iniciar sesión →</a>
+          </div>`;
+        return;
+      }
+
+      const [meData, chessDaily, damasDaily, achData] = await Promise.all([
+        fetchJson('/api/user/me'),
+        fetchJson('/api/puzzles/daily'),
+        fetchJson('/api/damas-puzzles/daily'),
+        fetchJson('/api/user/achievements'),
+      ]);
+      const me = meData?.user || user;
+
+      const level = levelFromXp(me.xp);
+      const xpPct = xpIntoLevel(me.xp);
+      const unlocked = (achData?.achievements || []).filter((a) => a.unlocked).sort((a, b) => new Date(b.unlockedAt) - new Date(a.unlockedAt));
+      const recentAchv = unlocked.slice(0, 6);
+
+      content.innerHTML = `
+        <div class="hero">
+          <div class="av" data-frame="${escapeHtml(me.equippedFrame || 'ninguno')}">${avatarHtml(me)}</div>
+          <div>
+            <div class="hero-name">${escapeHtml(me.username)}${me.premiumActive ? '<span class="pro">PRO</span>' : ''}</div>
+            <div class="level-line">Nivel ${level} · ${xpPct}/100 XP</div>
+            <div class="xp-bar-track"><div class="xp-bar-fill" style="width:${xpPct}%"></div></div>
+          </div>
+        </div>
+
+        <div class="games-row">
+          <div class="game-summary">
+            <div class="g-label">♟ Ajedrez</div>
+            <div class="g-elo">${me.elo}</div>
+            <div class="g-rank">${rankTier(me.elo)}</div>
+            <div class="g-record">${record(me.stats)}</div>
+          </div>
+          <div class="game-summary">
+            <div class="g-label">⚫ Damas</div>
+            <div class="g-elo">${me.damasElo}</div>
+            <div class="g-rank">${rankTier(me.damasElo)}</div>
+            <div class="g-record">${record(me.damasStats)}</div>
+          </div>
+        </div>
+
+        <div class="section-title">Desafíos de hoy</div>
+        <div class="daily-row">
+          ${dailyCardHtml({ href: '/training.html', icon: '♟', name: 'Ajedrez', done: !!chessDaily?.alreadyDone })}
+          ${dailyCardHtml({ href: '/damas-training.html', icon: '⚫', name: 'Damas', done: !!damasDaily?.alreadyDone })}
+        </div>
+
+        <div class="section-title">Logros recientes</div>
+        <div class="achv-strip">
+          ${recentAchv.length ? recentAchv.map((a) => `
+            <div class="achv-chip" title="${escapeHtml(a.description)}">
+              <span class="a-icon">${a.icon}</span>
+              <span class="a-name">${escapeHtml(a.name)}</span>
+            </div>
+          `).join('') : '<div class="achv-empty">Todavía no desbloqueaste logros -- jugá una partida o resolvé un puzzle.</div>'}
+        </div>
+
+        <div class="section-title">Accesos rápidos</div>
+        <div class="quick-grid">
+          <a class="quick-tile" href="/lobby.html"><span class="q-icon">♟</span><span class="q-label">Jugar Ajedrez</span></a>
+          <a class="quick-tile" href="/damas.html"><span class="q-icon">⚫</span><span class="q-label">Jugar Damas</span></a>
+          <a class="quick-tile" href="/tournaments.html"><span class="q-icon">🏆</span><span class="q-label">Torneos</span></a>
+          <a class="quick-tile" href="/openings.html"><span class="q-icon">📖</span><span class="q-label">Aperturas</span></a>
+          <a class="quick-tile" href="/collection.html"><span class="q-icon">👑</span><span class="q-label">Colección</span></a>
+          <a class="quick-tile" href="/leaderboard.html"><span class="q-icon">📊</span><span class="q-label">Ranking</span></a>
+        </div>
+      `;
+    }
+
+    init();
+  </script>
+</body>
+</html>
