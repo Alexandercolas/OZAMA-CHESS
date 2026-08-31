@@ -152,7 +152,10 @@ function buildContext({ user, game, outcome, opponentElo, moveCount, endedAt, to
     opponentEloWasHigher: typeof opponentElo === 'number' && opponentElo > myElo,
     moveCount: moveCount || 0,
     endHourUTC: endedAt ? new Date(endedAt).getUTCHours() : null,
-    totalPuzzlesSolved: totalPuzzlesSolved ?? (user.puzzles?.totalSolved || 0),
+    // Los logros de puzzles (primer_acertijo, etc.) son globales a
+    // proposito -- no distinguen ajedrez de Damas, asi que suman los
+    // dos catalogos salvo que el llamador pase un total ya calculado.
+    totalPuzzlesSolved: totalPuzzlesSolved ?? ((user.puzzles?.totalSolved || 0) + (user.damasPuzzles?.totalSolved || 0)),
   };
 }
 

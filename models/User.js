@@ -119,6 +119,18 @@ const UserSchema = new mongoose.Schema(
       lastSolvedDate: { type: String, default: null },
       lastDailyDate: { type: String, default: null },
     },
+    // Mismo shape que `puzzles` de arriba, pero para el catalogo de
+    // Damas (services/damas-puzzles.js) -- catalogos y rachas
+    // separadas por juego, igual que el ELO/estadisticas. El XP si es
+    // compartido (ver el comentario de xp arriba).
+    damasPuzzles: {
+      solvedKeys: { type: [String], default: [] },
+      totalSolved: { type: Number, default: 0 },
+      streak: { type: Number, default: 0 },
+      bestStreak: { type: Number, default: 0 },
+      lastSolvedDate: { type: String, default: null },
+      lastDailyDate: { type: String, default: null },
+    },
 
     // The paid plan must never provide competitive advantages.
     plan: {
