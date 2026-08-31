@@ -14,6 +14,8 @@ const { generateFirstRound } = require('../services/tournament');
 const router = express.Router();
 const allowedEventTypes = new Set(['event', 'tournament', 'announcement', 'maintenance']);
 const allowedEventStatuses = new Set(['draft', 'active', 'finished', 'cancelled', 'published', 'closed']);
+const allowedTournamentFormats = new Set(['elimination', 'arena', 'swiss', 'round_robin']);
+const allowedRecurrences = new Set(['none', 'daily', 'weekly', 'monthly']);
 const publicUserFields = 'username email country avatar avatarImage elo stats plan premiumUntil subscriptionStatus isActive lastSeenAt createdAt updatedAt';
 
 const boundaryLimiter = new RateLimiterMemory({ points: 180, duration: 60, blockDuration: 60 });
@@ -93,6 +95,25 @@ function eventPayload(body, { partial = false } = {}) {
       throw Object.assign(new Error('Maximo de jugadores invalido.'), { statusCode: 400 });
     }
     payload.maxPlayers = maxPlayers;
+  }
+  if (!partial || body.format !== undefined) {
+    const format = String(body.format || 'elimination');
+    if (!allowedTournamentFormats.has(format)) throw Object.assign(new Error('Formato de torneo invalido.'), { statusCode: 400 });
+    payload.format = format;
+  }
+  if (!partial || body.timeControl !== undefined) payload.timeControl = cleanString(body.timeControl, 20);
+  if (!partial || body.reward !== undefined) payload.reward = cleanString(body.reward, 80);
+  if (!partial || body.icon !== undefined) payload.icon = cleanString(body.icon, 8);
+  if (!partial || body.recurrence !== undefined) {
+    const recurrence = String(body.recurrence || 'none');
+    if (!allowedRecurrences.has(recurrence)) throw Object.assign(new Error('Recurrencia invalida.'), { statusCode: 400 });
+    payload.recurrence = recurrence;
+  }
+  if (!partial || body.minRating !== undefined) {
+    payload.minRating = body.minRating === null || body.minRating === '' ? null : Number(body.minRating);
+  }
+  if (!partial || body.maxRating !== undefined) {
+    payload.maxRating = body.maxRating === null || body.maxRating === '' ? null : Number(body.maxRating);
   }
   return payload;
 }

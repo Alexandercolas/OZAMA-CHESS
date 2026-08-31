@@ -44,6 +44,37 @@ const EventSchema = new mongoose.Schema(
       max: 512,
       default: 16,
     },
+
+    // Metadata de torneo (Fase 2, "OZAMA Torneos + Experiencia Visual").
+    // Todo opcional/aditivo -- los eventos viejos (sin nada de esto)
+    // siguen funcionando igual, solo se ven mas simples en la card.
+    format: {
+      type: String,
+      enum: ['elimination', 'arena', 'swiss', 'round_robin'],
+      default: 'elimination',
+    },
+    // Texto libre tipo "5+0", "10+0", "3+2" -- igual que como ya se
+    // muestra el control de tiempo en el resto de la app (nunca se
+    // valida contra una lista cerrada, es solo informativo).
+    timeControl: { type: String, trim: true, maxlength: 20, default: '' },
+    // Texto libre tipo "Insignia + XP" -- la recompensa REAL (logro,
+    // XP, marco) la otorga services/achievements.js / server.js al
+    // coronar campeon; esto es solo lo que se muestra en la card antes
+    // de jugar.
+    reward: { type: String, trim: true, maxlength: 80, default: '' },
+    icon: { type: String, trim: true, maxlength: 8, default: '' },
+    minRating: { type: Number, min: 0, max: 4000, default: null },
+    maxRating: { type: Number, min: 0, max: 4000, default: null },
+    // Torneos recurrentes (Fase 4): 'none' es un torneo unico de
+    // siempre. Los demas valores son solo METADATA por ahora -- no hay
+    // todavia un generador automatico que cree la proxima edicion (ver
+    // el comentario en scripts/seed-default-tournaments.js sobre por
+    // que se dejo afuera de este primer corte).
+    recurrence: {
+      type: String,
+      enum: ['none', 'daily', 'weekly', 'monthly'],
+      default: 'none',
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
