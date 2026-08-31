@@ -27,6 +27,21 @@ const OZAMA_PREFS = (() => {
   const DEFAULT_THEME = 'colonial';
   const DEFAULT_VOLUME = 0.82;
 
+  // Sets de piezas de Ajedrez (Fase 2 de personalizacion). 'clasico' y
+  // 'ornamentado' ya existian como los dos estilos de siempre --
+  // 'clasico' era el default fijo (USE_BLENDER_PIECES en script.js) y
+  // 'ornamentado' el set SVG que solo se usaba como fallback. 'dorado'
+  // reusa un set de piezas 3D que ya estaba en
+  // assets/pieces/blender/gold/ sin usarse en ningun lado del juego.
+  const PIECE_SETS = {
+    clasico:     { free: true,  label: 'Clásico' },
+    ornamentado: { free: true,  label: 'Ornamentado' },
+    dorado:      { free: false, label: 'Dorado' },
+  };
+  const PIECE_SET_ORDER = ['clasico', 'ornamentado', 'dorado'];
+  const DEFAULT_PIECE_SET = 'clasico';
+  const PIECE_SET_CACHE_KEY = 'ozama-piece-set';
+
   function readStoredUser() {
     try { return JSON.parse(localStorage.getItem('ozama-user') || 'null'); }
     catch { return null; }
@@ -61,6 +76,10 @@ const OZAMA_PREFS = (() => {
     // preferencia, vuelve sola si renueva).
     if (!themeDef || (!themeDef.free && !isPremiumActive(user))) boardTheme = DEFAULT_THEME;
 
+    let pieceSet = localStorage.getItem(PIECE_SET_CACHE_KEY) || fromServer.pieceSet || DEFAULT_PIECE_SET;
+    const pieceSetDef = PIECE_SETS[pieceSet];
+    if (!pieceSetDef || (!pieceSetDef.free && !isPremiumActive(user))) pieceSet = DEFAULT_PIECE_SET;
+
     const soundMuted = localStorage.getItem(SOUND_MUTED_KEY) !== null
       ? localStorage.getItem(SOUND_MUTED_KEY) === 'true'
       : !!fromServer.soundMuted;
@@ -69,7 +88,7 @@ const OZAMA_PREFS = (() => {
       ? Math.max(0, Math.min(1, Number(storedVolume)))
       : (Number.isFinite(fromServer.soundVolume) ? fromServer.soundVolume : DEFAULT_VOLUME);
 
-    return { boardTheme, soundMuted, soundVolume };
+    return { boardTheme, pieceSet, soundMuted, soundVolume };
   }
 
   function applyToDocument(prefs) {
@@ -81,6 +100,7 @@ const OZAMA_PREFS = (() => {
 
   async function save(partial) {
     if (partial.boardTheme !== undefined) localStorage.setItem(THEME_CACHE_KEY, partial.boardTheme);
+    if (partial.pieceSet !== undefined) localStorage.setItem(PIECE_SET_CACHE_KEY, partial.pieceSet);
     if (partial.soundMuted !== undefined) localStorage.setItem(SOUND_MUTED_KEY, String(partial.soundMuted));
     if (partial.soundVolume !== undefined) localStorage.setItem(SOUND_VOLUME_KEY, String(partial.soundVolume));
     applyToDocument(current());
@@ -123,7 +143,15 @@ const OZAMA_PREFS = (() => {
     return next;
   }
 
-  return { current, applyToDocument, save, availableThemes, cycleBoardTheme, BOARD_THEMES, THEME_ORDER, isPremiumActive };
+  function availablePieceSets(user) {
+    const premiumActive = isPremiumActive(user || readStoredUser());
+    return PIECE_SET_ORDER.map((key) => ({ key, ...PIECE_SETS[key], locked: !PIECE_SETS[key].free && !premiumActive }));
+  }
+
+  return {
+    current, applyToDocument, save, availableThemes, cycleBoardTheme, BOARD_THEMES, THEME_ORDER, isPremiumActive,
+    availablePieceSets, PIECE_SETS, PIECE_SET_ORDER,
+  };
 })();
 
 // Aplicar apenas se puede (antes de que el usuario interactue, para

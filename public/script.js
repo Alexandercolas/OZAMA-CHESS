@@ -165,6 +165,41 @@ const PIECE_SVGS = {
   bk:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><defs><radialGradient id="bkg" cx="32%" cy="26%" r="70%"><stop offset="0%" stop-color="#3A3028"/><stop offset="40%" stop-color="#1C1610"/><stop offset="75%" stop-color="#100D08"/><stop offset="100%" stop-color="#060504"/></radialGradient><radialGradient id="bkh" cx="28%" cy="22%" r="55%"><stop offset="0%" stop-color="rgba(200,152,60,0.25)"/><stop offset="100%" stop-color="rgba(200,152,60,0)"/></radialGradient></defs><rect x="9" y="35.5" width="27" height="4.5" rx="1" fill="url(#bkg)" stroke="#C8983C" stroke-width="1.6"/><rect x="9" y="35.5" width="27" height="1.2" rx="0.5" fill="rgba(200,152,60,0.22)"/><path d="M11.5 35.5Q10 25 13.5 20Q17.5 16 22.5 16Q27.5 16 31.5 20Q35 25 33.5 35.5Z" fill="url(#bkg)" stroke="#C8983C" stroke-width="1.6"/><path d="M11.5 35.5Q10 25 13.5 20Q17.5 16 22.5 16Q27.5 16 31.5 20Q35 25 33.5 35.5Z" fill="url(#bkh)"/><line x1="13" y1="24" x2="32" y2="24" stroke="rgba(200,152,60,0.28)" stroke-width="0.9"/><line x1="12" y1="29" x2="33" y2="29" stroke="rgba(200,152,60,0.2)" stroke-width="0.9"/><rect x="14" y="14.5" width="17" height="3.5" rx="1" fill="#6B5018" stroke="#C8983C" stroke-width="0.9"/><rect x="20.5" y="2" width="4.5" height="15" rx="1.8" fill="url(#bkg)" stroke="#C8983C" stroke-width="1.6"/><rect x="20.5" y="2" width="4.5" height="15" rx="1.8" fill="url(#bkh)"/><rect x="14.5" y="5.5" width="16" height="5" rx="1.8" fill="url(#bkg)" stroke="#C8983C" stroke-width="1.6"/><rect x="14.5" y="5.5" width="16" height="5" rx="1.8" fill="url(#bkh)"/><rect x="21.5" y="3" width="2" height="5" rx="1" fill="rgba(200,152,60,0.3)"/></svg>`,
 };
 
+// Set de piezas elegido (Fase 2 de personalizacion, ver preferences.js):
+// 'clasico' (3D, el default de siempre) / 'dorado' (3D, lado blanco en
+// dorado -- Premium) / 'ornamentado' (el set SVG de abajo, que antes
+// solo se usaba como fallback si USE_BLENDER_PIECES era false). No se
+// cachea: cada renderizado de pieza vuelve a leer la preferencia
+// actual, asi un cambio se ve al toque sin recargar la pagina.
+function currentPieceSet() {
+  if (typeof OZAMA_PREFS === 'undefined') return 'clasico';
+  return OZAMA_PREFS.current().pieceSet || 'clasico';
+}
+
+// Arma el HTML de una pieza para el tablero o el dialogo de coronacion
+// -- unico lugar que decide entre el set 3D (Blender) y el set SVG
+// ornamentado, para no repetir esta rama en cada sitio que dibuja una
+// pieza (antes estaba duplicada en renderBoard() y showPromotionDialog()).
+function pieceInnerHtml(type, color, extraClasses = '') {
+  const key = `${color}${type}`;
+  const colorClass = color === COLOR.WHITE ? 'white' : 'black';
+  const pieceSet = currentPieceSet();
+  const classes = `piece piece-${colorClass} piece-${type}${extraClasses ? ' ' + extraClasses : ''}`;
+
+  if (pieceSet === 'ornamentado' && CONFIG.USE_INLINE_SVG && PIECE_SVGS[key]) {
+    return `<span class="${classes}">${PIECE_SVGS[key]}</span>`;
+  }
+  if (CONFIG.USE_BLENDER_PIECES && BLENDER_PIECE_NAMES[type]) {
+    const style = color === COLOR.WHITE ? (pieceSet === 'dorado' ? 'gold' : 'white-matte') : 'black';
+    const pieceName = BLENDER_PIECE_NAMES[type];
+    return `<span class="${classes} piece-3d"><img src="./assets/pieces/blender/${style}/${pieceName}.png" alt="" draggable="false"></span>`;
+  }
+  if (CONFIG.USE_INLINE_SVG && PIECE_SVGS[key]) {
+    return `<span class="${classes}">${PIECE_SVGS[key]}</span>`;
+  }
+  return '';
+}
+
 // ================================================================
 // SECTION 3: GAME STATE
 // ================================================================
@@ -662,17 +697,7 @@ function showPromotionDialog(row, col, color) {
   if (optionsEl) {
     const order = [PIECE.QUEEN, PIECE.ROOK, PIECE.BISHOP, PIECE.KNIGHT];
     optionsEl.innerHTML = order.map(type => {
-      const key = `${color}${type}`;
-      let inner;
-      if (CONFIG.USE_BLENDER_PIECES && BLENDER_PIECE_NAMES[type]) {
-        const style = color === COLOR.WHITE ? 'white-matte' : 'black';
-        const colorClass = color === COLOR.WHITE ? 'white' : 'black';
-        inner = `<span class="piece piece-3d piece-${colorClass} piece-${type}"><img src="./assets/pieces/blender/${style}/${BLENDER_PIECE_NAMES[type]}.png" alt="" draggable="false"></span>`;
-      } else if (CONFIG.USE_INLINE_SVG && PIECE_SVGS[key]) {
-        inner = `<span class="piece piece-${color === COLOR.WHITE ? 'white' : 'black'} piece-${type}">${PIECE_SVGS[key]}</span>`;
-      } else {
-        inner = '?';
-      }
+      const inner = pieceInnerHtml(type, color) || '?';
       return `<button type="button" class="promotion-btn" data-type="${type}">${inner}</button>`;
     }).join('');
     optionsEl.querySelectorAll('.promotion-btn').forEach(btn => {
@@ -918,15 +943,7 @@ function renderBoard() {
         sq.classList.add('in-check');
       }
       if (p) {
-        const key = `${p.color}${p.type}`;
-        if (CONFIG.USE_BLENDER_PIECES && BLENDER_PIECE_NAMES[p.type]) {
-          const style = p.color === COLOR.WHITE ? 'white-matte' : 'black';
-          const colorClass = p.color === COLOR.WHITE ? 'white' : 'black';
-          const pieceName = BLENDER_PIECE_NAMES[p.type];
-          sq.innerHTML = `<span class="piece piece-3d piece-${colorClass} piece-${p.type}"><img src="./assets/pieces/blender/${style}/${pieceName}.png" alt="" draggable="false"></span>`;
-        } else if (CONFIG.USE_INLINE_SVG && PIECE_SVGS[key]) {
-          sq.innerHTML = `<span class="piece piece-${p.color === COLOR.WHITE ? 'white' : 'black'} piece-${p.type}">${PIECE_SVGS[key]}</span>`;
-        }
+        sq.innerHTML = pieceInnerHtml(p.type, p.color);
       }
 
       if (legalMove) {

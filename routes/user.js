@@ -55,9 +55,10 @@ function premiumCapabilities(user) {
     benefits: premiumActive ? [
       'Marco dorado + insignia PREMIUM en tu avatar',
       'Temas de tablero exclusivos (Ebano y Caoba)',
+      'Set de piezas Dorado en Ajedrez',
       'Exportar tus partidas en formato PGN',
       'Estadisticas avanzadas: color con mas victorias, duracion y aperturas',
-      'Analisis post-partida: deteccion de errores graves e imprecisiones',
+      'Analisis post-partida en Ajedrez y Damas: deteccion de errores graves e imprecisiones',
     ] : [],
   };
 }
@@ -106,6 +107,16 @@ const BOARD_THEMES = {
   caoba:    { free: false },
 };
 
+// Mismo criterio que BOARD_THEMES, para los sets de piezas de Ajedrez
+// (Fase 2 de personalizacion). 'dorado' reusa un set 3D que ya vivia
+// en assets/pieces/blender/gold/ sin usarse en ningun lado -- ver
+// public/preferences.js para el detalle de por que.
+const PIECE_SETS = {
+  clasico:     { free: true },
+  ornamentado: { free: true },
+  dorado:      { free: false },
+};
+
 // PATCH /api/user/preferences - personalizacion (tablero, sonido...).
 // Whitelist explicita de claves conocidas -- una preferencia nueva se
 // agrega sumando un caso aca, nunca reescribiendo el endpoint entero.
@@ -123,6 +134,16 @@ router.patch('/preferences', requireAuth, async (req, res) => {
         return res.status(403).json({ error: 'Ese tema de tablero es exclusivo de OZAMA Premium.' });
       }
       updates['preferences.boardTheme'] = theme;
+    }
+
+    if (body.pieceSet !== undefined) {
+      const pieceSet = String(body.pieceSet || '').trim();
+      const pieceSetDef = PIECE_SETS[pieceSet];
+      if (!pieceSetDef) return res.status(400).json({ error: 'Set de piezas invalido.' });
+      if (!pieceSetDef.free && !premiumActive) {
+        return res.status(403).json({ error: 'Ese set de piezas es exclusivo de OZAMA Premium.' });
+      }
+      updates['preferences.pieceSet'] = pieceSet;
     }
 
     if (body.soundMuted !== undefined) {
