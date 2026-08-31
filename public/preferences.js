@@ -171,10 +171,47 @@ const OZAMA_PREFS = (() => {
     return DAMAS_PIECE_SET_ORDER.map((key) => ({ key, ...DAMAS_PIECE_SETS[key], locked: !DAMAS_PIECE_SETS[key].free && !premiumActive }));
   }
 
+  // Vistas previas compartidas (Fase H, roadmap PRO 2.0) -- usadas por
+  // settings.html (para elegir) Y collection.html (para mostrar la
+  // coleccion completa), asi ninguna de las dos reinventa los mismos
+  // mapas de color.
+  function themeSwatchColor(themeKey, which) {
+    const colors = {
+      colonial: { light: '#C9B79C', dark: '#5C3A1E' },
+      marmol:   { light: '#EDE7DC', dark: '#8B8478' },
+      ebano:    { light: '#3A3630', dark: '#14120F' },
+      caoba:    { light: '#D9B98C', dark: '#6B2E1F' },
+    };
+    return colors[themeKey]?.[which] || '#888';
+  }
+
+  // 'clasico'/'dorado' son el set 3D de verdad (assets/pieces/blender/...),
+  // 'ornamentado' se previsualiza con un glifo (el set SVG en si vive
+  // dentro de script.js, que no tiene sentido cargar aca solo para esto).
+  function pieceSetPreviewHtml(key) {
+    if (key === 'ornamentado') return '♛';
+    const style = key === 'dorado' ? 'gold' : 'white-matte';
+    return `<img src="/assets/pieces/blender/${style}/queen.png" alt="">`;
+  }
+
+  // Mismos colores que las reglas body[data-damas-piece-set=...] de
+  // damas.html, para que la vista previa combine con lo que se ve de
+  // verdad en el tablero.
+  function damasPieceSetPreviewHtml(key) {
+    const colors = {
+      clasico: { w: 'radial-gradient(circle at 35% 28%, #FBF3DE, #C8983C 78%)', b: 'radial-gradient(circle at 35% 28%, #4a4038, #050403 82%)' },
+      marmol:  { w: 'radial-gradient(circle at 35% 28%, #FFFFFF, #8B8478 80%)', b: 'radial-gradient(circle at 35% 28%, #5C5850, #0D0B08 82%)' },
+      bronce:  { w: 'radial-gradient(circle at 35% 28%, #F6D9A0, #6B4712 78%)', b: 'radial-gradient(circle at 35% 28%, #5A2A2A, #100505 82%)' },
+    };
+    const c = colors[key] || colors.clasico;
+    return `<span style="display:flex;gap:4px;"><span style="width:20px;height:20px;border-radius:50%;background:${c.w};box-shadow:0 1px 3px rgba(0,0,0,0.4);"></span><span style="width:20px;height:20px;border-radius:50%;background:${c.b};box-shadow:0 1px 3px rgba(0,0,0,0.4);"></span></span>`;
+  }
+
   return {
     current, applyToDocument, save, availableThemes, cycleBoardTheme, BOARD_THEMES, THEME_ORDER, isPremiumActive,
     availablePieceSets, PIECE_SETS, PIECE_SET_ORDER,
     availableDamasPieceSets, DAMAS_PIECE_SETS, DAMAS_PIECE_SET_ORDER,
+    themeSwatchColor, pieceSetPreviewHtml, damasPieceSetPreviewHtml,
   };
 })();
 

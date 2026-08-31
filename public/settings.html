@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/theme.css">
-  <script src="/preferences.js?v=20260830-fase2"></script>
+  <script src="/preferences.js?v=20260831-faseH"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1126,7 +1126,7 @@
       const themes = OZAMA_PREFS.availableThemes(_prefsUser);
       row.innerHTML = themes.map((t) => `
         <button type="button" class="theme-swatch ${t.key === current.boardTheme ? 'is-active' : ''}" onclick="selectBoardTheme('${t.key}')" title="${escapeHtml(t.label)}${t.locked ? ' (Premium)' : ''}">
-          <span class="theme-swatch-board" style="--sw-light:${swatchColor(t.key, 'light')};--sw-dark:${swatchColor(t.key, 'dark')};">
+          <span class="theme-swatch-board" style="--sw-light:${OZAMA_PREFS.themeSwatchColor(t.key, 'light')};--sw-dark:${OZAMA_PREFS.themeSwatchColor(t.key, 'dark')};">
             <span></span><span></span><span></span><span></span>
           </span>
           ${t.locked ? '<span class="theme-swatch-lock">🔒</span>' : ''}
@@ -1139,7 +1139,7 @@
         const pieceSets = OZAMA_PREFS.availablePieceSets(_prefsUser);
         pieceRow.innerHTML = pieceSets.map((p) => `
           <button type="button" class="theme-swatch ${p.key === current.pieceSet ? 'is-active' : ''}" onclick="selectPieceSet('${p.key}')" title="${escapeHtml(p.label)}${p.locked ? ' (Premium)' : ''}">
-            <span class="piece-swatch-preview">${pieceSetPreview(p.key)}</span>
+            <span class="piece-swatch-preview">${OZAMA_PREFS.pieceSetPreviewHtml(p.key)}</span>
             ${p.locked ? '<span class="theme-swatch-lock">🔒</span>' : ''}
             <span class="theme-swatch-label">${escapeHtml(p.label)}</span>
           </button>
@@ -1151,7 +1151,7 @@
         const damasPieceSets = OZAMA_PREFS.availableDamasPieceSets(_prefsUser);
         damasPieceRow.innerHTML = damasPieceSets.map((p) => `
           <button type="button" class="theme-swatch ${p.key === current.damasPieceSet ? 'is-active' : ''}" onclick="selectDamasPieceSet('${p.key}')" title="${escapeHtml(p.label)}${p.locked ? ' (Premium)' : ''}">
-            <span class="piece-swatch-preview">${damasPieceSetPreview(p.key)}</span>
+            <span class="piece-swatch-preview">${OZAMA_PREFS.damasPieceSetPreviewHtml(p.key)}</span>
             ${p.locked ? '<span class="theme-swatch-lock">🔒</span>' : ''}
             <span class="theme-swatch-label">${escapeHtml(p.label)}</span>
           </button>
@@ -1164,38 +1164,10 @@
       if (slider) slider.value = String(Math.round(current.soundVolume * 100));
     }
 
-    // Mismos colores que las reglas body[data-damas-piece-set=...] de
-    // damas.html, para que la vista previa combine con lo que se ve
-    // de verdad en el tablero.
-    function damasPieceSetPreview(key) {
-      const colors = {
-        clasico: { w: 'radial-gradient(circle at 35% 28%, #FBF3DE, #C8983C 78%)', b: 'radial-gradient(circle at 35% 28%, #4a4038, #050403 82%)' },
-        marmol:  { w: 'radial-gradient(circle at 35% 28%, #FFFFFF, #8B8478 80%)', b: 'radial-gradient(circle at 35% 28%, #5C5850, #0D0B08 82%)' },
-        bronce:  { w: 'radial-gradient(circle at 35% 28%, #F6D9A0, #6B4712 78%)', b: 'radial-gradient(circle at 35% 28%, #5A2A2A, #100505 82%)' },
-      };
-      const c = colors[key] || colors.clasico;
-      return `<span style="display:flex;gap:4px;"><span style="width:20px;height:20px;border-radius:50%;background:${c.w};box-shadow:0 1px 3px rgba(0,0,0,0.4);"></span><span style="width:20px;height:20px;border-radius:50%;background:${c.b};box-shadow:0 1px 3px rgba(0,0,0,0.4);"></span></span>`;
-    }
-
-    // Vista previa de cada set -- 'clasico'/'dorado' son el set 3D de
-    // verdad (assets/pieces/blender/...), 'ornamentado' se previsualiza
-    // con un glifo (el set SVG en si vive dentro de script.js, que no
-    // tiene sentido cargar aca solo para esto).
-    function pieceSetPreview(key) {
-      if (key === 'ornamentado') return '♛';
-      const style = key === 'dorado' ? 'gold' : 'white-matte';
-      return `<img src="/assets/pieces/blender/${style}/queen.png" alt="">`;
-    }
-
-    function swatchColor(themeKey, which) {
-      const colors = {
-        colonial: { light: '#C9B79C', dark: '#5C3A1E' },
-        marmol:   { light: '#EDE7DC', dark: '#8B8478' },
-        ebano:    { light: '#3A3630', dark: '#14120F' },
-        caoba:    { light: '#D9B98C', dark: '#6B2E1F' },
-      };
-      return colors[themeKey]?.[which] || '#888';
-    }
+    // Las vistas previas (damas/piezas/tablero) ahora viven en
+    // OZAMA_PREFS (public/preferences.js), compartidas con
+    // collection.html -- ver themeSwatchColor/pieceSetPreviewHtml/
+    // damasPieceSetPreviewHtml ahi.
 
     async function selectBoardTheme(key) {
       const themes = OZAMA_PREFS.availableThemes(_prefsUser);

@@ -8,12 +8,13 @@
   <meta name="theme-color" content="#0D0B08"/>
   <meta name="color-scheme" content="dark"/>
   <title>OZAMA CHESS - Colección</title>
-  <meta name="description" content="Marcos de perfil que desbloqueás jugando y mejorando en OZAMA CHESS."/>
+  <meta name="description" content="Marcos de perfil, temas de tablero y piezas que desbloqueás o activás con Premium en OZAMA CHESS."/>
   <meta name="robots" content="noindex, nofollow"/>
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/favicon.png?v=5">
   <link rel="manifest" href="/manifest.webmanifest">
   <script src="/pwa.js" defer></script>
+  <script src="/preferences.js?v=20260831-faseH"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -51,6 +52,15 @@
     .av-preview[data-frame="centenario"] { box-shadow: 0 0 0 4px #6B4A2A; }
 
     .loading, .error-msg { text-align: center; padding: 60px 20px; color: var(--dim); }
+
+    /* Secciones adicionales (Fase H): temas de tablero + piezas/fichas,
+       mismo lenguaje visual que los marcos de arriba. */
+    .section-title { font-family: var(--ft); font-size: 15px; color: var(--gold); margin: 32px 0 12px; }
+    .cos-card .swatch-preview { width: 56px; height: 56px; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; }
+    .cos-card .swatch-preview img { width: 100%; height: 100%; object-fit: contain; }
+    .cos-board { width: 48px; height: 48px; border-radius: 6px; overflow: hidden; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+    .cos-board span:nth-child(1), .cos-board span:nth-child(4) { background: var(--sw-light); }
+    .cos-board span:nth-child(2), .cos-board span:nth-child(3) { background: var(--sw-dark); }
   </style>
 </head>
 <body>
@@ -59,6 +69,7 @@
 
   <script>
     let _token = '';
+    let _user = null;
     let frames = [];
 
     function escapeHtml(value) {
@@ -70,9 +81,8 @@
       try {
         window.OZAMA_RUNTIME && await window.OZAMA_RUNTIME.ready;
         _token = window.OZAMA_RUNTIME?.getAuthToken?.() || '';
-        let user = null;
-        try { user = JSON.parse(localStorage.getItem('ozama-user') || 'null'); } catch (_) {}
-        if (!user || (window.OZAMA_RUNTIME?.native && !_token)) {
+        try { _user = JSON.parse(localStorage.getItem('ozama-user') || 'null'); } catch (_) {}
+        if (!_user || (window.OZAMA_RUNTIME?.native && !_token)) {
           content.innerHTML = `<div class="error-msg">Iniciá sesión para ver tu colección.<br><br><a href="/login.html" style="color:var(--gold);font-weight:700;text-decoration:none;">Iniciar sesión →</a></div>`;
           return;
         }
@@ -100,10 +110,78 @@
 
       document.getElementById('content').innerHTML = `
         <div class="eyebrow">Colección</div>
-        <h1>Marcos de Perfil</h1>
-        <div class="sub">Se desbloquean jugando y mejorando -- ninguno se compra.</div>
+        <h1>Tu Colección</h1>
+        <div class="sub">Marcos, tableros y piezas -- ninguno se compra por separado.</div>
+        <div class="section-title" style="margin-top:0;">Marcos de Perfil <span style="color:var(--dim);font-weight:400;">— se desbloquean jugando</span></div>
         <div class="grid">${cards}</div>
+        <div class="section-title">Temas de Tablero</div>
+        <div class="grid" id="board-theme-grid"></div>
+        <div class="section-title">Piezas de Ajedrez</div>
+        <div class="grid" id="piece-set-grid"></div>
+        <div class="section-title">Fichas de Damas</div>
+        <div class="grid" id="damas-piece-set-grid"></div>
       `;
+      renderCosmetics();
+    }
+
+    // Temas de tablero y sets de piezas (Fase H): a diferencia de los
+    // marcos, estos no se "desbloquean" jugando -- son gratis o
+    // exclusivos de Premium (ver preferences.js). Se equipan con la
+    // MISMA funcion OZAMA_PREFS.save() que usa settings.html, asi que
+    // un cambio hecho aca se ve reflejado alli y viceversa.
+    function renderCosmetics() {
+      if (typeof OZAMA_PREFS === 'undefined') return;
+      const current = OZAMA_PREFS.current();
+
+      const boardGrid = document.getElementById('board-theme-grid');
+      if (boardGrid) {
+        boardGrid.innerHTML = OZAMA_PREFS.availableThemes(_user).map((t) => `
+          <div class="frame-card ${t.locked ? 'locked' : ''} ${t.key === current.boardTheme ? 'equipped' : ''}">
+            <div class="swatch-preview">
+              <span class="cos-board" style="--sw-light:${OZAMA_PREFS.themeSwatchColor(t.key, 'light')};--sw-dark:${OZAMA_PREFS.themeSwatchColor(t.key, 'dark')};"><span></span><span></span><span></span><span></span></span>
+            </div>
+            <div class="fr-name">${escapeHtml(t.label)}</div>
+            <div class="fr-desc">${t.free ? 'Gratis' : 'Exclusivo de Premium'}</div>
+            ${t.locked
+              ? `<div class="fr-lock">🔒 Premium</div>`
+              : `<button class="fr-btn" ${t.key === current.boardTheme ? 'disabled' : ''} onclick="equipCosmetic('boardTheme','${t.key}')">${t.key === current.boardTheme ? 'Activo' : 'Usar'}</button>`}
+          </div>
+        `).join('');
+      }
+
+      const pieceGrid = document.getElementById('piece-set-grid');
+      if (pieceGrid) {
+        pieceGrid.innerHTML = OZAMA_PREFS.availablePieceSets(_user).map((p) => `
+          <div class="frame-card cos-card ${p.locked ? 'locked' : ''} ${p.key === current.pieceSet ? 'equipped' : ''}">
+            <div class="swatch-preview">${OZAMA_PREFS.pieceSetPreviewHtml(p.key)}</div>
+            <div class="fr-name">${escapeHtml(p.label)}</div>
+            <div class="fr-desc">${p.free ? 'Gratis' : 'Exclusivo de Premium'}</div>
+            ${p.locked
+              ? `<div class="fr-lock">🔒 Premium</div>`
+              : `<button class="fr-btn" ${p.key === current.pieceSet ? 'disabled' : ''} onclick="equipCosmetic('pieceSet','${p.key}')">${p.key === current.pieceSet ? 'Activo' : 'Usar'}</button>`}
+          </div>
+        `).join('');
+      }
+
+      const damasGrid = document.getElementById('damas-piece-set-grid');
+      if (damasGrid) {
+        damasGrid.innerHTML = OZAMA_PREFS.availableDamasPieceSets(_user).map((p) => `
+          <div class="frame-card cos-card ${p.locked ? 'locked' : ''} ${p.key === current.damasPieceSet ? 'equipped' : ''}">
+            <div class="swatch-preview">${OZAMA_PREFS.damasPieceSetPreviewHtml(p.key)}</div>
+            <div class="fr-name">${escapeHtml(p.label)}</div>
+            <div class="fr-desc">${p.free ? 'Gratis' : 'Exclusivo de Premium'}</div>
+            ${p.locked
+              ? `<div class="fr-lock">🔒 Premium</div>`
+              : `<button class="fr-btn" ${p.key === current.damasPieceSet ? 'disabled' : ''} onclick="equipCosmetic('damasPieceSet','${p.key}')">${p.key === current.damasPieceSet ? 'Activo' : 'Usar'}</button>`}
+          </div>
+        `).join('');
+      }
+    }
+
+    async function equipCosmetic(field, key) {
+      const result = await OZAMA_PREFS.save({ [field]: key });
+      if (!result.ok) { alert(result.error || 'No se pudo guardar.'); }
+      renderCosmetics();
     }
 
     async function equip(key) {
@@ -122,6 +200,7 @@
     }
 
     window.equip = equip;
+    window.equipCosmetic = equipCosmetic;
     load();
   </script>
 </body>
