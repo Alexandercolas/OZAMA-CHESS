@@ -251,12 +251,16 @@
 
     function renderSections() {
       const filtered = gameFilter === 'all' ? allTournaments : allTournaments.filter((t) => t.gameType === (gameFilter === 'chess' ? 'chess' : 'checkers'));
-      const live = filtered.filter((t) => t.status === 'active');
-      const upcoming = filtered.filter((t) => t.status !== 'active').sort((a, b) => new Date(a.startsAt || 0) - new Date(b.startsAt || 0));
       // Destacados: los que dan un marco/cosmetico de verdad como
       // premio -- son objetivamente los de mayor prestigio, no un
-      // criterio arbitrario.
+      // criterio arbitrario. Se sacan de "Proximos"/"En curso" para
+      // no mostrar el mismo torneo dos veces en la pagina.
       const featured = filtered.filter((t) => /marco/i.test(t.reward || ''));
+      const featuredIds = new Set(featured.map((t) => t._id));
+      const live = filtered.filter((t) => t.status === 'active' && !featuredIds.has(t._id));
+      const upcoming = filtered
+        .filter((t) => t.status !== 'active' && !featuredIds.has(t._id))
+        .sort((a, b) => new Date(a.startsAt || 0) - new Date(b.startsAt || 0));
 
       let idx = 0;
       const sections = [];
