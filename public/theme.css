@@ -355,3 +355,118 @@ body::before {
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--carbon); }
 ::-webkit-scrollbar-thumb { background: rgba(200,152,60,0.3); border-radius: 3px; }
+
+/* ================================================================
+   Primitivas compartidas -- "OZAMA Torneos + Experiencia Visual".
+   Un solo lugar para toast/skeleton/badges/contenido bloqueado, para
+   que cada pagina deje de reinventar su propia version (tournaments.html
+   ya tenia un toast ad-hoc distinto al de otras paginas; esto lo
+   reemplaza sin romper nada que no lo use todavia).
+   ================================================================ */
+
+/* Toast (Fase 20): reemplaza alert() y los toasts sueltos por pagina.
+   Uso: window.ozToast('Mensaje', 'success'|'error'|'info'|'unlock'). */
+#oz-toast-stack {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  pointer-events: none;
+  width: min(92vw, 420px);
+}
+.oz-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: var(--radius-md);
+  background: var(--s2);
+  border: 1px solid rgba(200,152,60,0.3);
+  color: var(--text);
+  font-family: var(--fb);
+  font-size: 12.5px;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.5);
+  animation: ozToastIn var(--dur-base) var(--ease-out) forwards;
+}
+.oz-toast.is-leaving { animation: ozToastOut var(--dur-fast) var(--ease-out) forwards; }
+.oz-toast .ot-icon { font-size: 15px; flex-shrink: 0; }
+.oz-toast.success { border-color: rgba(46,204,113,0.4); }
+.oz-toast.success .ot-icon { color: #2ecc71; }
+.oz-toast.error { border-color: rgba(239,68,68,0.4); }
+.oz-toast.error .ot-icon { color: var(--danger); }
+.oz-toast.unlock { border-color: rgba(200,152,60,0.6); background: rgba(200,152,60,0.08); }
+.oz-toast.unlock .ot-icon { color: var(--gold); }
+@keyframes ozToastIn { from { opacity: 0; transform: translateY(10px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes ozToastOut { from { opacity: 1; transform: translateY(0) scale(1); } to { opacity: 0; transform: translateY(6px) scale(0.96); } }
+
+/* Skeleton loading (Fase 19): mantiene el layout mientras carga, en
+   vez de una pantalla que se siente congelada. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--s2);
+  border-radius: var(--radius-md);
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(200,152,60,0.12), transparent);
+  animation: ozShimmer 1.4s ease-in-out infinite;
+}
+@keyframes ozShimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+.skeleton-line { height: 12px; margin-bottom: 8px; }
+.skeleton-line.w-60 { width: 60%; }
+.skeleton-line.w-40 { width: 40%; }
+
+/* Badges / pills (estado, juego, rareza) -- paleta contenida, nada de
+   colores saturados que rompan la identidad de OZAMA. */
+.oz-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  border: 1px solid rgba(200,152,60,0.3);
+  color: var(--gold);
+  background: rgba(200,152,60,0.08);
+  white-space: nowrap;
+}
+.oz-badge.is-live { color: #2ecc71; border-color: rgba(46,204,113,0.35); background: rgba(46,204,113,0.08); }
+.oz-badge.is-live .dot { width: 6px; height: 6px; border-radius: 50%; background: #2ecc71; animation: ozPulse 1.6s ease-in-out infinite; }
+.oz-badge.is-dim { color: var(--dim); border-color: rgba(233,228,218,0.14); background: transparent; }
+.oz-badge.is-pro { color: var(--carbon); background: var(--gold); border-color: rgba(232,192,106,0.6); }
+@keyframes ozPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+/* Rarezas (Fase 16): mismo lenguaje visual que los badges, un tono por
+   nivel -- muted a proposito, ver el pedido original ("no colores
+   excesivamente fuertes"). */
+.oz-rarity { font-size: 9px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; }
+.oz-rarity.comun { color: var(--dim); }
+.oz-rarity.poco-comun { color: #7FB88A; }
+.oz-rarity.raro { color: #7FA8D9; }
+.oz-rarity.epico { color: #B48CE0; }
+.oz-rarity.legendario { color: var(--gold-2); }
+.oz-rarity.pro { color: var(--gold); }
+
+/* Progreso hacia un desbloqueo (Fase 14) -- datos reales siempre, el
+   texto ("Nivel 7/10") lo arma quien use esto, esto es solo la barra. */
+.oz-progress-track { width: 100%; height: 5px; border-radius: 3px; background: var(--s3); overflow: hidden; margin-top: 6px; }
+.oz-progress-fill { height: 100%; background: linear-gradient(90deg, var(--amber), var(--gold)); transition: width var(--dur-slow) var(--ease-out); }
+
+/* Contenido bloqueado (Fase 12/13): bloqueado = objetivo, no invisible.
+   Se usa junto con .oz-card -- agrega el estado "atenuado pero
+   legible", nunca oculto. */
+.oz-locked { opacity: 0.62; }
+.oz-locked:hover { opacity: 0.85; }
+.oz-lock-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; color: var(--dim); font-weight: 700; letter-spacing: 0.5px; margin-top: 8px; }

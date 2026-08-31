@@ -22,6 +22,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/theme.css">
+  <script src="/toast.js" defer></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: var(--carbon); color: var(--text); font-family: var(--fb); min-height: 100vh; padding: 0 0 60px; }
@@ -41,30 +42,74 @@
     }
     .topbar-logo-mark { width: 32px; height: 32px; flex: 0 0 auto; display: block; object-fit: cover; border-radius: 50%; border: 1px solid rgba(200,152,60,0.48); }
     .topbar-nav { display: flex; align-items: center; gap: 16px; }
-    .topbar-nav a { color: var(--dim); text-decoration: none; font-size: 11px; font-weight: 600; letter-spacing: 2px; }
+    .topbar-nav a { color: var(--dim); text-decoration: none; font-size: 11px; font-weight: 600; letter-spacing: 2px; transition: color var(--dur-base); }
     .topbar-nav a:hover { color: var(--gold); }
 
-    .container { max-width: 900px; margin: 0 auto; padding: 28px 20px 0; }
+    .container { max-width: 980px; margin: 0 auto; padding: 28px 20px 0; }
     .page-title { font-family: var(--ft); font-size: 28px; font-weight: 700; color: var(--gold); letter-spacing: 1px; margin-bottom: 6px; }
-    .page-sub { color: var(--dim); font-size: 13px; margin-bottom: 24px; }
+    .page-sub { color: var(--dim); font-size: 13px; margin-bottom: 20px; }
 
-    .t-card { padding: 20px; margin-bottom: 16px; cursor: pointer; }
-    .t-card:hover { border-color: rgba(200,152,60,0.3); }
-    .t-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-    .t-name { font-family: var(--ft); font-size: 19px; font-weight: 700; color: var(--text); }
-    .t-status { padding: 3px 10px; border-radius: 12px; font-size: 9px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; border: 1px solid rgba(200,152,60,0.3); color: var(--gold); background: rgba(200,152,60,0.08); }
-    .t-status.is-active { color: #2ecc71; border-color: rgba(46,204,113,0.3); background: rgba(46,204,113,0.08); }
-    .t-status.is-finished { color: var(--dim); }
-    .game-badge { padding: 3px 10px; border-radius: 12px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.5px; color: var(--gold-2); background: rgba(200,152,60,0.08); border: 1px solid rgba(200,152,60,0.18); white-space: nowrap; }
-    .t-desc { color: var(--dim); font-size: 12.5px; margin-top: 8px; line-height: 1.5; }
-    .t-meta { display: flex; gap: 16px; margin-top: 12px; font-size: 11px; color: var(--dim); letter-spacing: 0.5px; flex-wrap: wrap; }
-    .t-meta strong { color: var(--gold-2); }
+    /* Filtros de juego */
+    .filter-row { display: flex; gap: 8px; margin-bottom: 26px; flex-wrap: wrap; }
+    .filter-chip {
+      padding: 7px 16px; border-radius: var(--radius-pill); cursor: pointer;
+      background: var(--s2); border: 1px solid rgba(200,152,60,0.18); color: var(--dim);
+      font-size: 11.5px; font-weight: 700; letter-spacing: 0.5px;
+      transition: border-color var(--dur-base), color var(--dur-base), background var(--dur-base), transform var(--dur-fast);
+    }
+    .filter-chip:hover { border-color: rgba(200,152,60,0.4); color: var(--text); transform: translateY(-1px); }
+    .filter-chip.is-active { color: var(--gold); border-color: rgba(200,152,60,0.5); background: rgba(200,152,60,0.1); }
 
-    .empty-msg, .loading { text-align: center; padding: 40px 20px; color: var(--dim); font-size: 13px; letter-spacing: 2px; }
-    .spinner { width: 32px; height: 32px; border: 3px solid rgba(200,152,60,0.15); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .section-block { margin-bottom: 32px; }
+    .section-head { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+    .section-head .s-icon { font-size: 15px; }
+    .section-head .s-title { font-family: var(--fm); font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); }
+    .section-head .s-count { font-size: 10px; color: var(--faint, var(--dim)); background: var(--s2); border-radius: var(--radius-pill); padding: 1px 8px; }
 
-    .back-link { display: inline-block; color: var(--dim); font-size: 11px; letter-spacing: 1.5px; text-decoration: none; margin-bottom: 18px; text-transform: uppercase; }
+    .t-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+
+    /* Card de torneo */
+    .t-card { padding: 18px; cursor: pointer; display: flex; flex-direction: column; gap: 10px; }
+    .t-card.is-featured { background: linear-gradient(160deg, rgba(200,152,60,0.1), var(--s2)); border-color: rgba(200,152,60,0.5); }
+    .t-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .t-icon-name { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .t-icon { font-size: 22px; flex-shrink: 0; }
+    .t-name { font-family: var(--ft); font-size: 17px; font-weight: 700; color: var(--text); line-height: 1.2; }
+    .t-game { font-size: 10.5px; color: var(--gold-2); letter-spacing: 0.5px; margin-top: 1px; }
+    .t-desc { color: var(--dim); font-size: 12px; line-height: 1.5; }
+
+    .t-meta-row { display: flex; align-items: center; gap: 10px; font-size: 11.5px; color: var(--dim); flex-wrap: wrap; }
+    .t-meta-row .tc { font-family: var(--fm); color: var(--gold-2); font-weight: 700; }
+
+    .t-players-line { font-size: 11px; color: var(--dim); }
+    .t-players-line strong { color: var(--gold-2); }
+
+    .t-reward { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--dim); }
+    .t-reward .r-icon { color: var(--gold); }
+
+    .t-countdown { font-family: var(--fm); font-size: 12px; color: var(--gold); font-weight: 700; letter-spacing: 0.5px; }
+
+    .t-cta { margin-top: 4px; }
+    .t-cta .btn-primary { width: 100%; padding: 10px; font-size: 10.5px; }
+    .t-cta .t-note { text-align: center; font-size: 10.5px; color: var(--dim); }
+
+    /* Seccion PRO -- teaser bloqueado, honesto: no hay torneos PRO
+       exclusivos todavia, esto muestra la meta, no la finge. */
+    .pro-teaser { padding: 20px; text-align: center; }
+    .pro-teaser .pt-icon { font-size: 26px; margin-bottom: 6px; }
+    .pro-teaser .pt-title { font-family: var(--ft); font-size: 16px; color: var(--gold); margin-bottom: 4px; }
+    .pro-teaser .pt-desc { color: var(--dim); font-size: 12px; max-width: 380px; margin: 0 auto; line-height: 1.5; }
+
+    .empty-msg, .loading { text-align: center; padding: 40px 20px; color: var(--dim); font-size: 13px; letter-spacing: 1px; }
+
+    .skeleton-card { height: 168px; }
+
+    .history-toggle { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--dim); font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 8px 0; transition: color var(--dur-base); }
+    .history-toggle:hover { color: var(--gold); }
+    .history-toggle .chev { transition: transform var(--dur-base); }
+    .history-toggle.is-open .chev { transform: rotate(90deg); }
+
+    .back-link { display: inline-block; color: var(--dim); font-size: 11px; letter-spacing: 1.5px; text-decoration: none; margin-bottom: 18px; text-transform: uppercase; transition: color var(--dur-base); }
     .back-link:hover { color: var(--gold); }
 
     .detail-hero { padding: 22px; margin-bottom: 20px; }
@@ -80,14 +125,13 @@
 
     .round-block { margin-bottom: 22px; }
     .round-title { font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(200,152,60,0.1); }
-    .match-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-radius: 8px; background: var(--s2); border: 1px solid rgba(200,152,60,0.08); margin-bottom: 8px; flex-wrap: wrap; }
+    .match-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border-radius: var(--radius-md); background: var(--s2); border: 1px solid rgba(200,152,60,0.08); margin-bottom: 8px; flex-wrap: wrap; transition: border-color var(--dur-base); }
+    .match-row:hover { border-color: rgba(200,152,60,0.24); }
     .match-players { display: flex; align-items: center; gap: 8px; font-size: 13px; min-width: 0; }
     .match-players .p { color: var(--text); }
     .match-players .p.is-winner { color: #2ecc71; font-weight: 700; }
     .match-players .vs { color: var(--dim); font-size: 10px; }
     .match-status { font-size: 9.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); }
-
-    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--s3); border: 1px solid rgba(200,152,60,0.3); color: var(--text); padding: 10px 18px; border-radius: 8px; font-size: 12px; z-index: 999; display: none; }
   </style>
 </head>
 <body>
@@ -99,10 +143,8 @@
   </nav>
 
   <div class="container" id="main-content">
-    <div class="loading"><div class="spinner"></div>Cargando...</div>
+    <div class="loading">Cargando...</div>
   </div>
-
-  <div class="toast" id="toast"></div>
 
   <script src="/vendor/socket.io.min.js"></script>
   <script>
@@ -111,16 +153,17 @@
     const _user  = JSON.parse(localStorage.getItem('ozama-user') || 'null');
     const _token = window.OZAMA_RUNTIME?.getAuthToken?.() || '';
     const main = document.getElementById('main-content');
+    let gameFilter = 'all';
+    let allTournaments = [];
+    let historyLoaded = false;
+    let countdownTimer = null;
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch]));
     }
 
-    function showToast(message) {
-      const el = document.getElementById('toast');
-      el.textContent = message;
-      el.style.display = 'block';
-      setTimeout(() => { el.style.display = 'none'; }, 3000);
+    function showToast(message, type) {
+      if (typeof window.ozToast === 'function') window.ozToast(message, type);
     }
 
     function fmtDate(value) {
@@ -136,40 +179,182 @@
       return new URLSearchParams(window.location.search).get('id');
     }
 
+    // Cuenta regresiva en vivo (Fase 6: "Empieza en: 00:32:15") -- solo
+    // para lo que arranca en menos de 24h, si no alcanza con la fecha.
+    function countdownText(startsAt) {
+      if (!startsAt) return null;
+      const diff = new Date(startsAt).getTime() - Date.now();
+      if (diff <= 0 || diff > 24 * 3600 * 1000) return null;
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function skeletonGrid(n) {
+      return `<div class="t-grid">${Array.from({ length: n }).map(() => `
+        <div class="oz-card skeleton skeleton-card"></div>
+      `).join('')}</div>`;
+    }
+
+    function tCardHtml(t, { featured = false, index = 0 } = {}) {
+      const isLive = t.status === 'active';
+      const statusBadge = isLive
+        ? `<span class="oz-badge is-live"><span class="dot"></span>En curso</span>`
+        : t.status === 'finished'
+          ? `<span class="oz-badge is-dim">Finalizado</span>`
+          : `<span class="oz-badge">Inscripciones abiertas</span>`;
+      const countdown = countdownText(t.startsAt);
+      const timeLine = countdown
+        ? `<div class="t-countdown" data-countdown="${escapeHtml(t.startsAt)}">Empieza en: ${countdown}</div>`
+        : `<div class="t-meta-row"><span>📅 ${fmtDate(t.startsAt)}</span></div>`;
+      const players = t.participantCount || 0;
+      const max = t.maxPlayers || 16;
+      const pct = max ? Math.min(100, Math.round((players / max) * 100)) : 0;
+      return `
+        <div class="t-card oz-card oz-enter${featured ? ' is-featured' : ''}" style="--d:${index}" onclick="window.location.href='/tournaments.html?id=${t._id}'">
+          <div class="t-head">
+            <div class="t-icon-name">
+              <span class="t-icon">${escapeHtml(t.icon || '🏆')}</span>
+              <div>
+                <div class="t-name">${escapeHtml(t.title)}</div>
+                <div class="t-game">${gameLabels[t.gameType] || gameLabels.chess}</div>
+              </div>
+            </div>
+            ${statusBadge}
+          </div>
+          ${t.description ? `<div class="t-desc">${escapeHtml(t.description)}</div>` : ''}
+          <div class="t-meta-row">
+            ${t.timeControl ? `<span class="tc">${escapeHtml(t.timeControl)}</span>` : ''}
+          </div>
+          <div>
+            <div class="t-players-line"><strong>${players}</strong> / ${max} jugadores</div>
+            <div class="oz-progress-track"><div class="oz-progress-fill" style="width:${pct}%"></div></div>
+          </div>
+          ${timeLine}
+          ${t.reward ? `<div class="t-reward"><span class="r-icon">🏅</span>Recompensa: ${escapeHtml(t.reward)}</div>` : ''}
+          <div class="t-cta"><button class="btn-primary" type="button">Ver torneo</button></div>
+        </div>
+      `;
+    }
+
+    function startCountdownTicker() {
+      if (countdownTimer) clearInterval(countdownTimer);
+      countdownTimer = setInterval(() => {
+        document.querySelectorAll('[data-countdown]').forEach((el) => {
+          const text = countdownText(el.getAttribute('data-countdown'));
+          if (text) el.textContent = `Empieza en: ${text}`;
+          else el.textContent = '';
+        });
+      }, 1000);
+    }
+
+    function renderSections() {
+      const filtered = gameFilter === 'all' ? allTournaments : allTournaments.filter((t) => t.gameType === (gameFilter === 'chess' ? 'chess' : 'checkers'));
+      const live = filtered.filter((t) => t.status === 'active');
+      const upcoming = filtered.filter((t) => t.status !== 'active').sort((a, b) => new Date(a.startsAt || 0) - new Date(b.startsAt || 0));
+      // Destacados: los que dan un marco/cosmetico de verdad como
+      // premio -- son objetivamente los de mayor prestigio, no un
+      // criterio arbitrario.
+      const featured = filtered.filter((t) => /marco/i.test(t.reward || ''));
+
+      let idx = 0;
+      const sections = [];
+
+      if (featured.length) {
+        sections.push(`
+          <div class="section-block">
+            <div class="section-head"><span class="s-icon">🏆</span><span class="s-title">Destacados</span></div>
+            <div class="t-grid">${featured.map((t) => tCardHtml(t, { featured: true, index: idx++ })).join('')}</div>
+          </div>
+        `);
+      }
+      if (live.length) {
+        sections.push(`
+          <div class="section-block">
+            <div class="section-head"><span class="s-icon">🔥</span><span class="s-title">En curso</span><span class="s-count">${live.length}</span></div>
+            <div class="t-grid">${live.map((t) => tCardHtml(t, { index: idx++ })).join('')}</div>
+          </div>
+        `);
+      }
+      sections.push(`
+        <div class="section-block">
+          <div class="section-head"><span class="s-icon">⏰</span><span class="s-title">Próximos</span><span class="s-count">${upcoming.length}</span></div>
+          ${upcoming.length ? `<div class="t-grid">${upcoming.map((t) => tCardHtml(t, { index: idx++ })).join('')}</div>` : '<div class="empty-msg">No hay torneos próximos en este juego ahora mismo.</div>'}
+        </div>
+      `);
+
+      sections.push(`
+        <div class="section-block">
+          <div class="pro-teaser oz-card oz-locked">
+            <div class="pt-icon">🔒</div>
+            <div class="pt-title">Torneos PRO</div>
+            <div class="pt-desc">Torneos exclusivos para OZAMA Premium, con recompensas mas grandes, llegan pronto. Por ahora, todos los torneos son gratis para toda la comunidad.</div>
+          </div>
+        </div>
+      `);
+
+      sections.push(`
+        <div class="section-block">
+          <div class="history-toggle" id="history-toggle" onclick="toggleHistory()"><span class="chev">▸</span> Historial de torneos</div>
+          <div id="history-body" style="display:none;"></div>
+        </div>
+      `);
+
+      return sections.join('');
+    }
+
+    async function loadHistory() {
+      const body = document.getElementById('history-body');
+      if (!body) return;
+      body.innerHTML = skeletonGrid(2);
+      try {
+        const res = await fetch('/api/events?status=finished', { cache: 'no-store' });
+        const data = await res.json();
+        const events = (data.events || []).filter((e) => e.type === 'tournament');
+        body.innerHTML = events.length
+          ? `<div class="t-grid">${events.map((t, i) => tCardHtml(t, { index: i })).join('')}</div>`
+          : '<div class="empty-msg">Todavía no hay torneos finalizados.</div>';
+      } catch (_) {
+        body.innerHTML = '<div class="empty-msg">No se pudo cargar el historial.</div>';
+      }
+    }
+
+    function toggleHistory() {
+      const toggle = document.getElementById('history-toggle');
+      const body = document.getElementById('history-body');
+      const open = body.style.display !== 'none';
+      body.style.display = open ? 'none' : '';
+      toggle.classList.toggle('is-open', !open);
+      if (!open && !historyLoaded) { historyLoaded = true; loadHistory(); }
+    }
+
+    function setFilter(game) {
+      gameFilter = game;
+      document.querySelectorAll('.filter-chip').forEach((el) => el.classList.toggle('is-active', el.dataset.game === game));
+      document.getElementById('sections-body').innerHTML = renderSections();
+      startCountdownTicker();
+    }
+
     async function loadList() {
-      main.innerHTML = '<div class="loading"><div class="spinner"></div>Cargando torneos...</div>';
+      main.innerHTML = `
+        <div class="page-title">Torneos</div>
+        <div class="page-sub">Competencias de OZAMA para Ajedrez y Damas -- inscribite y jugá.</div>
+        <div class="filter-row">
+          <div class="filter-chip is-active" data-game="all" onclick="setFilter('all')">Todos</div>
+          <div class="filter-chip" data-game="chess" onclick="setFilter('chess')">♟ Ajedrez</div>
+          <div class="filter-chip" data-game="checkers" onclick="setFilter('checkers')">⚫ Damas</div>
+        </div>
+        <div id="sections-body">${skeletonGrid(3)}</div>
+      `;
       try {
         const res = await fetch('/api/events', { cache: 'no-store' });
         const data = await res.json();
-        const tournaments = (data.events || []).filter((e) => e.type === 'tournament');
-        if (!tournaments.length) {
-          main.innerHTML = `
-            <div class="page-title">Torneos</div>
-            <div class="page-sub">Competencias de eliminacion directa entre jugadores de OZAMA.</div>
-            <div class="empty-msg">No hay torneos abiertos ahora mismo. Vuelve pronto.</div>
-          `;
-          return;
-        }
-        main.innerHTML = `
-          <div class="page-title">Torneos</div>
-          <div class="page-sub">Competencias de eliminacion directa entre jugadores de OZAMA.</div>
-          ${tournaments.map((t) => `
-            <div class="t-card oz-card oz-enter" onclick="window.location.href='/tournaments.html?id=${t._id}'">
-              <div class="t-top">
-                <div class="t-name">${escapeHtml(t.title)}</div>
-                <div class="t-status${t.status === 'active' ? ' is-active' : t.status === 'finished' ? ' is-finished' : ''}">${statusLabels[t.status] || t.status}</div>
-              </div>
-              <div class="game-badge" style="margin-top:8px;display:inline-block;">${gameLabels[t.gameType] || gameLabels.chess}</div>
-              <div class="t-desc">${escapeHtml(t.description || '')}</div>
-              <div class="t-meta">
-                <span>Inicio: <strong>${fmtDate(t.startsAt)}</strong></span>
-                <span><strong>${t.participantCount || 0}/${t.maxPlayers || 16}</strong> inscritos</span>
-              </div>
-            </div>
-          `).join('')}
-        `;
+        allTournaments = (data.events || []).filter((e) => e.type === 'tournament');
+        document.getElementById('sections-body').innerHTML = renderSections();
+        startCountdownTicker();
       } catch (_) {
-        main.innerHTML = '<div class="empty-msg">No se pudo cargar la lista de torneos.</div>';
+        document.getElementById('sections-body').innerHTML = '<div class="empty-msg">No se pudo cargar la lista de torneos.</div>';
       }
     }
 
@@ -217,7 +402,7 @@
       };
       const onError = (message) => {
         cleanup();
-        showToast(message || 'No se pudo entrar al partido.');
+        showToast(message || 'No se pudo entrar al partido.', 'error');
         if (btn) { btn.disabled = false; btn.textContent = 'Jugar mi partida'; }
       };
       function cleanup() {
@@ -234,9 +419,9 @@
         const res = await fetch(`/api/events/${id}/join`, { method: 'POST', headers: { Authorization: `Bearer ${_token}` } });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || 'No se pudo inscribir.');
-        showToast('Te inscribiste al torneo.');
+        showToast('Te inscribiste al torneo.', 'success');
         loadDetail(id);
-      } catch (err) { showToast(err.message); }
+      } catch (err) { showToast(err.message, 'error'); }
     }
 
     async function leaveTournament(id) {
@@ -244,9 +429,9 @@
         const res = await fetch(`/api/events/${id}/leave`, { method: 'POST', headers: { Authorization: `Bearer ${_token}` } });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || 'No se pudo salir.');
-        showToast('Saliste del torneo.');
+        showToast('Saliste del torneo.', 'info');
         loadDetail(id);
-      } catch (err) { showToast(err.message); }
+      } catch (err) { showToast(err.message, 'error'); }
     }
 
     function matchPlayerLabel(name, winnerId, playerId) {
@@ -275,7 +460,7 @@
     }
 
     async function loadDetail(id) {
-      main.innerHTML = '<div class="loading"><div class="spinner"></div>Cargando torneo...</div>';
+      main.innerHTML = `<div class="loading">Cargando torneo...</div>`;
       try {
         const res = await fetch(`/api/events/${id}`, { headers: _token ? { Authorization: `Bearer ${_token}` } : {}, cache: 'no-store' });
         const data = await res.json();
@@ -314,15 +499,16 @@
         main.innerHTML = `
           <a class="back-link" href="/tournaments.html">← Todos los torneos</a>
           <div class="detail-hero oz-card oz-enter">
-            <div class="t-top">
-              <div class="t-name" style="font-size:24px;">${escapeHtml(event.title)}</div>
-              <div class="t-status${event.status === 'active' ? ' is-active' : event.status === 'finished' ? ' is-finished' : ''}">${statusLabels[event.status] || event.status}</div>
+            <div class="t-top" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+              <div class="t-name" style="font-size:24px;">${escapeHtml(event.icon || '')} ${escapeHtml(event.title)}</div>
+              ${event.status === 'active' ? `<span class="oz-badge is-live"><span class="dot"></span>En curso</span>` : `<span class="oz-badge${event.status === 'finished' ? ' is-dim' : ''}">${statusLabels[event.status] || event.status}</span>`}
             </div>
-            <div class="game-badge" style="margin:6px 0;display:inline-block;">${gameLabels[event.gameType] || gameLabels.chess}</div>
+            <div class="t-game" style="margin:6px 0;">${gameLabels[event.gameType] || gameLabels.chess}${event.timeControl ? ' · ' + escapeHtml(event.timeControl) : ''}</div>
             <div class="t-desc">${escapeHtml(event.description || '')}</div>
-            <div class="t-meta">
-              <span>Inicio: <strong>${fmtDate(event.startsAt)}</strong></span>
-              <span><strong>${(event.participants || []).length}/${event.maxPlayers || 16}</strong> inscritos</span>
+            <div class="t-meta-row" style="margin-top:10px;">
+              <span>📅 Inicio: <strong style="color:var(--gold-2);">${fmtDate(event.startsAt)}</strong></span>
+              <span><strong style="color:var(--gold-2);">${(event.participants || []).length}/${event.maxPlayers || 16}</strong> inscritos</span>
+              ${event.reward ? `<span>🏅 ${escapeHtml(event.reward)}</span>` : ''}
             </div>
             <div class="detail-actions">${joinAction}</div>
           </div>
@@ -341,6 +527,9 @@
         main.innerHTML = `<a class="back-link" href="/tournaments.html">← Todos los torneos</a><div class="empty-msg">${escapeHtml(err.message || 'No se pudo cargar el torneo.')}</div>`;
       }
     }
+
+    window.setFilter = setFilter;
+    window.toggleHistory = toggleHistory;
 
     const id = eventIdFromUrl();
     if (id) loadDetail(id); else loadList();

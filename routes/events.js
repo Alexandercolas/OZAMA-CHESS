@@ -10,10 +10,18 @@ function validObjectId(value) {
   return /^[a-f0-9]{24}$/i.test(String(value || ''));
 }
 
-router.get('/', async (_req, res) => {
+// ?status=finished pide el historial en vez de la lista activa por
+// defecto -- se mantiene como parametro opcional para no romper a
+// quien ya llama GET /api/events sin nada (tournaments.html antes de
+// esta fase, apps moviles viejas, etc). Los finalizados se ordenan al
+// reves (mas reciente primero) porque el historial se lee "hacia
+// atras", no "hacia adelante" como la lista de proximos.
+router.get('/', async (req, res) => {
   try {
-    const events = await Event.find({ status: { $in: ['published', 'active'] } })
-      .sort({ startsAt: 1, createdAt: -1 })
+    const wantsHistory = req.query.status === 'finished';
+    const filter = wantsHistory ? { status: 'finished' } : { status: { $in: ['published', 'active'] } };
+    const events = await Event.find(filter)
+      .sort(wantsHistory ? { endsAt: -1, updatedAt: -1 } : { startsAt: 1, createdAt: -1 })
       .limit(20)
       .select('title type gameType description startsAt endsAt maxPlayers participants createdAt format timeControl reward icon minRating maxRating recurrence status bracket.championName')
       .lean();
