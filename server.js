@@ -446,19 +446,31 @@ function startCloseTimer(code) {
 // por torneo, desde el unico lugar que corona al campeon -- ver el
 // comentario ahi sobre por que es seguro.
 const TOURNAMENT_CHAMPION_XP = 200;
-async function grantTournamentChampionReward(userId) {
+const TOURNAMENT_FINALIST_XP = 60;
+const TOURNAMENT_FIRST_MATCH_XP = 15;
+
+// Otorga un logro (si todavia no lo tiene) mas un bono de XP -- helper
+// compartido para los 3 premios de torneo (Fase 5, "OZAMA Torneos +
+// Experiencia Visual": recompensas FREE para todos los que participan,
+// no solo para quien gana).
+async function grantAchievementReward(userId, achievementKey, xpBonus) {
+  if (!userId) return;
   try {
-    const champion = await User.findById(userId).select('achievements xp');
-    if (!champion) return;
-    const already = (champion.achievements || []).some((a) => a.key === 'campeon_torneo');
+    const user = await User.findById(userId).select('achievements xp');
+    if (!user) return;
+    const already = (user.achievements || []).some((a) => a.key === achievementKey);
     if (!already) {
-      champion.achievements = [...(champion.achievements || []), { key: 'campeon_torneo', unlockedAt: new Date() }];
+      user.achievements = [...(user.achievements || []), { key: achievementKey, unlockedAt: new Date() }];
     }
-    champion.xp = Number(champion.xp || 0) + TOURNAMENT_CHAMPION_XP;
-    await champion.save();
+    if (xpBonus) user.xp = Number(user.xp || 0) + xpBonus;
+    await user.save();
   } catch (err) {
-    console.warn('[Tournament] No se pudo otorgar el premio de campeon:', err.message);
+    console.warn(`[Tournament] No se pudo otorgar ${achievementKey}:`, err.message);
   }
+}
+
+function grantTournamentChampionReward(userId) {
+  return grantAchievementReward(userId, 'campeon_torneo', TOURNAMENT_CHAMPION_XP);
 }
 
 async function handleTournamentMatchFinished(tournamentMeta, winner, room) {
@@ -475,10 +487,18 @@ async function handleTournamentMatchFinished(tournamentMeta, winner, room) {
     }
 
     const winnerUserId = winner === 'w' ? room?.playerInfo?.w?.userId : room?.playerInfo?.b?.userId;
+    const loserUserId = winner === 'w' ? room?.playerInfo?.b?.userId : room?.playerInfo?.w?.userId;
     await Event.updateOne({ _id: eventId }, { $set: {
       [`bracket.rounds.${round}.matches.${matchIndex}.winner`]: winnerUserId || null,
       [`bracket.rounds.${round}.matches.${matchIndex}.status`]: 'finished',
     }});
+
+    // Primer Torneo (Fase 5, "OZAMA Torneos + Experiencia Visual"):
+    // jugar una partida de torneo ya es un logro -- para los dos
+    // jugadores de ESTE partido, ganen o pierdan. Recompensa FREE, no
+    // depende de como termine el torneo entero.
+    await grantAchievementReward(winnerUserId, 'primer_torneo', TOURNAMENT_FIRST_MATCH_XP);
+    await grantAchievementReward(loserUserId, 'primer_torneo', TOURNAMENT_FIRST_MATCH_XP);
 
     // Releer el estado real (puede ya incluir el resultado de otro
     // partido de la misma ronda que termino casi en simultaneo).
@@ -512,6 +532,11 @@ async function handleTournamentMatchFinished(tournamentMeta, winner, room) {
         // PRO 2.0: hasta ahora ganar un torneo no dejaba nada en el
         // perfil del campeon).
         if (winners[0]?.userId) await grantTournamentChampionReward(winners[0].userId);
+        // Finalista (Fase 5): el perdedor de ESTE partido es el
+        // subcampeon, porque este partido es el que acaba de dejar al
+        // torneo con 1 solo ganador (la guarda de arriba ya aseguro
+        // que esta llamada es la que realmente cerro el torneo).
+        if (loserUserId) await grantAchievementReward(loserUserId, 'finalista_torneo', TOURNAMENT_FINALIST_XP);
       }
     } else {
       const nextRound = generateNextRound(winners);

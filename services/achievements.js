@@ -124,6 +124,25 @@ const ACHIEVEMENTS = [
     // checkNewAchievements().
     check: () => false,
   },
+  {
+    key: 'primer_torneo',
+    name: 'Primer Torneo',
+    description: 'Juega tu primera partida de torneo en OZAMA.',
+    icon: '🎟️',
+    // Mismo motivo que campeon_torneo: se otorga directo desde
+    // handleTournamentMatchFinished() (a AMBOS jugadores del partido,
+    // ganen o pierdan), no via check(ctx).
+    check: () => false,
+  },
+  {
+    key: 'finalista_torneo',
+    name: 'Finalista',
+    description: 'Llega a la final de un torneo de OZAMA.',
+    icon: '🥈',
+    // Igual: se otorga al perdedor del partido que decide el torneo,
+    // desde handleTournamentMatchFinished().
+    check: () => false,
+  },
 ];
 
 const ACHIEVEMENT_MAP = new Map(ACHIEVEMENTS.map((a) => [a.key, a]));
