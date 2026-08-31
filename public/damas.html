@@ -343,6 +343,23 @@
       min-height: 18px;
     }
 
+    /* Analisis post-partida (Premium) -- ver analyzeGameForBlunders() */
+    .analysis-panel { margin-top: 10px; }
+    .analysis-summary {
+      text-align: center;
+      font-size: 12px;
+      color: var(--dim);
+      background: var(--s3);
+      border: 1px solid rgba(200,152,60,0.18);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-top: 8px;
+    }
+    .analysis-flags { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; max-height: 140px; overflow-y: auto; }
+    .analysis-flag { font-size: 11px; padding: 6px 10px; border-radius: 6px; background: var(--s3); }
+    .analysis-flag.blunder { color: #E39494; border-left: 3px solid #C0392B; }
+    .analysis-flag.inaccuracy { color: #E2B960; border-left: 3px solid var(--gold); }
+
     .online-panel {
       display: grid;
       gap: 14px;
@@ -503,6 +520,12 @@
           <button class="btn-resign hidden" type="button" id="resign-btn" onclick="resignOnline()">Rendirse</button>
           <button class="btn-mode" type="button" id="theme-toggle-btn" title="Cambiar tema de tablero (Zona Colonial, Mármol, y más con Premium)" onclick="cycleBoardThemeDamas()">🎨 Zona Colonial</button>
           <a class="btn-mode" href="/damas-training.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">🧩 Entrenamiento</a>
+        </div>
+
+        <div class="analysis-panel" id="analysis-panel" style="display:none;">
+          <button class="btn-mode" type="button" id="analyze-btn" onclick="analyzeGameForBlunders()">🔍 Analizar partida</button>
+          <div class="analysis-summary" id="analysis-summary" style="display:none;"></div>
+          <div class="analysis-flags" id="analysis-flags"></div>
         </div>
 
         <div class="side-label">Modo</div>
@@ -684,6 +707,13 @@
     let legalHere = [];       // sequences for the selected square
     let lastMove = null;      // { fromR, fromC, toR, toC }
     let gameOver = null;
+    // Historial de jugadas de la partida ACTUAL, para el analisis
+    // post-partida (Premium, ver analyzeGameForBlunders() mas abajo).
+    // Cada entrada: { boardBefore, color, fromR, fromC, toR, toC }.
+    // No sobrevive una reconexion (damas:rejoin restaura el tablero
+    // actual, no el historial de jugadas anteriores) -- limitacion
+    // conocida, no un intento fallido de resolverla.
+    let moveLog = [];
     let mode = 'local'; // 'local' | 'bot' | 'online'
     let botThinking = false;
 
@@ -810,6 +840,88 @@
       // status-line no se toca aqui: puede tener un mensaje puntual
       // (jugada rechazada, error de sala) que se limpia explicitamente
       // en newGame()/setMode(), no en cada render().
+      updateAnalysisGate();
+    }
+
+    // Muestra el boton "Analizar partida" cuando: la partida termino,
+    // hay al menos una jugada registrada en moveLog, y el usuario es
+    // Premium activo. Se llama desde CADA render() en vez de en cada
+    // sitio que pone gameOver=true (son 4 distintos, entre online y
+    // local/bot) -- un solo lugar, no se puede olvidar ninguno.
+    function damasUserIsPremiumActive() {
+      const user = readStoredUser();
+      const premiumUntil = user?.premiumUntil ? new Date(user.premiumUntil) : null;
+      return user?.plan === 'premium' && (!premiumUntil || premiumUntil > new Date());
+    }
+    function updateAnalysisGate() {
+      const panel = document.getElementById('analysis-panel');
+      if (!panel) return;
+      const eligible = !!gameOver && moveLog.length > 0 && damasUserIsPremiumActive();
+      panel.style.display = eligible ? '' : 'none';
+    }
+    function hideAnalysisPanel() {
+      const panel = document.getElementById('analysis-panel');
+      if (panel) panel.style.display = 'none';
+      const summary = document.getElementById('analysis-summary');
+      if (summary) { summary.style.display = 'none'; summary.textContent = ''; }
+      const flags = document.getElementById('analysis-flags');
+      if (flags) flags.innerHTML = '';
+      const btn = document.getElementById('analyze-btn');
+      if (btn) { btn.style.display = ''; btn.disabled = false; btn.textContent = '🔍 Analizar partida'; }
+    }
+
+    // Mismos umbrales que usa el analisis de ajedrez (classifyDelta en
+    // script.js) -- tienen sentido reusados sin cambios: MAN_VALUE en
+    // checkers-ai.js tambien vale 100 por pieza, la misma escala que
+    // ajedrez usa para un peon.
+    function classifyDamasDelta(delta) {
+      if (delta >= 300) return 'blunder';
+      if (delta >= 100) return 'inaccuracy';
+      return null;
+    }
+
+    let _damasAnalysisRunning = false;
+
+    async function analyzeGameForBlunders() {
+      if (_damasAnalysisRunning || !moveLog.length) return;
+      if (typeof OzamaCheckersAI === 'undefined' || typeof OzamaCheckersAI.analyzePosition !== 'function') return;
+      _damasAnalysisRunning = true;
+
+      const btn = document.getElementById('analyze-btn');
+      const summaryEl = document.getElementById('analysis-summary');
+      const flagsEl = document.getElementById('analysis-flags');
+      if (btn) btn.disabled = true;
+      flagsEl.innerHTML = '';
+
+      const flagged = [];
+      const CHUNK = 3;
+      for (let i = 0; i < moveLog.length; i++) {
+        const entry = moveLog[i];
+        const result = OzamaCheckersAI.analyzePosition(entry.boardBefore, entry.color, entry.fromR, entry.fromC, entry.toR, entry.toC);
+        entry.analysis = result ? { delta: result.delta, level: classifyDamasDelta(result.delta) } : null;
+        if (entry.analysis?.level) {
+          flagged.push({ index: i, color: entry.color, level: entry.analysis.level });
+        }
+        if (btn) btn.textContent = `Analizando ${i + 1}/${moveLog.length}...`;
+        if ((i + 1) % CHUNK === 0) await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+
+      _damasAnalysisRunning = false;
+      if (btn) { btn.style.display = 'none'; }
+
+      const blunders = flagged.filter((f) => f.level === 'blunder').length;
+      const inaccuracies = flagged.filter((f) => f.level === 'inaccuracy').length;
+      summaryEl.style.display = '';
+      summaryEl.textContent = (!blunders && !inaccuracies)
+        ? 'Sin errores graves detectados en esta partida.'
+        : `${blunders} error${blunders === 1 ? '' : 'es'} grave${blunders === 1 ? '' : 's'} · ${inaccuracies} imprecision${inaccuracies === 1 ? '' : 'es'}`;
+
+      flagsEl.innerHTML = flagged.map((f) => {
+        const moveNo = Math.floor(f.index / 2) + 1;
+        const colorLabel = f.color === E.COLOR.WHITE ? 'blancas' : 'negras';
+        const levelLabel = f.level === 'blunder' ? 'Error grave' : 'Imprecisión';
+        return `<div class="analysis-flag ${f.level}">Jugada ${moveNo} (${colorLabel}): ${levelLabel}</div>`;
+      }).join('');
     }
 
     const STATS_KEY = 'ozama-damas-stats';
@@ -949,9 +1061,12 @@
     }
 
     function applyMoveAndAdvance(fromR, fromC, seq) {
+      const boardBeforeMove = E.cloneBoard(board);
+      const movingColor = turn;
       const result = E.applyMove(board, fromR, fromC, seq);
       board = result.board;
       lastMove = { fromR, fromC, toR: result.to.r, toC: result.to.c };
+      moveLog.push({ boardBefore: boardBeforeMove, color: movingColor, fromR, fromC, toR: result.to.r, toC: result.to.c });
       selected = null;
       legalHere = [];
       turn = E.otherColor(turn);
@@ -1093,6 +1208,8 @@
         board = data.board;
         turn = data.turn;
         selected = null; legalHere = []; lastMove = null; gameOver = null;
+        moveLog = [];
+        hideAnalysisPanel();
         document.getElementById('online-panel').classList.add('hidden');
         document.getElementById('board-wrap').classList.remove('hidden');
         document.getElementById('resign-btn').classList.remove('hidden');
@@ -1103,6 +1220,11 @@
       });
 
       socket.on('damas:board-update', (data) => {
+        // `turn` (antes de pisarlo abajo) es de quien era el turno
+        // hasta este momento -- es decir, quien acaba de jugar.
+        if (data.lastMove) {
+          moveLog.push({ boardBefore: board, color: turn, fromR: data.lastMove.fromR, fromC: data.lastMove.fromC, toR: data.lastMove.toR, toC: data.lastMove.toC });
+        }
         board = data.board;
         turn = data.turn;
         lastMove = data.lastMove;
@@ -1303,6 +1425,8 @@
       legalHere = [];
       lastMove = null;
       gameOver = null;
+      moveLog = [];
+      hideAnalysisPanel();
       statsRecordedForThisGame = false;
       botThinking = false;
       document.getElementById('thinking-line').textContent = '';

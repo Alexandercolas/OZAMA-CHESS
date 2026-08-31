@@ -159,7 +159,45 @@
     return bestMove;
   }
 
-  const OzamaCheckersAI = { chooseMove, evaluate };
+  // Analisis post-partida (beneficio Premium, ver damas.html): para
+  // una posicion y una jugada REALMENTE jugada, compara el puntaje de
+  // esa jugada contra el de la mejor jugada disponible ahi -- mismo
+  // patron que bot.js usa para ajedrez (BOT.analyzePosition), pero
+  // reusando el motor de Damas que YA existe (minimax de arriba, el
+  // mismo que juega el bot) en vez de inventar una evaluacion nueva.
+  // La jugada jugada se identifica por casilla de origen + casilla
+  // FINAL de aterrizaje (no hace falta la cadena de capturas exacta),
+  // asi tambien funciona con el `lastMove` que ya manda el servidor
+  // en partidas online.
+  const ANALYSIS_DEPTH = 5;
+
+  function analyzePosition(board, movingColor, fromR, fromC, toR, toC, depth = ANALYSIS_DEPTH) {
+    const moves = flattenMoves(board, movingColor);
+    if (!moves.length) return null;
+
+    const scoreOf = (move) => {
+      const { board: nextBoard } = E.applyMove(board, move.r, move.c, move.seq);
+      return minimax(nextBoard, E.otherColor(movingColor), depth - 1, -Infinity, Infinity, movingColor, undefined);
+    };
+
+    let bestScore = -Infinity;
+    for (const move of moves) {
+      const score = scoreOf(move);
+      if (score > bestScore) bestScore = score;
+    }
+
+    const playedMove = moves.find((m) => {
+      if (m.r !== fromR || m.c !== fromC) return false;
+      const last = m.seq[m.seq.length - 1];
+      return last.toR === toR && last.toC === toC;
+    });
+    if (!playedMove) return null;
+    const playedScore = scoreOf(playedMove);
+
+    return { bestScore, playedScore, delta: Math.max(0, bestScore - playedScore) };
+  }
+
+  const OzamaCheckersAI = { chooseMove, evaluate, analyzePosition };
   if (typeof self !== 'undefined') self.OzamaCheckersAI = OzamaCheckersAI;
   if (typeof module !== 'undefined' && module.exports) module.exports = OzamaCheckersAI;
 })();
