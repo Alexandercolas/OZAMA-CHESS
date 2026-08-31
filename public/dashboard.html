@@ -163,6 +163,24 @@
       } catch (_) { return null; }
     }
 
+    const gameLabels = { chess: '♟ Ajedrez', checkers: '⚫ Damas' };
+
+    // Mismo criterio que tournaments.html: solo cuenta regresiva si
+    // empieza en menos de 24h, si no alcanza con la fecha (aca no hay
+    // ticker en vivo -- el dashboard no es la pagina de torneos, con
+    // recargar alcanza).
+    function tournamentTimeLabel(startsAt) {
+      if (!startsAt) return '';
+      const diff = new Date(startsAt).getTime() - Date.now();
+      if (diff <= 0) return 'Empezando...';
+      if (diff > 24 * 3600 * 1000) {
+        return new Date(startsAt).toLocaleDateString('es-DO', { day: 'numeric', month: 'short' });
+      }
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      return `en ${h}h ${m}m`;
+    }
+
     function dailyCardHtml({ href, icon, name, done }) {
       return `
         <a class="daily-card ${done ? 'done' : ''}" href="${href}">
@@ -191,13 +209,47 @@
         return;
       }
 
-      const [meData, chessDaily, damasDaily, achData] = await Promise.all([
+      content.innerHTML = `
+        <div class="skel-hero">
+          <div class="skeleton skel-av"></div>
+          <div class="skel-lines">
+            <div class="skeleton skeleton-line w-60"></div>
+            <div class="skeleton skeleton-line w-40"></div>
+          </div>
+        </div>
+        <div class="games-row">
+          <div class="skeleton" style="flex:1;height:88px;"></div>
+          <div class="skeleton" style="flex:1;height:88px;"></div>
+        </div>
+      `;
+
+      const [meData, chessDaily, damasDaily, achData, eventsData, lbData] = await Promise.all([
         fetchJson('/api/user/me'),
         fetchJson('/api/puzzles/daily'),
         fetchJson('/api/damas-puzzles/daily'),
         fetchJson('/api/user/achievements'),
+        fetchJson('/api/events'),
+        fetchJson('/api/user/leaderboard'),
       ]);
       const me = meData?.user || user;
+
+      // Proximo torneo (Fase 21: dashboard "vivo") -- el mas cercano
+      // en el tiempo, de cualquier juego, entre los que ya estan
+      // abiertos a inscripcion. Dato real de /api/events, nunca
+      // inventado.
+      const upcomingTournament = (eventsData?.events || [])
+        .filter((e) => e.type === 'tournament' && e.status !== 'active')
+        .sort((a, b) => new Date(a.startsAt || 0) - new Date(b.startsAt || 0))[0] || null;
+
+      // Tu posicion en el ranking global de Ajedrez -- si estas en el
+      // top 20 el propio listado te contiene: se busca ahi. Si no, el
+      // endpoint ya calcula yourRank aparte. Si no hay datos (invitado
+      // recien registrado, ranking vacio) simplemente no se muestra.
+      let yourRank = lbData?.yourRank || null;
+      if (!yourRank && lbData?.players) {
+        const idx = lbData.players.findIndex((p) => String(p._id) === String(me._id));
+        if (idx !== -1) yourRank = idx + 1;
+      }
 
       const level = levelFromXp(me.xp);
       const xpPct = xpIntoLevel(me.xp);
@@ -221,14 +273,35 @@
             <div class="g-elo">${me.elo}</div>
             <div class="g-rank">${rankTier(me.elo)}</div>
             <div class="g-record">${record(me.stats)}</div>
+            ${me.stats?.streak > 1 ? `<div class="g-streak">🔥 Racha de <strong>${me.stats.streak}</strong></div>` : ''}
           </div>
           <div class="game-summary">
             <div class="g-label">⚫ Damas</div>
             <div class="g-elo">${me.damasElo}</div>
             <div class="g-rank">${rankTier(me.damasElo)}</div>
             <div class="g-record">${record(me.damasStats)}</div>
+            ${me.damasStats?.streak > 1 ? `<div class="g-streak">🔥 Racha de <strong>${me.damasStats.streak}</strong></div>` : ''}
           </div>
         </div>
+
+        ${upcomingTournament ? `
+          <div class="section-title">Próximo torneo</div>
+          <a class="live-card" href="/tournaments.html?id=${upcomingTournament._id}">
+            <span class="lc-icon">${escapeHtml(upcomingTournament.icon || '🏆')}</span>
+            <span>
+              <div class="lc-name">${escapeHtml(upcomingTournament.title)}</div>
+              <div class="lc-meta">${gameLabels[upcomingTournament.gameType] || gameLabels.chess}${upcomingTournament.timeControl ? ' · ' + escapeHtml(upcomingTournament.timeControl) : ''}</div>
+            </span>
+            <span class="lc-countdown">${tournamentTimeLabel(upcomingTournament.startsAt)}</span>
+          </a>
+        ` : ''}
+
+        ${yourRank ? `
+          <a class="rank-chip" href="/leaderboard.html">
+            <span class="rc-icon">📊</span>
+            <span class="rc-text">Estás <strong>#${yourRank}</strong> en el ranking global de Ajedrez</span>
+          </a>
+        ` : ''}
 
         <div class="section-title">Desafíos de hoy</div>
         <div class="daily-row">
