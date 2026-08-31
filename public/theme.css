@@ -52,6 +52,18 @@
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* Foco visible (Fase 23, accesibilidad) -- varias paginas suprimen el
+   outline por defecto en inputs/botones (outline:none) sin poner nada
+   en su lugar, dejando a quien navega por teclado sin forma de saber
+   donde esta el foco. :focus-visible ya excluye clicks de mouse en
+   los navegadores modernos, asi que esto no cambia nada para el uso
+   normal con mouse/touch -- el !important es a proposito, para ganarle
+   a esos "outline:none" locales mas especificos. */
+:focus-visible {
+  outline: 2px solid var(--gold) !important;
+  outline-offset: 2px !important;
+}
+
 html, body {
   min-height: 100vh;
   background: var(--carbon);
