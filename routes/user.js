@@ -461,6 +461,16 @@ router.post('/analysis/:game/:roomCode', requireAuth, async (req, res) => {
 // partidas que el jugador (o su rival) realmente analizo.
 router.get('/my-analysis', requireAuth, async (req, res) => {
   try {
+    // Bug encontrado en la auditoria de Fase M: este endpoint se
+    // publico sin el mismo chequeo de Premium que ya tienen
+    // /stats/advanced y /coach-insights -- el cliente (my-analysis.html)
+    // igual mostraba la pantalla de bloqueo, pero cualquier usuario
+    // logueado podia pedir los datos completos pegandole directo a la
+    // API. "Mi Analisis" es un beneficio Premium, no deberia haber
+    // quedado afuera.
+    if (!isPremiumActive(req.user)) {
+      return res.status(403).json({ error: 'Mi Analisis es un beneficio Premium.', premiumRequired: true });
+    }
     res.set('Cache-Control', 'no-store');
     const game = req.query.game === 'damas' ? 'damas' : 'chess';
     const userId = req.user._id;

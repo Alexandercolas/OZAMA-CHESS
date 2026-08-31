@@ -540,15 +540,18 @@
     .volume-icon { font-size: 14px; }
     #pref-volume-slider { flex: 1; accent-color: var(--gold); }
     .premium-panel { padding: 20px; margin-bottom: 28px; }
-    .premium-benefits { list-style: none; display: grid; gap: 8px; margin: 14px 0 18px; }
-    .premium-benefits li {
-      font-size: 12.5px; color: var(--text); line-height: 1.5;
-      padding-left: 22px; position: relative;
-    }
-    .premium-benefits li::before {
-      content: '\2726'; position: absolute; left: 0; top: 0;
-      color: var(--gold); font-size: 12px;
-    }
+    /* Matriz Free vs Premium (Fase M, roadmap PRO 2.0) -- reemplaza la
+       lista de bullets, que se habia quedado vieja (no mencionaba Mi
+       Analisis ni el Entrenador personal, agregados en esta sesion). */
+    .plan-matrix { width: 100%; border-collapse: collapse; margin: 14px 0 18px; font-size: 12px; }
+    .plan-matrix th, .plan-matrix td { padding: 9px 8px; text-align: center; border-bottom: 1px solid rgba(200,152,60,0.1); }
+    .plan-matrix th:first-child, .plan-matrix td:first-child { text-align: left; color: var(--text); }
+    .plan-matrix th { color: var(--dim); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+    .plan-matrix th.pro-col, .plan-matrix td.pro-col { color: var(--gold); }
+    .plan-matrix td.pro-col { font-weight: 700; }
+    .plan-matrix .yes { color: #7FD98A; }
+    .plan-matrix .no { color: var(--faint, var(--dim)); }
+    .plan-matrix-note { color: var(--dim); font-size: 11px; margin: -10px 0 18px; }
     .premium-price {
       font-family: var(--ft); font-size: 20px; font-weight: 800;
       color: var(--gold); letter-spacing: 1px; margin-bottom: 4px;
@@ -868,15 +871,23 @@
 
                     <div class="premium-panel oz-card oz-enter" id="premium-panel" style="--d:6">
                       <div class="section-title">OZAMA Premium</div>
-                      <ul class="premium-benefits">
-                        <li>Marco dorado + insignia PREMIUM en tu avatar</li>
-                        <li>Temas de tablero exclusivos (Ébano y Caoba)</li>
-                        <li>Set de piezas Dorado en Ajedrez y fichas Bronce Real en Damas</li>
-                        <li>Exportar tus partidas en formato PGN</li>
-                        <li>Estadisticas avanzadas: color con mas victorias, duracion y aperturas</li>
-                        <li>Analisis post-partida en Ajedrez y Damas: deteccion de errores graves e imprecisiones</li>
-                      </ul>
-                      <div style="color:var(--dim);font-size:11px;letter-spacing:0.5px;margin-bottom:14px;">Solo cosmetico y de comodidad -- nunca da ventaja dentro de la partida.</div>
+                      <div style="overflow-x:auto;">
+                      <table class="plan-matrix">
+                        <thead><tr><th>Beneficio</th><th>Free</th><th class="pro-col">Premium</th></tr></thead>
+                        <tbody>
+                          <tr><td>Marco de perfil + insignia PRO</td><td class="no">—</td><td class="pro-col yes">✓</td></tr>
+                          <tr><td>Temas de tablero</td><td>Zona Colonial, Mármol</td><td class="pro-col">+ Ébano, Caoba</td></tr>
+                          <tr><td>Piezas de Ajedrez</td><td>Clásico, Ornamentado</td><td class="pro-col">+ Dorado</td></tr>
+                          <tr><td>Fichas de Damas</td><td>Clásico, Mármol</td><td class="pro-col">+ Bronce Real</td></tr>
+                          <tr><td>Exportar partidas en PGN</td><td class="no">—</td><td class="pro-col yes">✓</td></tr>
+                          <tr><td>Estadísticas avanzadas</td><td class="no">—</td><td class="pro-col yes">✓</td></tr>
+                          <tr><td>Análisis post-partida (errores)</td><td class="no">—</td><td class="pro-col yes">✓</td></tr>
+                          <tr><td>Mi Análisis (Centro de Análisis)</td><td class="no">—</td><td class="pro-col yes">✓</td></tr>
+                          <tr><td>Entrenador personal</td><td class="no">—</td><td class="pro-col yes">✓</td></tr>
+                        </tbody>
+                      </table>
+                      </div>
+                      <div class="plan-matrix-note">Todo lo demas -- jugar Ajedrez y Damas online, ranking, torneos, logros, amigos, puzzles diarios -- es igual para todos. Premium es solo cosmetico y de comodidad, nunca da ventaja dentro de la partida.</div>
                       <div id="premium-panel-body"><div class="loading" style="padding:12px 0;"><div class="spinner" style="width:22px;height:22px;"></div></div></div>
                     </div>
 
