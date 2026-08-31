@@ -78,7 +78,7 @@ router.post('/cancel', requireAuth, async (req, res) => {
     const user = await User.findById(req.user._id).select('+paypalSubscriptionId');
     const subscriptionId = user?.paypalSubscriptionId;
     if (!subscriptionId) {
-      return res.status(400).json({ error: 'No tenes una suscripcion activa.' });
+      return res.status(400).json({ error: 'No tienes una suscripcion activa.' });
     }
 
     await cancelSubscription(subscriptionId, req.body?.reason || 'Cancelado por el usuario desde OZAMA CHESS.');

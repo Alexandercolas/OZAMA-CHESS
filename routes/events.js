@@ -112,7 +112,7 @@ router.post('/:id/leave', requireAuth, async (req, res) => {
     const event = await Event.findById(req.params.id);
     if (!event) return res.status(404).json({ error: 'Evento no encontrado.' });
     if (!['draft', 'published'].includes(event.status)) {
-      return res.status(400).json({ error: 'El torneo ya empezo, no podes salir desde aca.' });
+      return res.status(400).json({ error: 'El torneo ya empezo, no puedes salir desde aca.' });
     }
     event.participants = event.participants.filter((p) => String(p) !== String(req.user._id));
     await event.save({ validateModifiedOnly: true });

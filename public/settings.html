@@ -1004,7 +1004,7 @@
     async function cancelPremium() {
       const button = document.getElementById('cancel-premium-btn');
       const statusMsg = document.getElementById('premium-status-msg');
-      if (!confirm('Vas a cancelar tu suscripcion Premium. Seguis con los beneficios hasta que venza el periodo ya pago. Continuar?')) return;
+      if (!confirm('Vas a cancelar tu suscripcion Premium. Sigues con los beneficios hasta que venza el periodo ya pago. Continuar?')) return;
       if (button) { button.disabled = true; button.textContent = 'Cancelando...'; }
       try {
         const res = await fetch('/api/billing/cancel', {
