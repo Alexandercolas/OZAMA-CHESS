@@ -19,6 +19,7 @@ const FRAMES = [
   { key: 'tactico', name: 'Marco de Laurel', description: 'Logra el logro "Mente Tactica" (10 puzzles resueltos).', unlock: { type: 'achievement', value: 'diez_acertijos' } },
   { key: 'cazador', name: 'Marco de Cazador', description: 'Logra el logro "Caza Mayor" (gana a un rival de ELO mas alto).', unlock: { type: 'achievement', value: 'caza_mayor' } },
   { key: 'centenario', name: 'Marco de Roble', description: 'Logra el logro "Cien Partidas".', unlock: { type: 'achievement', value: 'cien_partidas' } },
+  { key: 'campeon', name: 'Marco de Campeón', description: 'Gana un torneo de eliminación directa (logro "Campeón de Torneo").', unlock: { type: 'achievement', value: 'campeon_torneo' } },
 ];
 
 const FRAME_KEYS = new Set(FRAMES.map((f) => f.key));

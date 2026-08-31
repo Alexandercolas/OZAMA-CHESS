@@ -440,6 +440,27 @@ function startCloseTimer(code) {
 // partidos de la ronda terminan a la vez y ambos ven "ronda completa",
 // solo uno de los dos updateOne/findOneAndUpdate de mas abajo
 // realmente matchea y empuja la ronda siguiente / corona al campeon.
+// Premio por ganar un torneo (Fase L, roadmap PRO 2.0): el logro
+// "Campeón de Torneo" (desbloquea el Marco de Campeón en la Colección,
+// ver services/cosmetics.js) mas un bono de XP. Se llama una sola vez
+// por torneo, desde el unico lugar que corona al campeon -- ver el
+// comentario ahi sobre por que es seguro.
+const TOURNAMENT_CHAMPION_XP = 200;
+async function grantTournamentChampionReward(userId) {
+  try {
+    const champion = await User.findById(userId).select('achievements xp');
+    if (!champion) return;
+    const already = (champion.achievements || []).some((a) => a.key === 'campeon_torneo');
+    if (!already) {
+      champion.achievements = [...(champion.achievements || []), { key: 'campeon_torneo', unlockedAt: new Date() }];
+    }
+    champion.xp = Number(champion.xp || 0) + TOURNAMENT_CHAMPION_XP;
+    await champion.save();
+  } catch (err) {
+    console.warn('[Tournament] No se pudo otorgar el premio de campeon:', err.message);
+  }
+}
+
 async function handleTournamentMatchFinished(tournamentMeta, winner, room) {
   try {
     const { eventId, round, matchIndex } = tournamentMeta || {};
@@ -481,7 +502,17 @@ async function handleTournamentMatchFinished(tournamentMeta, winner, room) {
         { $set: { 'bracket.championId': winners[0]?.userId || null, 'bracket.championName': winners[0]?.name || '', status: 'finished' } },
         { new: true }
       ).select('title bracket.championName');
-      if (updated) console.log(`[Tournament] ${updated.title} — campeon: ${updated.bracket.championName}`);
+      if (updated) {
+        console.log(`[Tournament] ${updated.title} — campeon: ${updated.bracket.championName}`);
+        // `updated` truthy garantiza que ESTA llamada fue la que
+        // corono al campeon (la guarda 'bracket.championId': null de
+        // arriba es atomica) -- por eso es seguro otorgar el premio
+        // aca mismo, sin riesgo de duplicarlo si dos partidos de la
+        // ronda final terminan casi en simultaneo (Fase L, roadmap
+        // PRO 2.0: hasta ahora ganar un torneo no dejaba nada en el
+        // perfil del campeon).
+        if (winners[0]?.userId) await grantTournamentChampionReward(winners[0].userId);
+      }
     } else {
       const nextRound = generateNextRound(winners);
       const updated = await Event.findOneAndUpdate(

@@ -110,6 +110,20 @@ const ACHIEVEMENTS = [
     icon: '👑',
     check: (ctx) => ctx.game === 'damas' && ctx.justPromoted,
   },
+  {
+    key: 'campeon_torneo',
+    name: 'Campeón de Torneo',
+    description: 'Gana un torneo de eliminación directa en OZAMA.',
+    icon: '🎖️',
+    // Este logro NO se detecta via check(ctx) -- coronarse campeon no
+    // es algo que pase "durante" una partida individual, sino el
+    // resultado de todo un bracket. Se otorga directo desde
+    // handleTournamentMatchFinished() en server.js, en el mismo lugar
+    // atomico (findOneAndUpdate con championId:null como guarda) donde
+    // se corona al campeon -- asi nunca se duplica ni se le escapa a
+    // checkNewAchievements().
+    check: () => false,
+  },
 ];
 
 const ACHIEVEMENT_MAP = new Map(ACHIEVEMENTS.map((a) => [a.key, a]));
