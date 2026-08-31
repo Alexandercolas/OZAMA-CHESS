@@ -110,12 +110,22 @@ function eventPayload(body, { partial = false } = {}) {
     payload.recurrence = recurrence;
   }
   if (!partial || body.minRating !== undefined) {
-    payload.minRating = body.minRating === null || body.minRating === '' ? null : Number(body.minRating);
+    payload.minRating = parseOptionalRating(body.minRating, 'Rating minimo');
   }
   if (!partial || body.maxRating !== undefined) {
-    payload.maxRating = body.maxRating === null || body.maxRating === '' ? null : Number(body.maxRating);
+    payload.maxRating = parseOptionalRating(body.maxRating, 'Rating maximo');
   }
   return payload;
+}
+
+// minRating/maxRating son opcionales -- null/''/undefined significan
+// "sin tope", cualquier otra cosa tiene que ser un numero de verdad
+// (nunca NaN silencioso, que Mongoose reportaria como un error generico).
+function parseOptionalRating(value, field) {
+  if (value === null || value === '' || value === undefined) return null;
+  const num = Number(value);
+  if (!Number.isFinite(num)) throw Object.assign(new Error(`${field} invalido.`), { statusCode: 400 });
+  return num;
 }
 
 function runtimeFor(req) {
