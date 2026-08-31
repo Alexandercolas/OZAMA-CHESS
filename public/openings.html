@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#0D0B08"/>
   <meta name="color-scheme" content="dark"/>
   <title>OZAMA CHESS - Aperturas</title>
-  <meta name="description" content="Explorá las aperturas de ajedrez más conocidas: idea, jugadas principales y posición resultante."/>
+  <meta name="description" content="Explora las aperturas de ajedrez más conocidas: idea, jugadas principales y posición resultante."/>
   <meta name="robots" content="index, follow"/>
   <link rel="canonical" href="https://ozama-chess.onrender.com/openings.html"/>
   <link rel="icon" href="/favicon.ico" sizes="any">
@@ -132,7 +132,7 @@
       content.innerHTML = `
         <div class="eyebrow">Teoría</div>
         <h1>Explorador de Aperturas</h1>
-        <div class="sub">Tocá una apertura para ver la posición y practicarla.</div>
+        <div class="sub">Toca una apertura para ver la posición y practicarla.</div>
         <div class="filter-row" id="filter-row">
           ${families.map((f) => `<div class="filter-tab ${f === activeFamily ? 'active' : ''}" onclick="setFamily('${f}')">${FAMILY_LABEL[f]}</div>`).join('')}
         </div>

@@ -981,7 +981,7 @@
               });
               const confirmData = await confirmRes.json().catch(() => ({}));
               if (!confirmRes.ok) throw new Error(confirmData.error || 'No se pudo confirmar la suscripcion.');
-              if (statusMsg) statusMsg.textContent = 'Listo! Ya sos Premium.';
+              if (statusMsg) statusMsg.textContent = 'Listo! Ya eres Premium.';
               const meRes = await fetch('/api/user/me', { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' });
               const meData = await meRes.json();
               localStorage.setItem('ozama-user', JSON.stringify(meData.user));

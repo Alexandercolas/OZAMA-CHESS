@@ -242,7 +242,7 @@ router.post('/register', limitRegister, async (req, res) => {
       remoteip: req.ip,
     });
     if (!captchaOk) {
-      return res.status(400).json({ error: 'No se pudo verificar que sos una persona. Recarga la pagina e intenta de nuevo.' });
+      return res.status(400).json({ error: 'No se pudo verificar que eres una persona. Recarga la pagina e intenta de nuevo.' });
     }
 
     const exists = await User.findOne({

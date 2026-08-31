@@ -214,7 +214,7 @@
     }
 
     async function submitReport() {
-      if (!_token) { showMsg('report-msg', 'Iniciá sesión para reportar jugadores.', 'err'); return; }
+      if (!_token) { showMsg('report-msg', 'Inicia sesión para reportar jugadores.', 'err'); return; }
       const reason = document.querySelector('input[name="reason"]:checked')?.value || 'otro';
       const note = document.getElementById('report-note').value.trim();
       try {
@@ -232,7 +232,7 @@
     }
 
     async function toggleBlock() {
-      if (!_token) { alert('Iniciá sesión para bloquear jugadores.'); return; }
+      if (!_token) { alert('Inicia sesión para bloquear jugadores.'); return; }
       try {
         const method = meta.isBlocked ? 'DELETE' : 'POST';
         const res = await fetch(`/api/user/${encodeURIComponent(profile.username)}/block`, {

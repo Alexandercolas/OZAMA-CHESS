@@ -159,7 +159,7 @@
         ` : '';
 
         if (!data.totalGames) {
-          body.innerHTML = coachHtml + `<div class="empty-msg">Todavía no tenés partidas online de ${currentGame === 'damas' ? 'Damas' : 'Ajedrez'} terminadas para analizar.</div>`;
+          body.innerHTML = coachHtml + `<div class="empty-msg">Todavía no tienes partidas online de ${currentGame === 'damas' ? 'Damas' : 'Ajedrez'} terminadas para analizar.</div>`;
           return;
         }
 
@@ -175,7 +175,7 @@
 
         const hint = data.analyzedCount
           ? `<div class="analyzed-hint">Basado en ${data.analyzedCount} partida${data.analyzedCount === 1 ? '' : 's'} que analizaste con "Analizar partida".</div>`
-          : `<div class="analyzed-hint">Usá "Analizar partida" al terminar una partida online para que aparezca aquí como partida con errores detectados.</div>`;
+          : `<div class="analyzed-hint">Usa "Analizar partida" al terminar una partida online para que aparezca aquí como partida con errores detectados.</div>`;
 
         body.innerHTML = coachHtml + sections + hint;
       } catch (err) {

@@ -375,7 +375,7 @@ router.get('/coach-insights', requireAuth, async (req, res) => {
       const worseRate = Math.min(whiteRate, blackRate);
       insights.push({
         icon: '⚖️',
-        text: `Jugás bastante mejor con ${better} (${betterRate}% de efectividad) que con ${worse} (${worseRate}%). Practicá más partidas con ${worse} para parejar tu nivel.`,
+        text: `Juegas bastante mejor con ${better} (${betterRate}% de efectividad) que con ${worse} (${worseRate}%). Practica más partidas con ${worse} para parejar tu nivel.`,
       });
     }
 
@@ -388,7 +388,7 @@ router.get('/coach-insights', requireAuth, async (req, res) => {
       if (pct >= 40) {
         insights.push({
           icon: '📉',
-          text: `En el ${pct}% de tus derrotas con razón registrada, ${topLabel}. ${topLabel.includes('tiempo') ? 'Practicá jugar con más ritmo para no quedarte corto de reloj.' : 'Prestale atención a ese patrón en tus próximas partidas.'}`,
+          text: `En el ${pct}% de tus derrotas con razón registrada, ${topLabel}. ${topLabel.includes('tiempo') ? 'Practica jugar con más ritmo para no quedarte corto de reloj.' : 'Presta atención a ese patrón en tus próximas partidas.'}`,
         });
       }
     }
@@ -400,7 +400,7 @@ router.get('/coach-insights', requireAuth, async (req, res) => {
       const avg = Math.round((errorSum / analyzedCount) * 10) / 10;
       insights.push({
         icon: '🔍',
-        text: `En tus últimas ${analyzedCount} partidas analizadas, promediás ${avg} error${avg === 1 ? '' : 'es'} grave${avg === 1 ? '' : 's'} e imprecisiones por partida. Seguí usando "Analizar partida" para ver si ese número baja con el tiempo.`,
+        text: `En tus últimas ${analyzedCount} partidas analizadas, promedias ${avg} error${avg === 1 ? '' : 'es'} grave${avg === 1 ? '' : 's'} e imprecisiones por partida. Sigue usando "Analizar partida" para ver si ese número baja con el tiempo.`,
       });
     }
 

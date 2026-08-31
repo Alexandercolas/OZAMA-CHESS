@@ -2071,7 +2071,7 @@ if (room.white && room.black && !room.clockInterval) {
     const blocked = (targetBlocklist?.blockedUsers || []).some((id) => String(id) === String(socket.data.userId))
       || (challengerBlocklist?.blockedUsers || []).some((id) => String(id) === String(targetSocket.data.userId));
     if (blocked) {
-      socket.emit('challenge-error', 'No podés desafiar a este jugador.');
+      socket.emit('challenge-error', 'No puedes desafiar a este jugador.');
       return;
     }
 
@@ -2149,7 +2149,7 @@ if (room.white && room.black && !room.clockInterval) {
   // ── TORNEOS: entrar a tu partido del bracket ────────────────────
   // A diferencia de create-room/join-room (donde el rival es
   // "quien tenga el codigo"), aca los dos jugadores ya estan fijados
-  // de antemano por el bracket -- este evento solo confirma que sos
+  // de antemano por el bracket -- este evento solo confirma que eres
   // uno de los dos y te arma (o te reconecta a) la sala. El primero
   // de los dos en entrar crea la sala entera con ambos jugadores ya
   // identificados; el segundo simplemente completa su lado.
@@ -2167,7 +2167,7 @@ if (room.white && room.black && !room.clockInterval) {
     const userId = String(socket.data.userId);
     const isP1 = match.player1 && String(match.player1) === userId;
     const isP2 = match.player2 && String(match.player2) === userId;
-    if (!isP1 && !isP2) { socket.emit('tournament:error', 'No sos parte de este partido.'); return; }
+    if (!isP1 && !isP2) { socket.emit('tournament:error', 'No eres parte de este partido.'); return; }
     if (match.status !== 'ready' && match.status !== 'playing') {
       socket.emit('tournament:error', 'Este partido no esta disponible ahora mismo.');
       return;
@@ -2589,7 +2589,7 @@ if (room.white && room.black && !room.clockInterval) {
     const userId = String(socket.data.userId);
     const isP1 = match.player1 && String(match.player1) === userId;
     const isP2 = match.player2 && String(match.player2) === userId;
-    if (!isP1 && !isP2) { socket.emit('tournament:error', 'No sos parte de este partido.'); return; }
+    if (!isP1 && !isP2) { socket.emit('tournament:error', 'No eres parte de este partido.'); return; }
     if (match.status !== 'ready' && match.status !== 'playing') {
       socket.emit('tournament:error', 'Este partido no esta disponible ahora mismo.');
       return;

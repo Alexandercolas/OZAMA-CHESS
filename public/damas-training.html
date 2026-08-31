@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#0D0B08"/>
   <meta name="color-scheme" content="dark"/>
   <title>OZAMA CHESS - Entrenamiento de Damas</title>
-  <meta name="description" content="Resolvé puzzles tácticos de Damas: el desafío del día o práctica libre, con racha y experiencia."/>
+  <meta name="description" content="Resuelve puzzles tácticos de Damas: el desafío del día o práctica libre, con racha y experiencia."/>
   <meta name="robots" content="noindex, nofollow"/>
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/favicon.png?v=5">
@@ -170,7 +170,7 @@
       if (currentMode === 'daily' && currentPuzzle._alreadyDone) {
         document.getElementById('feedback').className = 'feedback info';
         document.getElementById('feedback').style.display = 'block';
-        document.getElementById('feedback').textContent = 'Ya resolviste el desafío de hoy. Volvé mañana por uno nuevo, o probá la práctica libre.';
+        document.getElementById('feedback').textContent = 'Ya resolviste el desafío de hoy. Vuelve mañana por uno nuevo, o prueba la práctica libre.';
       }
       renderBoard();
     }
@@ -230,7 +230,7 @@
 
         if (!data.correct) {
           feedback.className = 'feedback bad';
-          feedback.textContent = 'No es la jugada. Probá de nuevo.';
+          feedback.textContent = 'No es la jugada. Prueba de nuevo.';
           solving = false;
           return;
         }
@@ -267,7 +267,7 @@
       if (!user || (window.OZAMA_RUNTIME?.native && !_token)) {
         document.getElementById('content').innerHTML = `
           <div class="login-gate">
-            Iniciá sesión para entrenar con puzzles de Damas y guardar tu progreso.<br><br>
+            Inicia sesión para entrenar con puzzles de Damas y guardar tu progreso.<br><br>
             <a href="/login.html">Iniciar sesión →</a>
           </div>`;
         return;

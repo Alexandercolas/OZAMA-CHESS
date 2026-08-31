@@ -929,7 +929,7 @@
         const data = await res.json();
         const history = data.history || [];
         if (history.length < 2) {
-          wrap.innerHTML = '<div class="elo-chart-empty">Jugá más partidas para ver tu progreso de ELO en un gráfico.</div>';
+          wrap.innerHTML = '<div class="elo-chart-empty">Juega más partidas para ver tu progreso de ELO en un gráfico.</div>';
           return;
         }
         const svg = eloChartSvg(history);

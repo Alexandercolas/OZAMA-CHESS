@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#0D0B08"/>
   <meta name="color-scheme" content="dark"/>
   <title>OZAMA CHESS - Colección</title>
-  <meta name="description" content="Marcos de perfil, temas de tablero y piezas que desbloqueás o activás con Premium en OZAMA CHESS."/>
+  <meta name="description" content="Marcos de perfil, temas de tablero y piezas que desbloqueas o activas con Premium en OZAMA CHESS."/>
   <meta name="robots" content="noindex, nofollow"/>
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/favicon.png?v=5">
@@ -84,7 +84,7 @@
         _token = window.OZAMA_RUNTIME?.getAuthToken?.() || '';
         try { _user = JSON.parse(localStorage.getItem('ozama-user') || 'null'); } catch (_) {}
         if (!_user || (window.OZAMA_RUNTIME?.native && !_token)) {
-          content.innerHTML = `<div class="error-msg">Iniciá sesión para ver tu colección.<br><br><a href="/login.html" style="color:var(--gold);font-weight:700;text-decoration:none;">Iniciar sesión →</a></div>`;
+          content.innerHTML = `<div class="error-msg">Inicia sesión para ver tu colección.<br><br><a href="/login.html" style="color:var(--gold);font-weight:700;text-decoration:none;">Iniciar sesión →</a></div>`;
           return;
         }
         const res = await fetch('/api/user/frames', { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' });
