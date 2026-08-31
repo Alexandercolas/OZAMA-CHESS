@@ -12,6 +12,7 @@ const { ACHIEVEMENTS, ACHIEVEMENT_MAP, levelFromXp, xpIntoLevel } = require('../
 const { titleForLevel } = require('../services/titles');
 const { detectOpening } = require('../services/openings');
 const { FRAMES, framesFor, isValidFrame, isUnlocked } = require('../services/cosmetics');
+const { currentSeason } = require('../services/seasons');
 
 const router = express.Router();
 
@@ -756,13 +757,16 @@ router.get('/leaderboard', optionalAuth, async (req, res) => {
       .limit(20)
       .select('username country avatar avatarImage elo stats plan premiumUntil');
 
-    const payload = { players: players.map((player) => {
-      const json = player.toJSON();
-      json.premiumActive = isPremiumActive(player);
-      delete json.plan;
-      delete json.premiumUntil;
-      return json;
-    }) };
+    const payload = {
+      season: currentSeason(),
+      players: players.map((player) => {
+        const json = player.toJSON();
+        json.premiumActive = isPremiumActive(player);
+        delete json.plan;
+        delete json.premiumUntil;
+        return json;
+      }),
+    };
 
     // Si el que pide el ranking esta logueado y no aparece en el top
     // 20, le decimos igual en que puesto esta -- para eso no hace

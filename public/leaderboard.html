@@ -141,6 +141,22 @@
       text-transform: uppercase;
     }
 
+    /* Temporada (Fase I): solo informativa por ahora, no reinicia ELO. */
+    .season-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 10px 0 4px;
+      padding: 5px 12px;
+      border: 1px solid rgba(200,152,60,0.3);
+      border-radius: 999px;
+      background: rgba(200,152,60,0.08);
+      color: var(--gold-2);
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
     h1 {
       margin-top: 12px;
       font-family: var(--title);
@@ -476,6 +492,7 @@
     <section class="hero">
       <div>
         <div class="kicker">Hall of Fame</div>
+        <div class="season-badge" id="season-badge" style="display:none;"></div>
         <h1>Ranking<br>Ozama</h1>
         <p>Una tabla de bronce para medir progreso real: ELO, victorias, partidas y rendimiento competitivo de los jugadores registrados.</p>
         <div class="actions">
@@ -638,12 +655,25 @@
         const data = await response.json();
         render(Array.isArray(data.players) ? data.players : []);
         renderYourRank(data);
+        renderSeasonBadge(data.season);
       } catch (_) {
         const body = document.getElementById('rank-body');
         if (body) body.innerHTML = '<div class="empty">No se pudo cargar el ranking</div>';
       } finally {
         rankingRefreshBusy = false;
       }
+    }
+
+    // Temporada (Fase I): puramente informativa -- no reinicia ELO ni
+    // otorga nada todavia, es solo para que el ranking no se sienta
+    // como un numero fijo para siempre.
+    function renderSeasonBadge(season) {
+      const badge = document.getElementById('season-badge');
+      if (!badge || !season) return;
+      badge.style.display = '';
+      const days = season.daysRemaining;
+      const daysText = days === 0 ? 'termina hoy' : `termina en ${days} día${days === 1 ? '' : 's'}`;
+      badge.textContent = `🏆 ${season.name} · ${daysText}`;
     }
 
     function renderYourRank(data) {
