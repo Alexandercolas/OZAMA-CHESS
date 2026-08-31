@@ -70,6 +70,9 @@
     .quick-tile .q-icon { font-size: 24px; }
     .quick-tile .q-label { font-size: 11px; font-weight: 700; }
 
+    .season-line { font-size: 10.5px; color: var(--faint, var(--dim)); margin-top: 8px; }
+    .season-line strong { color: var(--gold-2, var(--gold)); font-weight: 700; }
+
     .login-gate { text-align: center; padding: 60px 20px; color: var(--dim); }
     .login-gate a { color: var(--gold); font-weight: 700; text-decoration: none; }
     .loading { text-align: center; padding: 40px 20px; color: var(--dim); }
@@ -158,6 +161,7 @@
             <div class="hero-name">${escapeHtml(me.username)}${me.premiumActive ? '<span class="pro">PRO</span>' : ''}</div>
             <div class="level-line">${escapeHtml(me.globalTitle || 'Novato')} · Nivel ${level} · ${xpPct}/100 XP</div>
             <div class="xp-bar-track"><div class="xp-bar-fill" style="width:${xpPct}%"></div></div>
+            ${me.season ? `<div class="season-line">🏆 <strong>${escapeHtml(me.season.name)}</strong> · termina en ${me.season.daysRemaining} día${me.season.daysRemaining === 1 ? '' : 's'}</div>` : ''}
           </div>
         </div>
 

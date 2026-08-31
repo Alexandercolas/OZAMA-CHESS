@@ -95,6 +95,7 @@ router.get('/me', requireAuth, async (req, res) => {
       ...req.user.toJSON(),
       isAdmin: userIsAdmin(req.user),
       globalTitle: titleForLevel(levelFromXp(req.user.xp)),
+      season: currentSeason(),
     },
   });
 });
