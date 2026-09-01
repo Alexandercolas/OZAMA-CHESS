@@ -676,6 +676,23 @@
       try { return localStorage.getItem('ozama-sound-muted') === 'true'; }
       catch (_) { return false; }
     }
+    // Mismo localStorage que script.js (Ajedrez) escribe desde el
+    // slider de Ajustes -- antes este archivo solo leia el mute, nunca
+    // el volumen, asi que bajar el volumen en Ajustes no afectaba para
+    // nada el sonido de Damas (bug real, encontrado auditando Fase 26).
+    function soundVolume() {
+      try {
+        // OJO: getItem() devuelve null cuando la llave nunca se
+        // escribio (nadie toco el slider todavia) -- Number(null) es
+        // 0, NO NaN, asi que hay que distinguir "nunca se guardo" de
+        // "se guardo un 0" explicitamente, o todo el mundo que nunca
+        // abrio Ajustes quedaria mudo por defecto.
+        const raw = localStorage.getItem('ozama-sound-volume');
+        if (raw === null) return 0.82;
+        const v = Number(raw);
+        return Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0.82;
+      } catch (_) { return 0.82; }
+    }
     function playTone(freq, duration, type, gainPeak) {
       if (soundMuted()) return;
       const ctx = getAudioCtx();
@@ -684,8 +701,9 @@
       const gain = ctx.createGain();
       osc.type = type || 'sine';
       osc.frequency.value = freq;
+      const peak = (gainPeak || 0.14) * soundVolume();
       gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(gainPeak || 0.14, ctx.currentTime + 0.01);
+      gain.gain.linearRampToValueAtTime(peak, ctx.currentTime + 0.01);
       gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
       osc.connect(gain);
       gain.connect(ctx.destination);
