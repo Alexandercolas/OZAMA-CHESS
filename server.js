@@ -25,6 +25,7 @@ const User            = require('./models/User');
 const Event           = require('./models/Event');
 const { generateNextRound } = require('./services/tournament');
 const { xpForResult, buildContext, checkNewAchievements } = require('./services/achievements');
+const { activeThematicEvent } = require('./services/thematicEvents');
 
 const authRoutes      = require('./routes/auth');
 const userRoutes      = require('./routes/user');
@@ -604,12 +605,19 @@ function bumpStreak(statsObj, won) {
 // ya actualizados) y ANTES de guardarlos -- no agrega un save() extra,
 // reusa el que ya iba a pasar para cerrar la partida.
 function applyProgressionForMatch({ wUser, bUser, wOutcome, bOutcome, wEloBefore, bEloBefore, moveCount, game, promotions }) {
+  // Bono de Evento Tematico (Fase 12): si hay un evento activo ahora
+  // mismo (services/thematicEvents.js), multiplica el XP de esta
+  // partida -- real, no cosmetico. Se calcula una vez por partida, no
+  // por jugador, para que ambos lados de la misma partida reciban el
+  // mismo multiplicador aunque el reloj cruce la ventana entre un save
+  // y otro (extremadamente improbable, pero asi queda determinista).
+  const xpMultiplier = activeThematicEvent()?.xpMultiplier || 1;
   for (const [user, outcome, opponentElo, justPromoted] of [
     [wUser, wOutcome, bEloBefore, promotions?.w],
     [bUser, bOutcome, wEloBefore, promotions?.b],
   ]) {
     if (!user) continue;
-    user.xp = Number(user.xp || 0) + xpForResult(outcome);
+    user.xp = Number(user.xp || 0) + Math.round(xpForResult(outcome) * xpMultiplier);
     const ctx = buildContext({ user, game, outcome, opponentElo, moveCount, endedAt: new Date(), justPromoted: !!justPromoted });
     const newKeys = checkNewAchievements(user, ctx);
     if (newKeys.length) {

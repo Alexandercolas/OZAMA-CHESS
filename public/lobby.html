@@ -530,6 +530,21 @@
     .tb-meta { font-size: 10px; color: var(--dim); margin-top: 2px; }
     .tb-cta { font-size: 9.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--gold); flex-shrink: 0; }
 
+    /* ── EVENTO TEMATICO (Fase 12) -- mismo patron que el banner de
+       torneo de arriba, banda distinta (naranja/fuego) para que no se
+       confundan aunque aparezcan los dos a la vez. ── */
+    .event-banner {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px; margin-bottom: 20px;
+      text-decoration: none; color: var(--text);
+      border-color: rgba(226,87,28,0.35);
+      background: linear-gradient(135deg, rgba(226,87,28,0.1), var(--s1));
+    }
+    .eb-icon { font-size: 22px; flex-shrink: 0; }
+    .eb-info { min-width: 0; flex: 1; }
+    .eb-name { font-family: var(--ft); font-size: 13px; font-weight: 700; color: #E2571C; letter-spacing: 0.5px; }
+    .eb-meta { font-size: 10px; color: var(--dim); margin-top: 2px; }
+
     /* ── CHALLENGE SECTION ── */
     .challenge-section {
       background: var(--s2);
@@ -1144,6 +1159,15 @@
 
       </div>
 
+      <!-- EVENTO TEMATICO (Fase 12) -- bono real de XP, no solo un banner -->
+      <div class="event-banner oz-card oz-enter" id="event-banner" style="display:none;">
+        <span class="eb-icon" id="eb-icon">🔥</span>
+        <div class="eb-info">
+          <div class="eb-name" id="eb-name"></div>
+          <div class="eb-meta" id="eb-meta"></div>
+        </div>
+      </div>
+
       <!-- PROXIMO TORNEO (Fase 11: "torneos destacados", que la plataforma se sienta viva) -->
       <a class="tournament-banner oz-card oz-enter" id="tournament-banner" style="display:none;" href="/tournaments.html">
         <span class="tb-icon" id="tb-icon">🏆</span>
@@ -1275,8 +1299,24 @@
     // Pre-fill name inputs
     document.getElementById('create-username-input').value = user.username || '';
     document.getElementById('join-username-input').value   = user.username || '';
+    renderEventBanner(user.activeEvent);
   }
   renderLobbyUser();
+
+  // Evento tematico (Fase 12) -- viene en /api/user/me (activeEvent),
+  // calculado en el servidor a partir de la fecha, nunca guardado. El
+  // bono de XP real se aplica en server.js aunque este banner no
+  // llegue a mostrarse (p.ej. si falla el fetch); esto es solo la
+  // vitrina, no la fuente de verdad del bono.
+  function renderEventBanner(event) {
+    const banner = document.getElementById('event-banner');
+    if (!banner) return;
+    if (!event) { banner.style.display = 'none'; return; }
+    document.getElementById('eb-icon').textContent = event.icon || '🔥';
+    document.getElementById('eb-name').textContent = event.name;
+    document.getElementById('eb-meta').textContent = event.description || '';
+    banner.style.display = 'flex';
+  }
 
   // ── Logout ──
   async function doLogout(event) {

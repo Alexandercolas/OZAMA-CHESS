@@ -374,6 +374,17 @@
           </div>
         </div>
 
+        ${me.activeEvent ? `
+          <div class="section-title">Evento en curso</div>
+          <div class="live-card" style="border-color:rgba(226,87,28,0.35);background:linear-gradient(135deg, rgba(226,87,28,0.1), var(--s1));">
+            <span class="lc-icon">${escapeHtml(me.activeEvent.icon || '🔥')}</span>
+            <span>
+              <div class="lc-name" style="color:#E2571C;">${escapeHtml(me.activeEvent.name)}</div>
+              <div class="lc-meta">${escapeHtml(me.activeEvent.description || '')}</div>
+            </span>
+          </div>
+        ` : ''}
+
         ${upcomingTournament ? `
           <div class="section-title">Próximo torneo</div>
           <a class="live-card" href="/tournaments.html?id=${upcomingTournament._id}">

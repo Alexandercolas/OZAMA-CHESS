@@ -13,6 +13,7 @@ const { titleForLevel } = require('../services/titles');
 const { detectOpening } = require('../services/openings');
 const { FRAMES, framesFor, isValidFrame, isUnlocked } = require('../services/cosmetics');
 const { currentSeason, seasonProgressFor } = require('../services/seasons');
+const { activeThematicEvent } = require('../services/thematicEvents');
 const { weeklyProgressFor } = require('../services/weeklyChallenges');
 
 const router = express.Router();
@@ -97,6 +98,7 @@ router.get('/me', requireAuth, async (req, res) => {
       isAdmin: userIsAdmin(req.user),
       globalTitle: titleForLevel(levelFromXp(req.user.xp)),
       season: currentSeason(),
+      activeEvent: activeThematicEvent(),
     },
   });
 });
