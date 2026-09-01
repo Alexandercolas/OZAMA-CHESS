@@ -267,7 +267,7 @@
         </div>
       `;
 
-      const [meData, chessDaily, damasDaily, achData, eventsData, lbData, weeklyData, chessHistory, damasHistory, friendsData, coachData] = await Promise.all([
+      const [meData, chessDaily, damasDaily, achData, eventsData, lbData, weeklyData, seasonData, chessHistory, damasHistory, friendsData, coachData] = await Promise.all([
         fetchJson('/api/user/me'),
         fetchJson('/api/puzzles/daily'),
         fetchJson('/api/damas-puzzles/daily'),
@@ -275,6 +275,7 @@
         fetchJson('/api/events'),
         fetchJson('/api/user/leaderboard'),
         fetchJson('/api/user/weekly-challenges'),
+        fetchJson('/api/user/season-progress'),
         fetchJson('/api/user/history?limit=4'),
         fetchJson('/api/user/damas-history?limit=4'),
         fetchJson('/api/user/friends'),
@@ -334,6 +335,13 @@
 
       const level = levelFromXp(me.xp);
       const xpPct = xpIntoLevel(me.xp);
+
+      // Progreso de temporada (Fase 23): contador real, NUNCA un
+      // rating nuevo -- el ELO permanente (me.elo) no cambia por esto.
+      // Se oculta si todavia no jugo nada esta temporada, para no
+      // mostrar un "0 de 0" vacio apenas empieza.
+      const seasonGames = (seasonData?.chess?.games || 0) + (seasonData?.damas?.games || 0);
+      const seasonWins = (seasonData?.chess?.wins || 0) + (seasonData?.damas?.wins || 0);
       const unlocked = (achData?.achievements || []).filter((a) => a.unlocked).sort((a, b) => new Date(b.unlockedAt) - new Date(a.unlockedAt));
       const recentAchv = unlocked.slice(0, 6);
 
@@ -344,7 +352,7 @@
             <div class="hero-name">${escapeHtml(me.username)}${me.premiumActive ? '<span class="pro">PRO</span>' : ''}</div>
             <div class="level-line">${escapeHtml(me.globalTitle || 'Novato')} · Nivel ${level} · ${xpPct}/100 XP</div>
             <div class="xp-bar-track"><div class="xp-bar-fill" style="width:${xpPct}%"></div></div>
-            ${me.season ? `<div class="season-line">🏆 <strong>${escapeHtml(me.season.name)}</strong> · termina en ${me.season.daysRemaining} día${me.season.daysRemaining === 1 ? '' : 's'}</div>` : ''}
+            ${me.season ? `<div class="season-line">🏆 <strong>${escapeHtml(me.season.name)}</strong> · termina en ${me.season.daysRemaining} día${me.season.daysRemaining === 1 ? '' : 's'}${seasonGames > 0 ? ` · ${seasonWins}V en ${seasonGames} partida${seasonGames === 1 ? '' : 's'}` : ''}</div>` : ''}
           </div>
         </div>
 

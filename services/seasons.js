@@ -29,4 +29,46 @@ function currentSeason(now = new Date()) {
   };
 }
 
-module.exports = { currentSeason, SEASON_LENGTH_DAYS };
+// Fase 23 (roadmap "OZAMA PRO / Experiencia Final"): "separar el
+// rating permanente del progreso de temporada". Sin reglas de reset
+// de ELO todavia definidas, lo unico que se puede construir con datos
+// reales es un CONTADOR de la temporada (victorias/partidas desde que
+// arranco), nunca un rating nuevo -- el ELO real (User.elo) sigue
+// siendo el unico rating que existe. Mismo patron de rango de fechas
+// que weeklyProgressFor() en services/weeklyChallenges.js.
+const Match = require('../models/Match');
+const DamasMatch = require('../models/DamasMatch');
+
+async function seasonProgressFor(userId, now = new Date()) {
+  const season = currentSeason(now);
+  const seasonStart = new Date(season.startsAt);
+  const filter = {
+    $or: [{ 'whitePlayer.userId': userId }, { 'blackPlayer.userId': userId }],
+    result: { $in: ['white_win', 'black_win', 'draw'] },
+    endedAt: { $gte: seasonStart },
+  };
+
+  const [chessMatches, damasMatches] = await Promise.all([
+    Match.find(filter).select('whitePlayer.userId blackPlayer.userId result').lean(),
+    DamasMatch.find(filter).select('whitePlayer.userId blackPlayer.userId result').lean(),
+  ]);
+
+  function tally(matches) {
+    let games = 0, wins = 0;
+    for (const m of matches) {
+      const isWhite = String(m.whitePlayer?.userId) === String(userId);
+      const won = (m.result === 'white_win' && isWhite) || (m.result === 'black_win' && !isWhite);
+      games++;
+      if (won) wins++;
+    }
+    return { games, wins };
+  }
+
+  return {
+    season: { number: season.number, name: season.name, daysRemaining: season.daysRemaining },
+    chess: tally(chessMatches),
+    damas: tally(damasMatches),
+  };
+}
+
+module.exports = { currentSeason, seasonProgressFor, SEASON_LENGTH_DAYS };

@@ -12,7 +12,7 @@ const { ACHIEVEMENTS, ACHIEVEMENT_MAP, levelFromXp, xpIntoLevel, achievementProg
 const { titleForLevel } = require('../services/titles');
 const { detectOpening } = require('../services/openings');
 const { FRAMES, framesFor, isValidFrame, isUnlocked } = require('../services/cosmetics');
-const { currentSeason } = require('../services/seasons');
+const { currentSeason, seasonProgressFor } = require('../services/seasons');
 const { weeklyProgressFor } = require('../services/weeklyChallenges');
 
 const router = express.Router();
@@ -624,6 +624,19 @@ router.get('/weekly-challenges', requireAuth, async (req, res) => {
     res.json({ challenges });
   } catch (err) {
     serverError(res, 'Weekly challenges', err);
+  }
+});
+
+// GET /api/user/season-progress - Fase 23: contador real de
+// victorias/partidas desde que arranco la temporada actual. NO es un
+// rating -- el ELO permanente (User.elo) no cambia por esto.
+router.get('/season-progress', requireAuth, async (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    const progress = await seasonProgressFor(req.user._id);
+    res.json(progress);
+  } catch (err) {
+    serverError(res, 'Season progress', err);
   }
 });
 
