@@ -208,6 +208,71 @@
     }
     .board.thinking { pointer-events: none; opacity: 0.82; }
 
+    /* Tablero atenuado mientras se revisa una jugada pasada -- mismo
+       tratamiento que Ajedrez (game.html), para que se sienta el
+       mismo lenguaje visual sin ser una copia idéntica del tablero. */
+    .board.reviewing { filter: saturate(0.86) brightness(0.94); }
+    .board.reviewing::after {
+      content: 'REVISANDO'; position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
+      font-family: var(--fb); font-size: 8px; font-weight: 800; letter-spacing: 3px;
+      color: var(--carbon); background: var(--gold);
+      padding: 3px 10px; border-radius: 10px; z-index: 5; pointer-events: none;
+    }
+
+    /* ── REVISION DE JUGADAS (mismo lenguaje que .move-panel en
+       game.html/Ajedrez -- ver seccion 17 del roadmap: componentes
+       compartidos, sin ser una copia visual identica). ── */
+    .move-panel {
+      width: calc(var(--sq) * 8);
+      max-width: 100%;
+      margin-top: 10px;
+      background: var(--s1);
+      border: 1px solid rgba(200,152,60,0.12);
+      display: flex; flex-direction: column;
+    }
+    .move-panel-hd {
+      display: flex; align-items: stretch;
+      border-bottom: 1px solid rgba(200,152,60,0.1);
+    }
+    .move-nav-btn {
+      flex: 1; padding: 7px 4px;
+      border: none; border-right: 1px solid rgba(200,152,60,0.08);
+      background: transparent; color: var(--dim);
+      font-family: var(--fb); font-size: 11px; font-weight: 600;
+      letter-spacing: 1px;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .move-nav-btn:last-child { border-right: none; }
+    .move-nav-btn:hover:not(:disabled) { background: rgba(200,152,60,0.08); color: var(--gold); }
+    .move-nav-btn:disabled { opacity: 0.3; cursor: default; }
+    .move-nav-btn.live-btn { flex: 2; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; }
+    .move-panel.reviewing .move-nav-btn.live-btn { color: var(--gold); }
+    .move-list {
+      display: flex; flex-direction: column;
+      max-height: 130px; overflow-y: auto;
+      padding: 4px 6px;
+      scrollbar-color: rgba(200,152,60,0.28) transparent;
+    }
+    .move-empty {
+      padding: 12px 4px; text-align: center;
+      font-family: var(--fb); font-size: 10px; letter-spacing: 1.5px;
+      color: var(--ghost, var(--dim)); text-transform: uppercase;
+    }
+    .move-row { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+    .move-no {
+      width: 22px; flex-shrink: 0;
+      font-family: var(--fm); font-size: 11px; color: var(--ghost, var(--dim));
+      text-align: right;
+    }
+    .move-entry {
+      flex: 1; min-width: 0;
+      padding: 3px 8px; border-radius: 3px;
+      font-family: var(--fm); font-size: 12px; color: var(--text);
+      cursor: pointer; transition: background 0.15s, color 0.15s;
+    }
+    .move-entry:hover { background: rgba(200,152,60,0.1); color: var(--gold); }
+    .move-entry.active { background: var(--gold); color: var(--carbon); font-weight: 700; }
+
     .square {
       width: var(--sq);
       height: var(--sq);
@@ -613,6 +678,24 @@
           <div class="board" id="board"></div>
         </div>
 
+        <!-- REVISION DE JUGADAS -- pedido explicito: Damas no tenia
+             forma de repasar el historial de una partida (Ajedrez si,
+             ver .move-panel en game.html). Mismo lenguaje visual, ids
+             propios para no chocar con los de Ajedrez si ambas
+             paginas llegaran a compartir un script en el futuro. -->
+        <div class="move-panel hidden" id="damas-move-panel">
+          <div class="move-panel-hd">
+            <button class="move-nav-btn" id="damas-move-first-btn" title="Primera jugada" aria-label="Primera jugada" onclick="moveNavFirst()" disabled>⏮</button>
+            <button class="move-nav-btn" id="damas-move-prev-btn" title="Jugada anterior" aria-label="Jugada anterior" onclick="moveNavPrev()" disabled>◀</button>
+            <button class="move-nav-btn live-btn" id="damas-move-live-btn" title="Volver a la jugada actual" onclick="moveNavLast()">● EN VIVO</button>
+            <button class="move-nav-btn" id="damas-move-next-btn" title="Jugada siguiente" aria-label="Jugada siguiente" onclick="moveNavNext()" disabled>▶</button>
+            <button class="move-nav-btn" id="damas-move-last-btn" title="Ultima jugada" aria-label="Ultima jugada" onclick="moveNavLast()" disabled>⏭</button>
+          </div>
+          <div class="move-list" id="damas-move-list">
+            <div class="move-empty">Sin jugadas todavia</div>
+          </div>
+        </div>
+
         <div class="status-line" id="status-line"></div>
         <div class="thinking-line" id="thinking-line"></div>
       </main>
@@ -752,12 +835,23 @@
     let lastMove = null;      // { fromR, fromC, toR, toC }
     let gameOver = null;
     // Historial de jugadas de la partida ACTUAL, para el analisis
-    // post-partida (Premium, ver analyzeGameForBlunders() mas abajo).
-    // Cada entrada: { boardBefore, color, fromR, fromC, toR, toC }.
+    // post-partida (Premium, ver analyzeGameForBlunders() mas abajo) Y
+    // para la revision de jugadas (ver SECCION mas abajo). Cada
+    // entrada: { boardBefore, color, fromR, fromC, toR, toC, capture }.
     // No sobrevive una reconexion (damas:rejoin restaura el tablero
     // actual, no el historial de jugadas anteriores) -- limitacion
     // conocida, no un intento fallido de resolverla.
     let moveLog = [];
+    // Revision de jugadas (estilo chess.com, mismo concepto que
+    // state.reviewIndex en public/script.js): null = posicion en vivo,
+    // numero = tablero tal como quedo despues de moveLog[reviewIndex].
+    // A diferencia de Ajedrez, las entradas de moveLog NO guardan un
+    // "boardAfter" propio -- se deriva de boardBefore de la SIGUIENTE
+    // entrada (o del tablero en vivo si es la ultima jugada), ver
+    // boardAfterMoveIndex() mas abajo. Evita tocar el camino de
+    // aplicar una jugada real (el codigo de mas alto trafico de esta
+    // pagina) solo para guardar un dato que ya se puede derivar.
+    let reviewIndex = null;
     let mode = 'local'; // 'local' | 'bot' | 'online'
     let botThinking = false;
 
@@ -804,8 +898,20 @@
       boardEl.innerHTML = '';
       boardEl.classList.toggle('thinking', botThinking);
 
+      // Revision de jugadas: mientras se mira una jugada pasada, se
+      // pinta desde la foto derivada de moveLog (ver
+      // boardAfterMoveIndex()) en vez del tablero real -- "board" (la
+      // posicion en vivo) no se toca para nada, igual que en Ajedrez.
+      const reviewing = reviewIndex !== null && !!moveLog[reviewIndex];
+      const reviewEntry = reviewing ? moveLog[reviewIndex] : null;
+      const boardToRender = reviewing ? boardAfterMoveIndex(reviewIndex) : board;
+      const lastMoveToShow = reviewing
+        ? { fromR: reviewEntry.fromR, fromC: reviewEntry.fromC, toR: reviewEntry.toR, toC: reviewEntry.toC }
+        : lastMove;
+      boardEl.classList.toggle('reviewing', reviewing);
+
       const destSet = new Map(); // "r,c" -> hasCapture
-      if (selected) {
+      if (!reviewing && selected) {
         for (const seq of legalHere) {
           const final = seq[seq.length - 1];
           destSet.set(`${final.toR},${final.toC}`, seq[0].capturedR !== -1);
@@ -814,9 +920,10 @@
 
       // Piezas que tienen captura obligatoria disponible este turno --
       // se resaltan para que la regla no sea invisible para quien no
-      // conoce Damas dominicana.
+      // conoce Damas dominicana. No aplica mientras se revisa una
+      // jugada pasada (esa posicion ya no admite jugar).
       const mustMoveSet = new Set();
-      if (!gameOver) {
+      if (!reviewing && !gameOver) {
         for (const entry of E.getAllLegalMoves(board, turn)) {
           if (entry.sequences[0]?.[0]?.capturedR !== -1) mustMoveSet.add(`${entry.r},${entry.c}`);
         }
@@ -830,15 +937,15 @@
           const sq = document.createElement('div');
           const dark = E.isDarkSquare(r, c);
           sq.className = `square ${dark ? 'dark' : 'light'}`;
-          if (selected && selected.r === r && selected.c === c) sq.classList.add('selected');
-          if (lastMove && ((lastMove.fromR === r && lastMove.fromC === c))) sq.classList.add('last-from');
-          if (lastMove && (lastMove.toR === r && lastMove.toC === c)) sq.classList.add('last-to');
+          if (!reviewing && selected && selected.r === r && selected.c === c) sq.classList.add('selected');
+          if (lastMoveToShow && ((lastMoveToShow.fromR === r && lastMoveToShow.fromC === c))) sq.classList.add('last-from');
+          if (lastMoveToShow && (lastMoveToShow.toR === r && lastMoveToShow.toC === c)) sq.classList.add('last-to');
 
-          const piece = board[r][c];
+          const piece = boardToRender[r][c];
           if (piece) {
             const el = pieceEl(piece);
             if (mustMoveSet.has(`${r},${c}`)) el.classList.add('must-move');
-            if (lastMove && lastMove.toR === r && lastMove.toC === c) el.classList.add('landed');
+            if (lastMoveToShow && lastMoveToShow.toR === r && lastMoveToShow.toC === c) el.classList.add('landed');
             sq.appendChild(el);
           }
 
@@ -866,8 +973,12 @@
         }
       }
 
+      // El conteo de capturadas refleja lo que se esta VIENDO (la
+      // posicion revisada, si se esta revisando), no siempre la
+      // partida en vivo -- si no, se veria mal mientras se mira una
+      // jugada pasada con menos piezas capturadas de las que dice.
       let remainingW = 0, remainingB = 0;
-      for (const row of board) for (const cell of row) {
+      for (const row of boardToRender) for (const cell of row) {
         if (cell?.color === E.COLOR.WHITE) remainingW++;
         if (cell?.color === E.COLOR.BLACK) remainingB++;
       }
@@ -885,6 +996,104 @@
       // (jugada rechazada, error de sala) que se limpia explicitamente
       // en newGame()/setMode(), no en cada render().
       updateAnalysisGate();
+      renderMoveList();
+    }
+
+    // ================================================================
+    // REVISION DE JUGADAS (estilo chess.com, ver public/script.js)
+    // ================================================================
+
+    function sqName(r, c) { return 'abcdefgh'[c] + String(E.SIZE - r); }
+
+    // Tablero tal como quedo DESPUES de moveLog[index]. moveLog no
+    // guarda su propio "boardAfter" -- se deriva del boardBefore de la
+    // jugada SIGUIENTE (que es, por definicion, el resultado de esta),
+    // o del tablero en vivo si es la ultima jugada registrada.
+    function boardAfterMoveIndex(index) {
+      if (index < 0 || index >= moveLog.length) return board;
+      return index === moveLog.length - 1 ? board : moveLog[index + 1].boardBefore;
+    }
+
+    // Damas no tiene notacion algebraica como Ajedrez -- "casilla
+    // origen -> casilla destino", con "x" para capturas (dato que ya
+    // se guarda al empujar la jugada, ver applyMoveAndAdvance() y el
+    // handler de damas:board-update).
+    function moveNotation(entry) {
+      return `${sqName(entry.fromR, entry.fromC)}${entry.capture ? ' x ' : ' → '}${sqName(entry.toR, entry.toC)}`;
+    }
+
+    // index null = posicion en vivo. index numerico = la posicion tal
+    // como quedo despues de esa jugada (0-based, moveLog[index]).
+    function goToMoveIndex(index) {
+      const clamped = index === null ? null : Math.max(0, Math.min(index, moveLog.length - 1));
+      reviewIndex = moveLog.length ? clamped : null;
+      selected = null;
+      legalHere = [];
+      render();
+    }
+
+    function moveNavFirst() { if (moveLog.length) goToMoveIndex(0); }
+    function moveNavPrev() {
+      if (!moveLog.length) return;
+      const cur = reviewIndex === null ? moveLog.length - 1 : reviewIndex - 1;
+      goToMoveIndex(cur < 0 ? 0 : cur);
+    }
+    function moveNavNext() {
+      if (reviewIndex === null) return;
+      const nxt = reviewIndex + 1;
+      goToMoveIndex(nxt >= moveLog.length ? null : nxt);
+    }
+    function moveNavLast() { goToMoveIndex(null); }
+
+    function renderMoveList() {
+      const listEl = document.getElementById('damas-move-list');
+      if (!listEl) return;
+
+      // El panel se muestra/oculta junto con el tablero (board-wrap ya
+      // se togglea en 4 lugares distintos segun modo/estado online --
+      // en vez de repetir la logica ahi, se deriva aca, que ya corre
+      // en cada render()).
+      const panelWrap = document.getElementById('damas-move-panel');
+      const boardWrap = document.getElementById('board-wrap');
+      if (panelWrap && boardWrap) panelWrap.classList.toggle('hidden', boardWrap.classList.contains('hidden'));
+
+      if (!moveLog.length) {
+        listEl.innerHTML = '<div class="move-empty">Sin jugadas todavia</div>';
+      } else {
+        let html = '';
+        for (let i = 0; i < moveLog.length; i += 2) {
+          const moveNo = i / 2 + 1;
+          const w = moveLog[i];
+          const b = moveLog[i + 1];
+          const activeW = reviewIndex === i ? ' active' : '';
+          const activeB = b && reviewIndex === i + 1 ? ' active' : '';
+          html += `<div class="move-row">` +
+            `<span class="move-no">${moveNo}.</span>` +
+            `<span class="move-entry${activeW}" data-index="${i}">${moveNotation(w)}</span>` +
+            (b ? `<span class="move-entry${activeB}" data-index="${i + 1}">${moveNotation(b)}</span>` : '') +
+            `</div>`;
+        }
+        listEl.innerHTML = html;
+        listEl.querySelectorAll('.move-entry').forEach((el) => {
+          el.addEventListener('click', () => goToMoveIndex(Number(el.dataset.index)));
+        });
+        if (reviewIndex === null) listEl.scrollTop = listEl.scrollHeight;
+        else listEl.querySelector('.move-entry.active')?.scrollIntoView({ block: 'nearest' });
+      }
+
+      const panel = document.getElementById('damas-move-panel');
+      if (panel) panel.classList.toggle('reviewing', reviewIndex !== null);
+
+      const atStart = moveLog.length > 0 && reviewIndex === 0;
+      const atLive = reviewIndex === null;
+      const firstBtn = document.getElementById('damas-move-first-btn');
+      const prevBtn  = document.getElementById('damas-move-prev-btn');
+      const nextBtn  = document.getElementById('damas-move-next-btn');
+      const lastBtn  = document.getElementById('damas-move-last-btn');
+      if (firstBtn) firstBtn.disabled = !moveLog.length || atStart;
+      if (prevBtn)  prevBtn.disabled  = !moveLog.length || atStart;
+      if (nextBtn)  nextBtn.disabled  = !moveLog.length || atLive;
+      if (lastBtn)  lastBtn.disabled  = !moveLog.length || atLive;
     }
 
     // Muestra el boton "Analizar partida" cuando: la partida termino,
@@ -1085,6 +1294,12 @@
     }
 
     function onSquareClick(r, c) {
+      // Tocar el tablero mientras se revisa una jugada pasada vuelve a
+      // la posicion en vivo (o final, si la partida ya termino) en vez
+      // de interpretarse como un intento de jugada -- igual que en
+      // Ajedrez. Va ANTES del guard de gameOver: revisar despues de
+      // que la partida termino es justamente el caso de uso principal.
+      if (reviewIndex !== null) { goToMoveIndex(null); return; }
       if (gameOver || botThinking) return;
       if (mode === 'bot' && turn === BOT_COLOR) return;
       if (mode === 'online' && (onlineStatus !== 'playing' || turn !== onlineColor)) return;
@@ -1136,15 +1351,15 @@
     function applyMoveAndAdvance(fromR, fromC, seq) {
       const boardBeforeMove = E.cloneBoard(board);
       const movingColor = turn;
+      const wasCapture = seq.some((step) => step.capturedR !== -1);
       const result = E.applyMove(board, fromR, fromC, seq);
       board = result.board;
       lastMove = { fromR, fromC, toR: result.to.r, toC: result.to.c };
-      moveLog.push({ boardBefore: boardBeforeMove, color: movingColor, fromR, fromC, toR: result.to.r, toC: result.to.c });
+      moveLog.push({ boardBefore: boardBeforeMove, color: movingColor, fromR, fromC, toR: result.to.r, toC: result.to.c, capture: wasCapture });
       selected = null;
       legalHere = [];
       turn = E.otherColor(turn);
 
-      const wasCapture = seq.some((step) => step.capturedR !== -1);
       if (wasCapture) playCaptureSound(); else playMoveSound();
 
       const status = E.checkGameOver(board, turn);
@@ -1282,6 +1497,7 @@
         turn = data.turn;
         selected = null; legalHere = []; lastMove = null; gameOver = null;
         moveLog = [];
+        reviewIndex = null;
         hideAnalysisPanel();
         document.getElementById('online-panel').classList.add('hidden');
         document.getElementById('board-wrap').classList.remove('hidden');
@@ -1296,7 +1512,7 @@
         // `turn` (antes de pisarlo abajo) es de quien era el turno
         // hasta este momento -- es decir, quien acaba de jugar.
         if (data.lastMove) {
-          moveLog.push({ boardBefore: board, color: turn, fromR: data.lastMove.fromR, fromC: data.lastMove.fromC, toR: data.lastMove.toR, toC: data.lastMove.toC });
+          moveLog.push({ boardBefore: board, color: turn, fromR: data.lastMove.fromR, fromC: data.lastMove.fromC, toR: data.lastMove.toR, toC: data.lastMove.toC, capture: data.capturedCount > 0 });
         }
         board = data.board;
         turn = data.turn;
@@ -1499,6 +1715,7 @@
       lastMove = null;
       gameOver = null;
       moveLog = [];
+      reviewIndex = null;
       hideAnalysisPanel();
       statsRecordedForThisGame = false;
       botThinking = false;
