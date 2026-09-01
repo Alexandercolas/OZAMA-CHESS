@@ -93,6 +93,21 @@
     .w-name { font-size: 11.5px; font-weight: 700; margin-bottom: 4px; }
     .weekly-item.done .w-name { color: #7FD98A; }
     .w-count { font-family: var(--fm); font-size: 11px; color: var(--gold-2, var(--gold)); flex-shrink: 0; }
+
+    /* Partidas recientes / Amigos (Fase 14) -- misma lista compacta. */
+    .recent-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+    .recent-item {
+      display: flex; align-items: center; gap: 10px; background: var(--s1); border: 1px solid rgba(200,152,60,0.14); border-radius: 8px;
+      padding: 8px 12px; text-decoration: none; color: var(--text);
+      transition: transform var(--dur-base) var(--ease-out), border-color var(--dur-base);
+    }
+    .recent-item:hover { transform: translateY(-1px); border-color: rgba(200,152,60,0.35); }
+    .ri-icon { font-size: 14px; flex-shrink: 0; }
+    .ri-opp { flex: 1; font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ri-outcome { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0; }
+    .ri-outcome.win { color: #7FD98A; }
+    .ri-outcome.loss { color: #E39494; }
+    .ri-outcome.draw { color: var(--dim); }
     .daily-card {
       flex: 1; display: flex; align-items: center; gap: 10px; background: var(--s1); border: 1px solid rgba(200,152,60,0.16); border-radius: 10px;
       padding: 12px 14px; text-decoration: none; color: var(--text);
@@ -167,6 +182,23 @@
       return `${s.wins}V ${s.losses}D ${s.draws}T`;
     }
 
+    // "Conectado hace X" -- dato real (User.lastSeenAt, se actualiza en
+    // el login), nunca "en linea ahora" (eso necesitaria un socket
+    // abierto solo para esto).
+    function timeAgo(dateStr) {
+      if (!dateStr) return 'Sin conexión reciente';
+      const diff = Date.now() - new Date(dateStr).getTime();
+      if (diff < 0) return 'Ahora';
+      const min = Math.floor(diff / 60000);
+      if (min < 1) return 'Hace un momento';
+      if (min < 60) return `Hace ${min} min`;
+      const hr = Math.floor(min / 60);
+      if (hr < 24) return `Hace ${hr}h`;
+      const days = Math.floor(hr / 24);
+      if (days < 30) return `Hace ${days}d`;
+      return 'Hace tiempo';
+    }
+
     async function fetchJson(url) {
       try {
         const res = await fetch(url, { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' });
@@ -235,7 +267,7 @@
         </div>
       `;
 
-      const [meData, chessDaily, damasDaily, achData, eventsData, lbData, weeklyData] = await Promise.all([
+      const [meData, chessDaily, damasDaily, achData, eventsData, lbData, weeklyData, chessHistory, damasHistory, friendsData, coachData] = await Promise.all([
         fetchJson('/api/user/me'),
         fetchJson('/api/puzzles/daily'),
         fetchJson('/api/damas-puzzles/daily'),
@@ -243,8 +275,35 @@
         fetchJson('/api/events'),
         fetchJson('/api/user/leaderboard'),
         fetchJson('/api/user/weekly-challenges'),
+        fetchJson('/api/user/history?limit=4'),
+        fetchJson('/api/user/damas-history?limit=4'),
+        fetchJson('/api/user/friends'),
+        fetchJson('/api/user/coach-insights?game=chess'),
       ]);
       const me = meData?.user || user;
+
+      // Partidas recientes (Fase 14: dashboard "vivo") -- ambos juegos
+      // mezclados y ordenados por fecha real, ultimas 4 en total.
+      const recentMatches = [
+        ...(chessHistory?.matches || []).map((m) => ({ ...m, game: 'chess' })),
+        ...(damasHistory?.matches || []).map((m) => ({ ...m, game: 'damas' })),
+      ]
+        .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+        .slice(0, 4);
+
+      // Amigos (Fase 14): "conectado hace X" es un dato real
+      // (User.lastSeenAt, se actualiza en login) -- no es lo mismo que
+      // "en linea ahora mismo" (eso requeriria un socket abierto solo
+      // para el dashboard), asi que se etiqueta como lo que es.
+      const friendsSorted = [...(friendsData?.friends || [])]
+        .sort((a, b) => new Date(b.lastSeenAt || 0) - new Date(a.lastSeenAt || 0))
+        .slice(0, 4);
+
+      // Entrenamiento recomendado (Fase 15): un solo insight real del
+      // Entrenador personal (beneficio Premium, ya construido) -- para
+      // Free no hay equivalente honesto sin inventar una señal, asi
+      // que ahi simplemente no aparece la seccion.
+      const topInsight = (coachData?.insights || [])[0] || null;
 
       // Proximo torneo (Fase 21: dashboard "vivo") -- el mas cercano
       // en el tiempo, de cualquier juego, entre los que ya estan
@@ -316,6 +375,16 @@
           </a>
         ` : ''}
 
+        ${topInsight ? `
+          <a class="live-card" href="/my-analysis.html">
+            <span class="lc-icon">${topInsight.icon}</span>
+            <span>
+              <div class="lc-name">Entrenamiento recomendado</div>
+              <div class="lc-meta">${escapeHtml(topInsight.text)}</div>
+            </span>
+          </a>
+        ` : ''}
+
         <div class="section-title">Desafíos de hoy</div>
         <div class="daily-row">
           ${dailyCardHtml({ href: '/training.html', icon: '♟', name: 'Ajedrez', done: !!chessDaily?.alreadyDone })}
@@ -347,6 +416,38 @@
             </div>
           `).join('') : '<div class="achv-empty">Todavía no desbloqueaste logros -- juega una partida o resuelve un puzzle.</div>'}
         </div>
+
+        ${recentMatches.length ? `
+          <div class="section-title">Partidas recientes</div>
+          <div class="recent-list">
+            ${recentMatches.map((m) => {
+              const isWhite = String(m.whitePlayer?.userId) === String(me._id);
+              const opponent = isWhite ? m.blackPlayer : m.whitePlayer;
+              const outcome = m.result === 'draw' ? 'draw' : ((m.result === 'white_win' && isWhite) || (m.result === 'black_win' && !isWhite)) ? 'win' : 'loss';
+              const outcomeLabel = outcome === 'win' ? 'Ganada' : outcome === 'loss' ? 'Perdida' : 'Tablas';
+              return `
+                <a class="recent-item" href="${m.game === 'chess' ? `/watch.html?id=${m._id}` : '/history.html'}">
+                  <span class="ri-icon">${m.game === 'damas' ? '⚫' : '♟'}</span>
+                  <span class="ri-opp">vs ${escapeHtml(opponent?.name || 'Jugador')}</span>
+                  <span class="ri-outcome ${outcome}">${outcomeLabel}</span>
+                </a>
+              `;
+            }).join('')}
+          </div>
+        ` : ''}
+
+        ${friendsSorted.length ? `
+          <div class="section-title">Amigos</div>
+          <div class="recent-list">
+            ${friendsSorted.map((f) => `
+              <a class="recent-item" href="/player.html?u=${encodeURIComponent(f.username)}">
+                <span class="ri-icon">👤</span>
+                <span class="ri-opp">${escapeHtml(f.username)}</span>
+                <span class="ri-outcome" style="color:var(--dim);">${timeAgo(f.lastSeenAt)}</span>
+              </a>
+            `).join('')}
+          </div>
+        ` : ''}
 
         <div class="section-title">Accesos rápidos</div>
         <div class="quick-grid">
