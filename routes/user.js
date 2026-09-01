@@ -718,6 +718,53 @@ router.patch('/me', requireAuth, async (req, res) => {
   }
 });
 
+// Filtro de historial reutilizado por /history y /damas-history.
+// "result" replica exactamente la logica de victoria/derrota que ya usa
+// el cliente (history.html): abandoned cuenta como derrota para ambos
+// lados, igual que en la UI existente -- no se inventa una semantica
+// nueva para el filtro, solo se traduce la que ya se muestra.
+function buildHistoryFilter(userId, query, { excludeInProgress = false } = {}) {
+  const and = [{
+    $or: [
+      { 'whitePlayer.userId': userId },
+      { 'blackPlayer.userId': userId },
+    ],
+  }];
+
+  if (excludeInProgress) {
+    and.push({ result: { $ne: 'in_progress' } });
+  }
+
+  const resultParam = String(query.result || 'all').toLowerCase();
+  if (resultParam === 'win') {
+    and.push({
+      $or: [
+        { 'whitePlayer.userId': userId, result: 'white_win' },
+        { 'blackPlayer.userId': userId, result: 'black_win' },
+      ],
+    });
+  } else if (resultParam === 'draw') {
+    and.push({ result: 'draw' });
+  } else if (resultParam === 'loss') {
+    and.push({ result: { $ne: 'draw' } });
+    and.push({
+      $nor: [
+        { 'whitePlayer.userId': userId, result: 'white_win' },
+        { 'blackPlayer.userId': userId, result: 'black_win' },
+      ],
+    });
+  }
+
+  const opponent = String(query.opponent || '').trim().slice(0, 40);
+  if (opponent) {
+    const escaped = opponent.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(escaped, 'i');
+    and.push({ $or: [{ 'whitePlayer.name': re }, { 'blackPlayer.name': re }] });
+  }
+
+  return and.length === 1 ? and[0] : { $and: and };
+}
+
 // GET /api/user/history - match history
 router.get('/history', requireAuth, async (req, res) => {
   try {
@@ -726,13 +773,7 @@ router.get('/history', requireAuth, async (req, res) => {
     const page   = Math.max(1, parseInt(req.query.page)  || 1);
     const limit  = Math.min(20, parseInt(req.query.limit) || 10);
 
-    const filter = {
-      $or: [
-        { 'whitePlayer.userId': userId },
-        { 'blackPlayer.userId': userId },
-      ],
-      result: { $ne: 'in_progress' },
-    };
+    const filter = buildHistoryFilter(userId, req.query, { excludeInProgress: true });
 
     const [matches, total] = await Promise.all([
       Match.find(filter)
@@ -758,12 +799,7 @@ router.get('/damas-history', requireAuth, async (req, res) => {
     const page   = Math.max(1, parseInt(req.query.page)  || 1);
     const limit  = Math.min(20, parseInt(req.query.limit) || 10);
 
-    const filter = {
-      $or: [
-        { 'whitePlayer.userId': userId },
-        { 'blackPlayer.userId': userId },
-      ],
-    };
+    const filter = buildHistoryFilter(userId, req.query);
 
     const [matches, total] = await Promise.all([
       DamasMatch.find(filter)

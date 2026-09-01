@@ -605,6 +605,46 @@
     }
     .game-toggle-btn:hover { color: var(--gold); }
     .game-toggle-btn.is-active { background: var(--gold); color: var(--carbon); }
+
+    /* Filtros de historial: chips de resultado + busqueda de rival.
+       Compactos a proposito -- una sola fila, sin paneles nuevos. */
+    .history-filters {
+      display: flex; align-items: center; flex-wrap: wrap;
+      gap: 8px; margin-bottom: 16px;
+    }
+    .filter-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .filter-chip {
+      padding: 7px 13px;
+      border-radius: 20px;
+      border: 1px solid rgba(200,152,60,0.18);
+      background: transparent;
+      color: var(--dim);
+      font-family: var(--fb);
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+    .filter-chip:hover { border-color: var(--gold); color: var(--gold); }
+    .filter-chip.is-active { background: var(--gold); border-color: var(--gold); color: var(--carbon); }
+    .filter-search {
+      flex: 1; min-width: 140px; max-width: 220px;
+      padding: 8px 12px;
+      background: var(--surface);
+      border: 1px solid rgba(200,152,60,0.16);
+      border-radius: 20px;
+      color: var(--text);
+      font-family: var(--fb);
+      font-size: 12px; outline: none;
+      transition: border-color 0.2s;
+    }
+    .filter-search:focus { border-color: var(--gold); }
+    .filter-search::placeholder { color: rgba(233,228,218,0.35); }
+
+    @media (max-width: 600px) {
+      .history-filters { gap: 10px; }
+      .filter-search { max-width: none; width: 100%; }
+    }
   </style>
 </head>
 <body>
@@ -636,6 +676,16 @@
     let historyBusy = false;
     let historyInitialized = false;
     let currentGame = 'chess';
+    let currentResultFilter = 'all';
+    let currentOpponentFilter = '';
+    let opponentDebounceTimer = null;
+
+    const RESULT_FILTERS = [
+      { value: 'all',  label: 'Todas' },
+      { value: 'win',  label: 'Victorias' },
+      { value: 'loss', label: 'Derrotas' },
+      { value: 'draw', label: 'Tablas' },
+    ];
 
     const DAMAS_REASON_LABELS = {
       'no-pieces': 'Sin fichas',
@@ -693,8 +743,12 @@
         }
 
     function renderHistory(user, history, total, page, game) {
+            const filtersActive = currentResultFilter !== 'all' || currentOpponentFilter !== '';
+            const emptyText = filtersActive
+              ? 'Sin partidas que coincidan con estos filtros'
+              : 'Sin partidas registradas aun';
             const matchRows = history.length === 0 ?
-               `<div class="empty-msg">Sin partidas registradas aun</div>`
+               `<div class="empty-msg">${emptyText}</div>`
               : history.map(m => {
                   const isWhite = m.whitePlayer.userId === user._id || m.whitePlayer.userId === user.id;
                   const myColor = isWhite ? 'w' : 'b';
@@ -758,6 +812,12 @@
                       <button class="game-toggle-btn ${game === 'damas' ? 'is-active' : ''}" data-game="damas" onclick="switchGame('damas')">Damas</button>
                     </div>
                     <div class="section-title oz-enter" id="historial" style="--d:8">Historial de Partidas</div>
+                    <div class="history-filters oz-enter" style="--d:8.5">
+                      <div class="filter-chips" role="tablist" aria-label="Filtrar por resultado">
+                        ${RESULT_FILTERS.map(f => `<button class="filter-chip ${currentResultFilter === f.value ? 'is-active' : ''}" onclick="setResultFilter('${f.value}')">${f.label}</button>`).join('')}
+                      </div>
+                      <input type="search" class="filter-search" placeholder="Buscar rival..." value="${escapeHtml(currentOpponentFilter)}" oninput="onOpponentInput(this.value)" />
+                    </div>
                     <div class="match-list oz-enter" id="match-list" style="--d:9">${matchRows}</div>
                     ${paginationHtml}
 
@@ -769,10 +829,16 @@
       if (historyBusy) return;
       historyBusy = true;
       currentHistoryPage = Math.max(1, Number(page) || 1);
+      // Re-renderizar reemplaza el input de busqueda -- si el usuario
+      // estaba escribiendo ahi, se restaura el foco despues para no
+      // cortarle la escritura a mitad de palabra.
+      const focusedSearch = document.activeElement?.classList?.contains('filter-search');
       const endpoint = currentGame === 'damas' ? '/api/user/damas-history' : '/api/user/history';
       try {
+        const params = new URLSearchParams({ page: currentHistoryPage, limit: 10, result: currentResultFilter });
+        if (currentOpponentFilter) params.set('opponent', currentOpponentFilter);
         const [histRes, userRes] = await Promise.all([
-          fetch(`${endpoint}?page=${currentHistoryPage}&limit=10`, { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' }),
+          fetch(`${endpoint}?${params}`, { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' }),
           fetch('/api/user/me', { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' }),
         ]);
         if (!histRes.ok || !userRes.ok) throw new Error();
@@ -781,6 +847,10 @@
         localStorage.setItem('ozama-user', JSON.stringify(userData.user));
         renderHistory(userData.user, data.matches, data.total, currentHistoryPage, currentGame);
         historyInitialized = true;
+        if (focusedSearch) {
+          const input = document.querySelector('.filter-search');
+          if (input) { input.focus(); const v = input.value; input.setSelectionRange(v.length, v.length); }
+        }
       } catch (err) {
         const list = document.getElementById('match-list');
         if (list) list.innerHTML = '<div class="empty-msg">No se pudo cargar el historial.</div>';
@@ -794,6 +864,18 @@
       if (currentGame === game || historyBusy) return;
       currentGame = game;
       loadPage(1);
+    }
+
+    function setResultFilter(value) {
+      if (currentResultFilter === value || historyBusy) return;
+      currentResultFilter = value;
+      loadPage(1);
+    }
+
+    function onOpponentInput(value) {
+      currentOpponentFilter = value;
+      clearTimeout(opponentDebounceTimer);
+      opponentDebounceTimer = setTimeout(() => loadPage(1), 350);
     }
 
     async function shareMatch(matchId, btn) {
@@ -838,6 +920,8 @@
       loadPage,
       switchGame,
       shareMatch,
+      setResultFilter,
+      onOpponentInput,
     });
     })();
   </script>
