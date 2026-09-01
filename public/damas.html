@@ -536,6 +536,38 @@
       margin-top: 8px;
     }
 
+    /* "Como jugar" como acordeon (Fase pulido UX/UI, seccion 14): la
+       version anterior era un .oz-card siempre abierto (~225px en
+       desktop, ~260px en movil por 4 lineas de texto) -- para un
+       jugador que vuelve, es espacio perdido cada vez que entra a la
+       pagina. <details>/<summary> nativo: sin JS para el toggle,
+       operable por teclado y lector de pantalla de fabrica. Cerrado
+       por defecto en todos los anchos ("acordeon" de la lista de
+       opciones del pedido, no un resumen fijo distinto en desktop --
+       mas simple y con el mismo comportamiento en todas partes). */
+    .rules-details {
+      cursor: default;
+    }
+    .rules-details summary {
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      user-select: none;
+    }
+    .rules-details summary::-webkit-details-marker { display: none; }
+    .rules-details summary .rules-chevron {
+      font-size: 11px;
+      color: var(--dim);
+      transition: transform var(--dur-base, 0.3s) var(--ease-out, ease);
+      flex-shrink: 0;
+    }
+    .rules-details[open] summary .rules-chevron { transform: rotate(180deg); color: var(--gold); }
+    .rules-details summary:hover .oz-card-title,
+    .rules-details summary:focus-visible .oz-card-title { color: var(--gold); }
+
     .rules-list {
       list-style: none;
       display: grid;
@@ -702,15 +734,18 @@
     </div>
 
     <div class="info-cards">
-      <div class="oz-card">
-        <div class="oz-card-title" style="text-align:left;">Como jugar</div>
+      <details class="oz-card rules-details">
+        <summary>
+          <span class="oz-card-title">Como jugar</span>
+          <span class="rules-chevron" aria-hidden="true">▾</span>
+        </summary>
         <ul class="rules-list">
           <li>Capturas obligatorias, hacia adelante y hacia atras.</li>
           <li>Si hay mas de una captura, hay que tomar la que come mas piezas.</li>
           <li>Llegar a la ultima fila corona tu ficha en dama (vuela en diagonal).</li>
           <li>Ganas si el rival se queda sin piezas o sin movimientos.</li>
         </ul>
-      </div>
+      </details>
       <div class="oz-card">
         <div class="oz-card-title" style="text-align:left;">Tus estadisticas</div>
         <div class="stats-grid" id="stats-grid"></div>
