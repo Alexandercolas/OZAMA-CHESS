@@ -13,6 +13,7 @@ const { titleForLevel } = require('../services/titles');
 const { detectOpening } = require('../services/openings');
 const { FRAMES, framesFor, isValidFrame, isUnlocked } = require('../services/cosmetics');
 const { currentSeason } = require('../services/seasons');
+const { weeklyProgressFor } = require('../services/weeklyChallenges');
 
 const router = express.Router();
 
@@ -611,6 +612,21 @@ router.get('/profile-stats', requireAuth, async (req, res) => {
 
 // GET /api/user/achievements - catalogo completo (Fase 4 del roadmap
 // PRO), con cuales ya desbloqueo el jugador -- asi el perfil puede
+// GET /api/user/weekly-challenges (Fase 13, "OZAMA PRO / Experiencia
+// Final"): retos semanales calculados de partidas reales de esta
+// semana -- ver services/weeklyChallenges.js para por que no hay meta
+// de puzzles (no hay fecha por puzzle resuelto, solo un contador
+// total).
+router.get('/weekly-challenges', requireAuth, async (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    const challenges = await weeklyProgressFor(req.user._id);
+    res.json({ challenges });
+  } catch (err) {
+    serverError(res, 'Weekly challenges', err);
+  }
+});
+
 // mostrar los bloqueados tambien, no solo los conseguidos.
 router.get('/achievements', requireAuth, async (req, res) => {
   res.set('Cache-Control', 'no-store');
