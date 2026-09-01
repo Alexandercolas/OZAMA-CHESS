@@ -17,6 +17,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/theme.css">
+  <script src="/toast.js" defer></script>
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--carbon); color: var(--text); font-family: var(--fb); min-height: 100vh; }
@@ -100,6 +101,14 @@
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch]));
+    }
+
+    // Notificacion (Fase 16) -- toast compartido en vez de alert(). Si
+    // por algo el script no cargo todavia, cae de vuelta a alert()
+    // como red de seguridad, nunca se pierde el aviso.
+    function notify(message, type = 'error') {
+      if (typeof window.ozToast === 'function') window.ozToast(message, type);
+      else alert(message);
     }
     function flagUrl(country) {
       const code = String(country || 'DO').toLowerCase();
@@ -232,7 +241,7 @@
     }
 
     async function toggleBlock() {
-      if (!_token) { alert('Inicia sesión para bloquear jugadores.'); return; }
+      if (!_token) { notify('Inicia sesión para bloquear jugadores.', 'info'); return; }
       try {
         const method = meta.isBlocked ? 'DELETE' : 'POST';
         const res = await fetch(`/api/user/${encodeURIComponent(profile.username)}/block`, {
@@ -243,7 +252,7 @@
         meta.isBlocked = !meta.isBlocked;
         render();
       } catch (err) {
-        alert(err.message || 'Error al bloquear.');
+        notify(err.message || 'Error al bloquear.');
       }
     }
 

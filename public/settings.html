@@ -22,6 +22,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/theme.css">
+  <script src="/toast.js" defer></script>
   <script src="/preferences.js?v=20260831-faseH"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -688,6 +689,14 @@
           }[char]));
         }
 
+        // Notificacion (Fase 16) -- toast compartido en vez de alert().
+        // Si por algo el script no cargo todavia, cae de vuelta a
+        // alert() como red de seguridad, nunca se pierde el aviso.
+        function notify(message, type = 'error') {
+          if (typeof window.ozToast === 'function') window.ozToast(message, type);
+          else alert(message);
+        }
+
         function avatarClass(avatar) {
           const index = Number.isFinite(Number(avatar)) ? Number(avatar) : 0;
           return `avatar-${Math.abs(index) % 6}`;
@@ -759,7 +768,7 @@
             if (photoStatus) photoStatus.textContent = 'Foto lista. Toca Guardar.';
             document.querySelectorAll('.avatar-choice').forEach((btn) => btn.classList.remove('active'));
           } catch (err) {
-            alert(err.message || 'No se pudo preparar la foto.');
+            notify(err.message || 'No se pudo preparar la foto.');
           } finally {
             event.target.value = '';
           }
@@ -1051,7 +1060,7 @@
         const msg = document.getElementById('save-msg');
         if (msg) { msg.style.display = 'inline'; setTimeout(() => { msg.style.display = 'none'; }, 2000); }
       } catch (err) {
-        alert('Error al guardar.');
+        notify('Error al guardar.');
       }
     }
 
@@ -1184,11 +1193,11 @@
       const themes = OZAMA_PREFS.availableThemes(_prefsUser);
       const def = themes.find((t) => t.key === key);
       if (def?.locked) {
-        alert('Ese tema de tablero es exclusivo de OZAMA Premium.');
+        notify('Ese tema de tablero es exclusivo de OZAMA Premium.', 'info');
         return;
       }
       const result = await OZAMA_PREFS.save({ boardTheme: key });
-      if (!result.ok) alert(result.error || 'No se pudo guardar el tema.');
+      if (!result.ok) notify(result.error || 'No se pudo guardar el tema.');
       renderPersonalizationPanel();
     }
 
@@ -1196,11 +1205,11 @@
       const pieceSets = OZAMA_PREFS.availablePieceSets(_prefsUser);
       const def = pieceSets.find((p) => p.key === key);
       if (def?.locked) {
-        alert('Ese set de piezas es exclusivo de OZAMA Premium.');
+        notify('Ese set de piezas es exclusivo de OZAMA Premium.', 'info');
         return;
       }
       const result = await OZAMA_PREFS.save({ pieceSet: key });
-      if (!result.ok) alert(result.error || 'No se pudo guardar el set de piezas.');
+      if (!result.ok) notify(result.error || 'No se pudo guardar el set de piezas.');
       renderPersonalizationPanel();
     }
 
@@ -1208,11 +1217,11 @@
       const pieceSets = OZAMA_PREFS.availableDamasPieceSets(_prefsUser);
       const def = pieceSets.find((p) => p.key === key);
       if (def?.locked) {
-        alert('Ese set de fichas es exclusivo de OZAMA Premium.');
+        notify('Ese set de fichas es exclusivo de OZAMA Premium.', 'info');
         return;
       }
       const result = await OZAMA_PREFS.save({ damasPieceSet: key });
-      if (!result.ok) alert(result.error || 'No se pudo guardar el set de fichas.');
+      if (!result.ok) notify(result.error || 'No se pudo guardar el set de fichas.');
       renderPersonalizationPanel();
     }
 

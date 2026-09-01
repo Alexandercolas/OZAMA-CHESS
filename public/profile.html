@@ -22,6 +22,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/theme.css">
+  <script src="/toast.js" defer></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -787,6 +788,14 @@
           }[char]));
         }
 
+        // Notificacion (Fase 16) -- toast compartido en vez de alert().
+        // Si por algo el script no cargo todavia, cae de vuelta a
+        // alert() como red de seguridad, nunca se pierde el aviso.
+        function notify(message, type = 'error') {
+          if (typeof window.ozToast === 'function') window.ozToast(message, type);
+          else alert(message);
+        }
+
         function avatarClass(avatar) {
           const index = Number.isFinite(Number(avatar)) ? Number(avatar) : 0;
           return `avatar-${Math.abs(index) % 6}`;
@@ -1246,7 +1255,7 @@
         input.value = '';
         await loadFriends();
       } catch (err) {
-        alert(err.message || 'No se pudo agregar.');
+        notify(err.message || 'No se pudo agregar.');
       }
     }
 
@@ -1259,7 +1268,7 @@
         if (!res.ok) throw new Error();
         await loadFriends();
       } catch (err) {
-        alert('No se pudo quitar el amigo.');
+        notify('No se pudo quitar el amigo.');
       }
     }
 
