@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; base-uri 'self'; object-src 'none'; form-action 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://flagcdn.com; media-src 'self'; connect-src 'self' https://ozama-chess.onrender.com">
+  <script src="/mobile-runtime.js"></script>
+  <meta name="theme-color" content="#0D0B08"/>
+  <meta name="color-scheme" content="dark"/>
+  <title>OZAMA CHESS - Comparar Jugadores</title>
+  <meta name="robots" content="noindex, nofollow"/>
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="/favicon.png?v=5">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <script src="/pwa.js" defer></script>
+  <script src="/toast.js" defer></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--carbon); color: var(--text); font-family: var(--fb); min-height: 100vh; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; background: rgba(13,11,8,0.97); border-bottom: 1px solid rgba(200,152,60,0.18); }
+    .topbar a.brand { color: var(--gold); font-family: var(--ft); font-weight: 900; letter-spacing: 3px; text-decoration: none; font-size: 15px; }
+    .topbar a.back { color: var(--dim); text-decoration: none; font-size: 13px; }
+    .wrap { max-width: 640px; margin: 0 auto; padding: 28px 16px 60px; }
+    .eyebrow { font-family: var(--fm); font-size: 10.5px; letter-spacing: 3px; color: var(--gold); text-transform: uppercase; text-align: center; }
+    h1 { font-family: var(--ft); font-size: 26px; text-align: center; margin: 8px 0 6px; color: var(--text); }
+    .sub { text-align: center; color: var(--dim); font-size: 13px; margin-bottom: 26px; }
+
+    .picker-form { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .picker-form input { flex: 1; min-width: 140px; padding: 10px 14px; background: var(--s2); border: 1px solid rgba(200,152,60,0.22); border-radius: 8px; color: var(--text); font-family: var(--fb); font-size: 13px; }
+    .picker-form input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+    .vs-header { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; margin-bottom: 24px; }
+    .vs-player { text-align: center; }
+    .vs-av { width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-family: var(--ft); font-weight: 900; color: var(--carbon); font-size: 26px; background: linear-gradient(135deg, var(--gold), #8B6914); overflow: hidden; }
+    .vs-av img { width: 100%; height: 100%; object-fit: cover; }
+    .vs-av[data-frame="bronce"] { box-shadow: 0 0 0 4px #8B5A2B; }
+    .vs-av[data-frame="plata"] { box-shadow: 0 0 0 4px #C7CCD1; }
+    .vs-av[data-frame="oro"] { box-shadow: 0 0 0 4px #FFD34D; }
+    .vs-av[data-frame="racha"] { box-shadow: 0 0 0 4px #E2571C, 0 0 14px 2px rgba(226,87,28,0.5); }
+    .vs-av[data-frame="tactico"] { box-shadow: 0 0 0 4px #3F7D4E; }
+    .vs-av[data-frame="cazador"] { box-shadow: 0 0 0 4px #7A1F2B; }
+    .vs-av[data-frame="centenario"] { box-shadow: 0 0 0 4px #6B4A2A; }
+    .vs-av[data-frame="campeon"] { box-shadow: 0 0 0 4px #FFD700, 0 0 18px 3px rgba(255,215,0,0.55); }
+    .vs-name { font-family: var(--ft); font-size: 15px; color: var(--gold); }
+    .vs-title { font-size: 9.5px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+    .vs-mid { font-family: var(--ft); font-size: 20px; color: var(--dim); font-weight: 700; }
+
+    .cmp-section-title { font-family: var(--fm); font-size: 10.5px; color: var(--dim); text-transform: uppercase; letter-spacing: 1.5px; margin: 18px 0 8px; }
+    .cmp-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(200,152,60,0.08); }
+    .cmp-val { font-family: var(--fm); font-size: 15px; font-weight: 700; color: var(--text); text-align: center; }
+    .cmp-val.left { text-align: left; }
+    .cmp-val.right { text-align: right; }
+    .cmp-val.winner { color: var(--gold); }
+    .cmp-label { font-size: 9.5px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; text-align: center; }
+
+    .loading, .error-msg { text-align: center; padding: 60px 20px; color: var(--dim); }
+  </style>
+</head>
+<body>
+  <nav class="topbar"><a class="brand" href="/">OZAMA CHESS</a><a class="back" href="/leaderboard.html">← Ranking</a></nav>
+  <div class="wrap" id="content"><div class="loading">Cargando...</div></div>
+
+  <script>
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch]));
+    }
+    function notify(message, type = 'error') {
+      if (typeof window.ozToast === 'function') window.ozToast(message, type);
+      else alert(message);
+    }
+    function avatarHtml(u) {
+      if (u.avatarImage) return `<img src="${escapeHtml(u.avatarImage)}" alt="">`;
+      return escapeHtml((u.username || '?').charAt(0).toUpperCase());
+    }
+
+    async function fetchProfile(username) {
+      const res = await fetch(`/api/user/${encodeURIComponent(username)}`, { cache: 'no-store' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `No se encontró a "${username}".`);
+      return data.user;
+    }
+
+    function pickerForm(a, b) {
+      return `
+        <div class="eyebrow">Comparación</div>
+        <h1>Comparar Jugadores</h1>
+        <div class="sub">Rating, estadísticas y logros -- lado a lado. Nada privado, solo lo que ya se ve en el perfil público.</div>
+        <form class="picker-form" id="picker-form">
+          <input type="text" id="input-a" placeholder="Jugador 1" value="${escapeHtml(a || '')}" maxlength="20">
+          <input type="text" id="input-b" placeholder="Jugador 2" value="${escapeHtml(b || '')}" maxlength="20">
+          <button class="btn-primary" type="submit">Comparar</button>
+        </form>
+      `;
+    }
+
+    // Fila comparativa: destaca en dorado el lado con mejor valor.
+    // displayA/displayB es lo que se MUESTRA (puede ser texto, ej. un
+    // rango o "45%"); compareA/compareB es lo que se COMPARA (siempre
+    // numerico) -- separarlos evita comparar strings como "45%" contra
+    // "60%" letra por letra en vez de numero contra numero. Si no se
+    // pasan valores de comparacion (ej. el Rango, que es una etiqueta,
+    // no un numero ordenable), no se resalta ningun lado.
+    function cmpRow(label, displayA, displayB, compareA, compareB) {
+      const hasCompare = compareA !== undefined && compareB !== undefined;
+      const aWins = hasCompare && compareA > compareB;
+      const bWins = hasCompare && compareB > compareA;
+      return `
+        <div class="cmp-row">
+          <div class="cmp-val left ${aWins ? 'winner' : ''}">${displayA}</div>
+          <div class="cmp-label">${label}</div>
+          <div class="cmp-val right ${bWins ? 'winner' : ''}">${displayB}</div>
+        </div>
+      `;
+    }
+
+    function renderComparison(pa, pb) {
+      const statsFor = (p, game) => {
+        const s = game === 'damas' ? p.damasStats : p.stats;
+        const games = (s?.wins || 0) + (s?.losses || 0) + (s?.draws || 0);
+        const winrate = games ? Math.round(((s?.wins || 0) / games) * 100) : 0;
+        return { wins: s?.wins || 0, games, winrate };
+      };
+      const sA = statsFor(pa, 'chess'), sB = statsFor(pb, 'chess');
+      const dA = statsFor(pa, 'damas'), dB = statsFor(pb, 'damas');
+
+      document.getElementById('content').innerHTML = `
+        <div class="eyebrow">Comparación</div>
+        <h1>Comparar Jugadores</h1>
+        <div class="sub"><a href="/compare.html" style="color:var(--gold);text-decoration:none;">← Comparar otros dos</a></div>
+
+        <div class="vs-header">
+          <div class="vs-player">
+            <div class="vs-av" data-frame="${escapeHtml(pa.equippedFrame || 'ninguno')}">${avatarHtml(pa)}</div>
+            <div class="vs-name">${escapeHtml(pa.username)}</div>
+            <div class="vs-title">${escapeHtml(pa.globalTitle || 'Novato')}</div>
+          </div>
+          <div class="vs-mid">VS</div>
+          <div class="vs-player">
+            <div class="vs-av" data-frame="${escapeHtml(pb.equippedFrame || 'ninguno')}">${avatarHtml(pb)}</div>
+            <div class="vs-name">${escapeHtml(pb.username)}</div>
+            <div class="vs-title">${escapeHtml(pb.globalTitle || 'Novato')}</div>
+          </div>
+        </div>
+
+        <div class="cmp-section-title">♟ Ajedrez</div>
+        ${cmpRow('ELO', pa.elo, pb.elo, pa.elo, pb.elo)}
+        ${cmpRow('Rango', escapeHtml(pa.rank), escapeHtml(pb.rank))}
+        ${cmpRow('Victorias', sA.wins, sB.wins, sA.wins, sB.wins)}
+        ${cmpRow('Partidas', sA.games, sB.games, sA.games, sB.games)}
+        ${cmpRow('Efectividad', sA.winrate + '%', sB.winrate + '%', sA.winrate, sB.winrate)}
+
+        <div class="cmp-section-title">⚫ Damas</div>
+        ${cmpRow('ELO', pa.damasElo, pb.damasElo, pa.damasElo, pb.damasElo)}
+        ${cmpRow('Rango', escapeHtml(pa.damasRank), escapeHtml(pb.damasRank))}
+        ${cmpRow('Victorias', dA.wins, dB.wins, dA.wins, dB.wins)}
+        ${cmpRow('Partidas', dA.games, dB.games, dA.games, dB.games)}
+        ${cmpRow('Efectividad', dA.winrate + '%', dB.winrate + '%', dA.winrate, dB.winrate)}
+
+        <div class="cmp-section-title">Progreso</div>
+        ${cmpRow('Nivel', pa.level, pb.level, pa.level, pb.level)}
+        ${cmpRow('Logros', pa.achievementsUnlocked, pb.achievementsUnlocked, pa.achievementsUnlocked, pb.achievementsUnlocked)}
+      `;
+    }
+
+    async function load() {
+      const params = new URLSearchParams(window.location.search);
+      const a = params.get('a'), b = params.get('b');
+      const content = document.getElementById('content');
+
+      if (!a || !b) {
+        content.innerHTML = pickerForm(a, b);
+        wireForm();
+        return;
+      }
+
+      content.innerHTML = '<div class="loading">Cargando...</div>';
+      try {
+        const [pa, pb] = await Promise.all([fetchProfile(a), fetchProfile(b)]);
+        renderComparison(pa, pb);
+      } catch (err) {
+        content.innerHTML = pickerForm(a, b);
+        wireForm();
+        notify(err.message || 'No se pudo cargar la comparación.');
+      }
+    }
+
+    function wireForm() {
+      document.getElementById('picker-form')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const a = document.getElementById('input-a').value.trim();
+        const b = document.getElementById('input-b').value.trim();
+        if (!a || !b) { notify('Ingresá los dos nombres de usuario.', 'info'); return; }
+        window.location.href = `/compare.html?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`;
+      });
+    }
+
+    load();
+  </script>
+</body>
+</html>

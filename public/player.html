@@ -97,6 +97,12 @@
     let _token = '';
     let profile = null;
     let meta = null;
+    // Nombre del que esta MIRANDO este perfil (no el que se muestra) --
+    // solo para armar el link "Comparar" precargado (/compare.html usa
+    // el mismo endpoint publico que ya usa esta pagina, no expone nada
+    // nuevo).
+    let _viewerUsername = '';
+    try { _viewerUsername = JSON.parse(localStorage.getItem('ozama-user') || 'null')?.username || ''; } catch (_) {}
     let activeGame = 'chess';
 
     function escapeHtml(value) {
@@ -196,6 +202,7 @@
         ${meta.isSelf ? '' : `
           <div class="actions">
             <a class="btn" href="/lobby.html?challenge=${encodeURIComponent(profile.username || '')}">Desafiar</a>
+            <a class="btn" href="/compare.html?a=${encodeURIComponent(_viewerUsername || '')}&b=${encodeURIComponent(profile.username || '')}">Comparar</a>
             <div class="btn" onclick="togglePanel('report')">Reportar</div>
             <div class="btn danger" id="block-btn" onclick="toggleBlock()">${meta.isBlocked ? 'Desbloquear' : 'Bloquear'}</div>
           </div>
