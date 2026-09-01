@@ -1135,7 +1135,15 @@ function buildPgnText() {
   return `${headers}\n\n${moveText.trim()}\n`;
 }
 
+// No navega solo a Ajustes al tocar el candado -- una partida puede
+// estar en curso, e irse de golpe de la pagina por un click de mas en
+// un boton bloqueado seria peor que el problema que resuelve.
+function showPremiumLockToast(message) {
+  if (typeof window.ozToast === 'function') window.ozToast(`${message} Actívalo desde Ajustes.`, 'info');
+}
+
 function exportPgn() {
+  if (!userIsPremiumActive()) { showPremiumLockToast('Exportar PGN es un beneficio Premium.'); return; }
   if (!state.moveHistory.length) return;
   const pgn = buildPgnText();
   const blob = new Blob([pgn], { type: 'application/x-chess-pgn' });
@@ -1156,13 +1164,20 @@ function userIsPremiumActive() {
   return user?.plan === 'premium' && (!premiumUntil || premiumUntil > new Date());
 }
 
-// Solo se ve el boton si el usuario logueado es Premium activo (chequeo
-// de comodidad en cliente; el dato ya viene revalidado por
-// validateStoredSession() momentos antes en el arranque de la pagina).
+// Fase 5 ("OZAMA PRO / Experiencia Final", contenido bloqueado): el
+// boton se ve SIEMPRE -- antes se ocultaba del todo para Free, y un
+// jugador Free jugando una partida ni se enteraba de que esto
+// existia. Ahora queda visible pero marcado .locked; exportPgn() ya
+// revisa el permiso antes de actuar (chequeo de comodidad en
+// cliente; el dato real ya viene revalidado por
+// validateStoredSession() momentos antes en el arranque de la
+// pagina, y el archivo en si sale de datos que el jugador ya tiene
+// en memoria, asi que no hay nada que proteger server-side aca).
 function setupPgnExportGate() {
   const btn = document.getElementById('move-pgn-btn');
   if (!btn) return;
-  btn.style.display = userIsPremiumActive() ? '' : 'none';
+  btn.style.display = '';
+  btn.classList.toggle('locked', !userIsPremiumActive());
 }
 
 // Ciclar tema de tablero (preferences.js). En game.html el boton solo
@@ -1222,6 +1237,7 @@ function classifyDelta(delta) {
 let _analysisRunning = false;
 
 async function analyzeGameForBlunders() {
+  if (!userIsPremiumActive()) { showPremiumLockToast('Analizar partida es un beneficio Premium.'); return; }
   const history = state.moveHistory || [];
   const btn = document.getElementById('move-analyze-btn');
   if (!history.length || _analysisRunning) return;
@@ -1283,7 +1299,8 @@ function renderAnalysisSummary() {
 function setupAnalysisGate() {
   const btn = document.getElementById('move-analyze-btn');
   if (!btn) return;
-  btn.style.display = userIsPremiumActive() ? '' : 'none';
+  btn.style.display = '';
+  btn.classList.toggle('locked', !userIsPremiumActive());
 }
 
 function setupBoardThemeButton() {

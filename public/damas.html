@@ -13,6 +13,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/theme.css">
+  <script src="/toast.js" defer></script>
   <script src="/checkers-engine.js"></script>
   <script src="/checkers-ai.js"></script>
   <script src="/vendor/socket.io.min.js"></script>
@@ -336,6 +337,9 @@
       transition: all 0.2s ease;
     }
     .btn-mode:hover { color: var(--dama-2); border-color: var(--dama); background: var(--s3); }
+    /* Bloqueado por Premium (Fase 5) -- visible siempre, nunca oculto. */
+    .btn-mode.locked { color: var(--dim); opacity: 0.75; }
+    .btn-mode.locked::after { content: ' 🔒'; }
     .btn-mode.active { color: var(--carbon); background: var(--dama); border-color: var(--dama); }
 
     /* Botones principales de Damas con su propio color solido
@@ -875,11 +879,19 @@
       const premiumUntil = user?.premiumUntil ? new Date(user.premiumUntil) : null;
       return user?.plan === 'premium' && (!premiumUntil || premiumUntil > new Date());
     }
+    // Fase 5 ("OZAMA PRO / Experiencia Final", contenido bloqueado): el
+    // panel se muestra apenas termina la partida, sea Premium o no --
+    // antes se ocultaba entero para Free, y ni se enteraba de que la
+    // funcion existia. El boton en si queda .locked cuando no hay
+    // Premium; analyzeGameForBlunders() ya revisa el permiso antes de
+    // correr el motor.
     function updateAnalysisGate() {
       const panel = document.getElementById('analysis-panel');
+      const btn = document.getElementById('analyze-btn');
       if (!panel) return;
-      const eligible = !!gameOver && moveLog.length > 0 && damasUserIsPremiumActive();
-      panel.style.display = eligible ? '' : 'none';
+      const canShow = !!gameOver && moveLog.length > 0;
+      panel.style.display = canShow ? '' : 'none';
+      if (btn) btn.classList.toggle('locked', !damasUserIsPremiumActive());
     }
     function hideAnalysisPanel() {
       const panel = document.getElementById('analysis-panel');
@@ -905,6 +917,10 @@
     let _damasAnalysisRunning = false;
 
     async function analyzeGameForBlunders() {
+      if (!damasUserIsPremiumActive()) {
+        if (typeof window.ozToast === 'function') window.ozToast('Analizar partida es un beneficio Premium. Actívalo desde Ajustes.', 'info');
+        return;
+      }
       if (_damasAnalysisRunning || !moveLog.length) return;
       if (typeof OzamaCheckersAI === 'undefined' || typeof OzamaCheckersAI.analyzePosition !== 'function') return;
       _damasAnalysisRunning = true;

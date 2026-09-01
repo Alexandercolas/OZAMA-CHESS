@@ -21,6 +21,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/theme.css">
+  <script src="/toast.js" defer></script>
   <style>
     /* ── Reset & base ── */
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -790,6 +791,13 @@
     }
     .move-pgn-btn:hover { background: rgba(200,152,60,0.14); }
     .move-pgn-btn:disabled { opacity: 0.4; cursor: default; }
+    /* Bloqueado por Premium (Fase 5, "OZAMA PRO / Experiencia Final"):
+       visible siempre, nunca oculto del todo -- se ve, se sabe que
+       existe, un click explica como conseguirlo (ver
+       showPremiumLockToast en script.js). */
+    .move-pgn-btn.locked { color: var(--dim); opacity: 0.7; }
+    .move-pgn-btn.locked::after { content: ' 🔒'; }
+    .move-pgn-btn.locked:hover { opacity: 0.9; }
     .move-analysis-summary {
       padding: 7px 6px;
       border-top: 1px solid rgba(200,152,60,0.1);
