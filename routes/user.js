@@ -8,7 +8,7 @@ const Room                 = require('../models/Room');
 const Event                = require('../models/Event');
 const Report                = require('../models/Report');
 const { requireAuth, optionalAuth, userIsAdmin } = require('../middleware/auth');
-const { ACHIEVEMENTS, ACHIEVEMENT_MAP, levelFromXp, xpIntoLevel } = require('../services/achievements');
+const { ACHIEVEMENTS, ACHIEVEMENT_MAP, levelFromXp, xpIntoLevel, achievementProgressFor } = require('../services/achievements');
 const { titleForLevel } = require('../services/titles');
 const { detectOpening } = require('../services/openings');
 const { FRAMES, framesFor, isValidFrame, isUnlocked } = require('../services/cosmetics');
@@ -616,14 +616,19 @@ router.get('/achievements', requireAuth, async (req, res) => {
   res.set('Cache-Control', 'no-store');
   const unlockedMap = new Map((req.user.achievements || []).map((a) => [a.key, a.unlockedAt]));
   res.json({
-    achievements: ACHIEVEMENTS.map((a) => ({
-      key: a.key,
-      name: a.name,
-      description: a.description,
-      icon: a.icon,
-      unlocked: unlockedMap.has(a.key),
-      unlockedAt: unlockedMap.get(a.key) || null,
-    })),
+    achievements: ACHIEVEMENTS.map((a) => {
+      const unlocked = unlockedMap.has(a.key);
+      return {
+        key: a.key,
+        name: a.name,
+        description: a.description,
+        icon: a.icon,
+        rarity: a.rarity || null,
+        unlocked,
+        unlockedAt: unlockedMap.get(a.key) || null,
+        progress: unlocked ? null : achievementProgressFor(a.key, req.user),
+      };
+    }),
   });
 });
 

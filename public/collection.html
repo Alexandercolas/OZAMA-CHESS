@@ -77,6 +77,9 @@
     .cos-board { width: 48px; height: 48px; border-radius: 6px; overflow: hidden; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
     .cos-board span:nth-child(1), .cos-board span:nth-child(4) { background: var(--sw-light); }
     .cos-board span:nth-child(2), .cos-board span:nth-child(3) { background: var(--sw-dark); }
+
+    /* Insignias (Fase 8) -- mismo lenguaje que marcos/temas/piezas. */
+    .badge-preview { width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 26px; background: var(--s2); border: 1px solid rgba(200,152,60,0.2); }
   </style>
 </head>
 <body>
@@ -87,6 +90,7 @@
     let _token = '';
     let _user = null;
     let frames = [];
+    let achievements = [];
 
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch]));
@@ -102,10 +106,14 @@
           content.innerHTML = `<div class="error-msg">Inicia sesión para ver tu colección.<br><br><a href="/login.html" style="color:var(--gold);font-weight:700;text-decoration:none;">Iniciar sesión →</a></div>`;
           return;
         }
-        const res = await fetch('/api/user/frames', { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'No se pudo cargar la colección.');
+        const [framesRes, achvRes] = await Promise.all([
+          fetch('/api/user/frames', { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' }),
+          fetch('/api/user/achievements', { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' }),
+        ]);
+        const data = await framesRes.json();
+        if (!framesRes.ok) throw new Error(data.error || 'No se pudo cargar la colección.');
         frames = data.frames;
+        achievements = achvRes.ok ? (await achvRes.json()).achievements || [] : [];
         render();
       } catch (err) {
         content.innerHTML = `<div class="error-msg">${escapeHtml(err.message || 'Error al cargar.')}</div>`;
@@ -153,8 +161,28 @@
         <div class="grid" id="piece-set-grid"></div>
         <div class="section-title">Fichas de Damas</div>
         <div class="grid" id="damas-piece-set-grid"></div>
+        <div class="section-title">Insignias <span style="color:var(--dim);font-weight:400;">— se ganan jugando</span></div>
+        <div class="grid">${achievementsHtml()}</div>
       `;
       renderCosmetics();
+    }
+
+    // Insignias (Fase 8, "OZAMA PRO / Experiencia Final") -- el
+    // catalogo de logros ya existia (services/achievements.js) y ya se
+    // mostraba en el perfil/dashboard, pero nunca en la Coleccion. No
+    // se "equipan" (no hay upside en elegir uno solo, se muestran
+    // todos), asi que la tarjeta es igual a la de un marco bloqueado
+    // pero sin boton de Equipar.
+    function achievementsHtml() {
+      return achievements.map((a) => `
+        <div class="frame-card ${a.unlocked ? 'equipped' : 'locked'}">
+          ${a.rarity ? `<div class="fr-rarity"><span class="oz-rarity ${a.rarity}">${RARITY_LABELS[a.rarity] || a.rarity}</span></div>` : ''}
+          <div class="badge-preview">${a.icon}</div>
+          <div class="fr-name">${escapeHtml(a.name)}</div>
+          <div class="fr-desc">${escapeHtml(a.description)}</div>
+          ${a.unlocked ? '' : progressHtml(a.progress)}
+        </div>
+      `).join('');
     }
 
     // Temas de tablero y sets de piezas (Fase H): a diferencia de los
