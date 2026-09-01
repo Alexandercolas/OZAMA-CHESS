@@ -305,6 +305,15 @@
       // que ahi simplemente no aparece la seccion.
       const topInsight = (coachData?.insights || [])[0] || null;
 
+      // "Te falta poco para desbloquear X" (Fase 15) -- el logro NO
+      // desbloqueado mas cerca de completarse, usando el progreso real
+      // que GET /api/user/achievements ya calcula (Fase 8). Solo se
+      // muestra si falta 2 o menos -- mas lejos que eso no se siente
+      // como "casi lo tenes", se siente como spam.
+      const closestUnlock = (achData?.achievements || [])
+        .filter((a) => !a.unlocked && a.progress && (a.progress.target - a.progress.current) <= 2 && (a.progress.target - a.progress.current) >= 0)
+        .sort((a, b) => (a.progress.target - a.progress.current) - (b.progress.target - b.progress.current))[0] || null;
+
       // Proximo torneo (Fase 21: dashboard "vivo") -- el mas cercano
       // en el tiempo, de cualquier juego, entre los que ya estan
       // abiertos a inscripcion. Dato real de /api/events, nunca
@@ -382,6 +391,17 @@
               <div class="lc-name">Entrenamiento recomendado</div>
               <div class="lc-meta">${escapeHtml(topInsight.text)}</div>
             </span>
+          </a>
+        ` : ''}
+
+        ${closestUnlock ? `
+          <a class="live-card" href="/lobby.html">
+            <span class="lc-icon">${closestUnlock.icon}</span>
+            <span>
+              <div class="lc-name">Te falta poco: ${escapeHtml(closestUnlock.name)}</div>
+              <div class="lc-meta">${closestUnlock.progress.target - closestUnlock.progress.current === 1 ? 'Falta 1' : `Faltan ${closestUnlock.progress.target - closestUnlock.progress.current}`} para desbloquearlo -- ${escapeHtml(closestUnlock.description)}</div>
+            </span>
+            <span class="lc-countdown">Jugar →</span>
           </a>
         ` : ''}
 
