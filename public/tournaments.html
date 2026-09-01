@@ -174,6 +174,10 @@
 
     const statusLabels = { draft: 'Proximamente', published: 'Inscripciones abiertas', active: 'En curso', finished: 'Finalizado', cancelled: 'Cancelado', closed: 'Cerrado' };
     const gameLabels = { chess: '♟ Ajedrez', checkers: '⚫ Damas' };
+    // Torneos recurrentes (Fase 9-10): la edicion se genera sola cada
+    // dia/semana/mes (services/recurringTournaments.js) -- esto solo
+    // es la etiqueta que avisa que hay una proxima.
+    const RECURRENCE_LABELS = { daily: '🔁 Diario', weekly: '🔁 Semanal', monthly: '🔁 Mensual' };
 
     function eventIdFromUrl() {
       return new URLSearchParams(window.location.search).get('id');
@@ -218,7 +222,7 @@
               <span class="t-icon">${escapeHtml(t.icon || '🏆')}</span>
               <div>
                 <div class="t-name">${escapeHtml(t.title)}</div>
-                <div class="t-game">${gameLabels[t.gameType] || gameLabels.chess}</div>
+                <div class="t-game">${gameLabels[t.gameType] || gameLabels.chess}${RECURRENCE_LABELS[t.recurrence] ? ' · ' + RECURRENCE_LABELS[t.recurrence] : ''}</div>
               </div>
             </div>
             ${statusBadge}

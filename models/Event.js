@@ -65,16 +65,22 @@ const EventSchema = new mongoose.Schema(
     icon: { type: String, trim: true, maxlength: 8, default: '' },
     minRating: { type: Number, min: 0, max: 4000, default: null },
     maxRating: { type: Number, min: 0, max: 4000, default: null },
-    // Torneos recurrentes (Fase 4): 'none' es un torneo unico de
-    // siempre. Los demas valores son solo METADATA por ahora -- no hay
-    // todavia un generador automatico que cree la proxima edicion (ver
-    // el comentario en scripts/seed-default-tournaments.js sobre por
-    // que se dejo afuera de este primer corte).
+    // Torneos recurrentes (Fase 9-10, "OZAMA PRO / Experiencia Final"):
+    // 'none' es un torneo unico de siempre. Los demas se generan solos
+    // -- ver services/recurringTournaments.js. Mismo principio que el
+    // puzzle diario (services/puzzles.js: dailyPuzzleForDate): la
+    // "edicion actual" se CALCULA a partir de la fecha, nunca un cron
+    // que la crea de antemano (poco confiable en Render, que puede
+    // reiniciar el proceso). recurrenceKey identifica esa edicion de
+    // forma deterministica (ej: "blitz-diario-2026-08-31") -- el
+    // indice unico disperso evita que dos requests casi simultaneas
+    // creen la misma edicion dos veces.
     recurrence: {
       type: String,
       enum: ['none', 'daily', 'weekly', 'monthly'],
       default: 'none',
     },
+    recurrenceKey: { type: String, default: null },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
@@ -111,5 +117,6 @@ const EventSchema = new mongoose.Schema(
 
 EventSchema.index({ status: 1, startsAt: 1 });
 EventSchema.index({ type: 1, createdAt: -1 });
+EventSchema.index({ recurrenceKey: 1 }, { unique: true, sparse: true });
 
 module.exports = mongoose.model('Event', EventSchema);

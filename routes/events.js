@@ -3,11 +3,25 @@
 const express = require('express');
 const Event = require('../models/Event');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
+const { ensureCurrentEditions } = require('../services/recurringTournaments');
 
 const router = express.Router();
 
 function validObjectId(value) {
   return /^[a-f0-9]{24}$/i.test(String(value || ''));
+}
+
+// Asegura las ediciones actuales de los torneos recurrentes antes de
+// listar -- con throttle en memoria (una vez cada 5 min por proceso)
+// para no pegarle a la base en cada request, ya que el resultado no
+// cambia entre requests que caen en la misma ventana.
+let _lastRecurringCheck = 0;
+const RECURRING_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+async function maybeEnsureRecurringEditions() {
+  const now = Date.now();
+  if (now - _lastRecurringCheck < RECURRING_CHECK_INTERVAL_MS) return;
+  _lastRecurringCheck = now;
+  await ensureCurrentEditions().catch((err) => console.warn('[Events] ensureCurrentEditions:', err.message));
 }
 
 // ?status=finished pide el historial en vez de la lista activa por
@@ -18,6 +32,7 @@ function validObjectId(value) {
 // atras", no "hacia adelante" como la lista de proximos.
 router.get('/', async (req, res) => {
   try {
+    await maybeEnsureRecurringEditions();
     const wantsHistory = req.query.status === 'finished';
     const filter = wantsHistory ? { status: 'finished' } : { status: { $in: ['published', 'active'] } };
     const events = await Event.find(filter)
