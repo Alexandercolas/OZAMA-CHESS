@@ -236,6 +236,39 @@ body::before {
 .btn-primary:active { transform: translateY(1px) scale(0.98); }
 .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; background: rgba(139,101,32,0.4); }
 
+/* Estados LOADING/SUCCESS/ERROR (Fase 2, "OZAMA PRO / Experiencia
+   Final") -- lenguaje unico para toda la app en vez de que cada
+   pagina resuelva "cargando" a su manera. Uso tipico:
+   btn.classList.add('is-loading'); btn.disabled = true; ... luego
+   btn.classList.remove('is-loading') y opcionalmente
+   .is-success/.is-error por un momento antes de volver a lo normal.
+   No reemplaza los textos contextuales que ya existen ("Buscando
+   rival...", "Conectando...") -- esos siguen siendo mejores porque
+   dicen QUE esta pasando; esto es para botones que solo necesitan
+   feedback de "estoy trabajando" sin texto especifico. */
+.btn-primary.is-loading,
+.btn-danger.is-loading {
+  color: transparent !important;
+  pointer-events: none;
+}
+.btn-primary.is-loading::after,
+.btn-danger.is-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 14px; height: 14px;
+  margin: -7px 0 0 -7px;
+  border: 2px solid rgba(13,11,8,0.3);
+  border-top-color: var(--carbon);
+  border-radius: 50%;
+  animation: ozSpin 0.7s linear infinite;
+}
+.btn-danger.is-loading::after { border: 2px solid rgba(233,228,218,0.25); border-top-color: var(--text); }
+@keyframes ozSpin { to { transform: rotate(360deg); } }
+
+.btn-primary.is-success { background: #2ecc71 !important; border-color: #2ecc71 !important; }
+.btn-primary.is-error { background: var(--danger) !important; border-color: var(--danger) !important; color: var(--text) !important; }
+
 .btn-danger {
   padding: 11px 26px;
   background: transparent;
