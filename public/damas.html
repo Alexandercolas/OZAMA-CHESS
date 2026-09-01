@@ -553,7 +553,13 @@
       list-style: none;
       display: flex;
       align-items: center;
-      justify-content: center;
+      /* "Tus estadisticas" (la otra card de este mismo par) tiene su
+         titulo alineado a la izquierda -- el titulo se mantiene ahi
+         (no centrado, para no romper la consistencia entre las dos),
+         y la flecha se manda al borde derecho: senal visual estandar
+         de "esto se puede abrir/cerrar" en toda la fila, no solo
+         pegada al texto. */
+      justify-content: space-between;
       gap: 8px;
       user-select: none;
     }
