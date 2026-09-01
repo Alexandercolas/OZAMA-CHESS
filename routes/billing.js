@@ -3,6 +3,7 @@
 const express = require('express');
 const User = require('../models/User');
 const { requireAuth } = require('../middleware/auth');
+const { rateLimit } = require('../middleware/rateLimit');
 const {
   billingProviderConfig,
   fetchSubscription,
@@ -11,6 +12,26 @@ const {
 } = require('../services/paypal');
 
 const router = express.Router();
+
+// /confirm y /webhook hacen una llamada de verdad a la API de PayPal
+// por request (verificar la suscripcion / verificar la firma) -- sin
+// un limite, cualquiera podria usarlos para generar trafico saliente
+// contra PayPal a costa nuestra (nunca podrian falsificar un premium,
+// eso ya lo garantiza la reverificacion server-side, pero si generar
+// carga/costo). /confirm ademas requiere sesion, asi que el limite es
+// mas alto que en /webhook (publico, sin auth).
+const limitConfirm = rateLimit({
+  bucket: 'billing-confirm',
+  limit: 20,
+  windowMs: 10 * 60 * 1000,
+  message: 'Demasiados intentos de confirmar la suscripcion. Intenta de nuevo en unos minutos.',
+});
+const limitWebhook = rateLimit({
+  bucket: 'billing-webhook',
+  limit: 60,
+  windowMs: 60 * 1000,
+  message: 'Demasiadas notificaciones en poco tiempo.',
+});
 
 function serverError(res, scope, err) {
   console.error(`[Billing] ${scope}:`, err.message);
@@ -29,7 +50,7 @@ router.get('/config', (_req, res) => {
 // cuenta como premium si, al reconsultar directo contra PayPal, la
 // suscripcion esta realmente ACTIVE y corresponde al plan de OZAMA.
 // Nunca hay que confiar en el estado que manda el cliente.
-router.post('/confirm', requireAuth, async (req, res) => {
+router.post('/confirm', requireAuth, limitConfirm, async (req, res) => {
   try {
     const subscriptionId = String(req.body?.subscriptionID || '').trim();
     if (!subscriptionId) {
@@ -93,7 +114,7 @@ router.post('/cancel', requireAuth, async (req, res) => {
 // Webhook de PayPal -- mantiene la cuenta sincronizada aunque el
 // usuario nunca vuelva a abrir OZAMA (renovaciones, cancelaciones
 // hechas desde PayPal directamente, pagos fallidos, etc.).
-router.post('/webhook', async (req, res) => {
+router.post('/webhook', limitWebhook, async (req, res) => {
   try {
     const verified = await verifyWebhookSignature(req.headers, req.body);
     if (!verified) {

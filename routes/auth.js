@@ -9,36 +9,9 @@ const { requireAuth } = require('../middleware/auth');
 const { requestToken, setSessionCookie, clearSessionCookie } = require('../middleware/session');
 const { googleProviderConfig, verifyGoogleIdToken } = require('../services/google-auth');
 const { recaptchaProviderConfig, verifyRecaptchaToken } = require('../services/recaptcha');
+const { rateLimit } = require('../middleware/rateLimit');
 
 const router  = express.Router();
-const authAttempts = new Map();
-
-function getClientKey(req, bucket) {
-  const forwarded = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-  return `${bucket}:${forwarded || req.ip || req.socket?.remoteAddress || 'unknown'}`;
-}
-
-function rateLimit({ bucket, limit, windowMs, message }) {
-  return (req, res, next) => {
-    const key = getClientKey(req, bucket);
-    const now = Date.now();
-    const entry = authAttempts.get(key);
-
-    if (!entry || entry.resetAt <= now) {
-      authAttempts.set(key, { count: 1, resetAt: now + windowMs });
-      return next();
-    }
-
-    entry.count += 1;
-    if (entry.count > limit) {
-      const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
-      res.set('Retry-After', String(retryAfter));
-      return res.status(429).json({ error: message || 'Demasiados intentos. Espera un momento.' });
-    }
-
-    return next();
-  };
-}
 
 const limitRegister = rateLimit({
   bucket: 'register',
