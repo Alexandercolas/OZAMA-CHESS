@@ -42,6 +42,31 @@
   --dur-slow: 0.6s;
 }
 
+/* Temas de plataforma (Fase 25, roadmap "OZAMA PRO / Experiencia
+   Final"): arquitectura simple a proposito -- solo redefine el trio
+   de acento (--gold/--gold-2/--amber) que ya maneja el "chrome"
+   compartido de este archivo (botones primarios, foco, spinners,
+   badges, barra de XP). NO recolorea los cientos de bordes/glows con
+   rgba(200,152,60,...) escritos a mano en cada pagina individual, ni
+   el arte de las piezas de ajedrez en script.js -- eso es una
+   retrofit mucho mas grande y separada, fuera de alcance por ahora
+   (ver public/preferences.js). "Ambar" (el de siempre) sigue siendo
+   gratis; los otros dos, exclusivos de Premium, igual que los temas
+   de tablero.
+   Los 3 acentos reusan las paletas que YA existen en la app (--blue-do
+   / --red-do, usadas en gradientes de avatar y banderas) para que se
+   sientan parte de la misma identidad, no colores inventados aparte. */
+:root[data-app-theme="malecon"] {
+  --gold: #3E82C4;
+  --gold-2: #7FB8E8;
+  --amber: #1A3A6B;
+}
+:root[data-app-theme="carmin"] {
+  --gold: #C0392B;
+  --gold-2: #E37360;
+  --amber: #7A2018;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;

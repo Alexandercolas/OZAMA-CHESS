@@ -868,6 +868,8 @@
                       <div class="theme-swatch-row" id="piece-set-row"></div>
                       <span class="edit-label" style="margin-top:16px;display:block;">Fichas de Damas</span>
                       <div class="theme-swatch-row" id="damas-piece-set-row"></div>
+                      <span class="edit-label" style="margin-top:16px;display:block;">Tema de la Plataforma</span>
+                      <div class="theme-swatch-row" id="platform-theme-row"></div>
                       <span class="edit-label" style="margin-top:16px;display:block;">Sonido</span>
                       <div class="sound-pref-row">
                         <button class="btn-save secondary" id="pref-mute-btn" onclick="togglePrefMute()">Sonido: ON</button>
@@ -1178,6 +1180,18 @@
         `).join('');
       }
 
+      const platformRow = document.getElementById('platform-theme-row');
+      if (platformRow) {
+        const platformThemes = OZAMA_PREFS.availablePlatformThemes(_prefsUser);
+        platformRow.innerHTML = platformThemes.map((t) => `
+          <button type="button" class="theme-swatch ${t.key === current.platformTheme ? 'is-active' : ''}" onclick="selectPlatformTheme('${t.key}')" title="${escapeHtml(t.label)}${t.locked ? ' (Premium)' : ''}">
+            <span class="piece-swatch-preview" style="background:${t.swatch};"></span>
+            ${t.locked ? '<span class="theme-swatch-lock">🔒</span>' : ''}
+            <span class="theme-swatch-label">${escapeHtml(t.label)}</span>
+          </button>
+        `).join('');
+      }
+
       const muteBtn = document.getElementById('pref-mute-btn');
       if (muteBtn) muteBtn.textContent = current.soundMuted ? 'Sonido: OFF' : 'Sonido: ON';
       const slider = document.getElementById('pref-volume-slider');
@@ -1225,6 +1239,18 @@
       renderPersonalizationPanel();
     }
 
+    async function selectPlatformTheme(key) {
+      const platformThemes = OZAMA_PREFS.availablePlatformThemes(_prefsUser);
+      const def = platformThemes.find((t) => t.key === key);
+      if (def?.locked) {
+        notify('Ese tema de plataforma es exclusivo de OZAMA Premium.', 'info');
+        return;
+      }
+      const result = await OZAMA_PREFS.save({ platformTheme: key });
+      if (!result.ok) notify(result.error || 'No se pudo guardar el tema de plataforma.');
+      renderPersonalizationPanel();
+    }
+
     function togglePrefMute() {
       const current = OZAMA_PREFS.current();
       OZAMA_PREFS.save({ soundMuted: !current.soundMuted });
@@ -1248,6 +1274,7 @@
       selectBoardTheme,
       selectPieceSet,
       selectDamasPieceSet,
+      selectPlatformTheme,
       togglePrefMute,
       onPrefVolumeInput,
     });

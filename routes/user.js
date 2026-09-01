@@ -134,6 +134,13 @@ const DAMAS_PIECE_SETS = {
   bronce:  { free: false },
 };
 
+// Temas de plataforma (Fase 25) -- mismo criterio, ver public/preferences.js.
+const PLATFORM_THEMES = {
+  ambar:   { free: true },
+  malecon: { free: false },
+  carmin:  { free: false },
+};
+
 // PATCH /api/user/preferences - personalizacion (tablero, sonido...).
 // Whitelist explicita de claves conocidas -- una preferencia nueva se
 // agrega sumando un caso aca, nunca reescribiendo el endpoint entero.
@@ -171,6 +178,16 @@ router.patch('/preferences', requireAuth, async (req, res) => {
         return res.status(403).json({ error: 'Ese set de fichas es exclusivo de OZAMA Premium.' });
       }
       updates['preferences.damasPieceSet'] = damasPieceSet;
+    }
+
+    if (body.platformTheme !== undefined) {
+      const platformTheme = String(body.platformTheme || '').trim();
+      const platformThemeDef = PLATFORM_THEMES[platformTheme];
+      if (!platformThemeDef) return res.status(400).json({ error: 'Tema de plataforma invalido.' });
+      if (!platformThemeDef.free && !premiumActive) {
+        return res.status(403).json({ error: 'Ese tema de plataforma es exclusivo de OZAMA Premium.' });
+      }
+      updates['preferences.platformTheme'] = platformTheme;
     }
 
     if (body.soundMuted !== undefined) {

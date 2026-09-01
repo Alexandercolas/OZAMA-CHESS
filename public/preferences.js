@@ -54,6 +54,17 @@ const OZAMA_PREFS = (() => {
   const DEFAULT_DAMAS_PIECE_SET = 'clasico';
   const DAMAS_PIECE_SET_CACHE_KEY = 'ozama-damas-piece-set';
 
+  // Temas de plataforma (Fase 25) -- ver el bloque [data-app-theme] al
+  // inicio de theme.css para el detalle de que cambia y que NO cambia.
+  const PLATFORM_THEMES = {
+    ambar:   { free: true,  label: 'Ámbar', swatch: '#C8983C' },
+    malecon: { free: false, label: 'Malecón', swatch: '#3E82C4' },
+    carmin:  { free: false, label: 'Carmín', swatch: '#C0392B' },
+  };
+  const PLATFORM_THEME_ORDER = ['ambar', 'malecon', 'carmin'];
+  const DEFAULT_PLATFORM_THEME = 'ambar';
+  const PLATFORM_THEME_CACHE_KEY = 'ozama-platform-theme';
+
   function readStoredUser() {
     try { return JSON.parse(localStorage.getItem('ozama-user') || 'null'); }
     catch { return null; }
@@ -96,6 +107,10 @@ const OZAMA_PREFS = (() => {
     const damasPieceSetDef = DAMAS_PIECE_SETS[damasPieceSet];
     if (!damasPieceSetDef || (!damasPieceSetDef.free && !isPremiumActive(user))) damasPieceSet = DEFAULT_DAMAS_PIECE_SET;
 
+    let platformTheme = localStorage.getItem(PLATFORM_THEME_CACHE_KEY) || fromServer.platformTheme || DEFAULT_PLATFORM_THEME;
+    const platformThemeDef = PLATFORM_THEMES[platformTheme];
+    if (!platformThemeDef || (!platformThemeDef.free && !isPremiumActive(user))) platformTheme = DEFAULT_PLATFORM_THEME;
+
     const soundMuted = localStorage.getItem(SOUND_MUTED_KEY) !== null
       ? localStorage.getItem(SOUND_MUTED_KEY) === 'true'
       : !!fromServer.soundMuted;
@@ -104,13 +119,18 @@ const OZAMA_PREFS = (() => {
       ? Math.max(0, Math.min(1, Number(storedVolume)))
       : (Number.isFinite(fromServer.soundVolume) ? fromServer.soundVolume : DEFAULT_VOLUME);
 
-    return { boardTheme, pieceSet, damasPieceSet, soundMuted, soundVolume };
+    return { boardTheme, pieceSet, damasPieceSet, platformTheme, soundMuted, soundVolume };
   }
 
   function applyToDocument(prefs) {
     const p = prefs || current();
     document.body?.setAttribute('data-board-theme', p.boardTheme);
     document.body?.setAttribute('data-damas-piece-set', p.damasPieceSet);
+    // En :root (<html>), no en <body> -- theme.css define el bloque
+    // [data-app-theme] como :root[data-app-theme=...] para que el
+    // acento este disponible desde el primer paint, antes de que
+    // <body> exista siquiera.
+    document.documentElement?.setAttribute('data-app-theme', p.platformTheme);
     if (typeof window.setSoundMuted === 'function') window.setSoundMuted(p.soundMuted);
     if (typeof window.setSoundVolumeGlobal === 'function') window.setSoundVolumeGlobal(p.soundVolume);
   }
@@ -119,6 +139,7 @@ const OZAMA_PREFS = (() => {
     if (partial.boardTheme !== undefined) localStorage.setItem(THEME_CACHE_KEY, partial.boardTheme);
     if (partial.pieceSet !== undefined) localStorage.setItem(PIECE_SET_CACHE_KEY, partial.pieceSet);
     if (partial.damasPieceSet !== undefined) localStorage.setItem(DAMAS_PIECE_SET_CACHE_KEY, partial.damasPieceSet);
+    if (partial.platformTheme !== undefined) localStorage.setItem(PLATFORM_THEME_CACHE_KEY, partial.platformTheme);
     if (partial.soundMuted !== undefined) localStorage.setItem(SOUND_MUTED_KEY, String(partial.soundMuted));
     if (partial.soundVolume !== undefined) localStorage.setItem(SOUND_VOLUME_KEY, String(partial.soundVolume));
     applyToDocument(current());
@@ -171,6 +192,11 @@ const OZAMA_PREFS = (() => {
     return DAMAS_PIECE_SET_ORDER.map((key) => ({ key, ...DAMAS_PIECE_SETS[key], locked: !DAMAS_PIECE_SETS[key].free && !premiumActive }));
   }
 
+  function availablePlatformThemes(user) {
+    const premiumActive = isPremiumActive(user || readStoredUser());
+    return PLATFORM_THEME_ORDER.map((key) => ({ key, ...PLATFORM_THEMES[key], locked: !PLATFORM_THEMES[key].free && !premiumActive }));
+  }
+
   // Vistas previas compartidas (Fase H, roadmap PRO 2.0) -- usadas por
   // settings.html (para elegir) Y collection.html (para mostrar la
   // coleccion completa), asi ninguna de las dos reinventa los mismos
@@ -211,6 +237,7 @@ const OZAMA_PREFS = (() => {
     current, applyToDocument, save, availableThemes, cycleBoardTheme, BOARD_THEMES, THEME_ORDER, isPremiumActive,
     availablePieceSets, PIECE_SETS, PIECE_SET_ORDER,
     availableDamasPieceSets, DAMAS_PIECE_SETS, DAMAS_PIECE_SET_ORDER,
+    availablePlatformThemes, PLATFORM_THEMES, PLATFORM_THEME_ORDER,
     themeSwatchColor, pieceSetPreviewHtml, damasPieceSetPreviewHtml,
   };
 })();
