@@ -516,6 +516,19 @@
       min-height: 14px;
     }
 
+    /* ── PROXIMO TORNEO (Fase 11) -- banner chico, no otro panel gigante. ── */
+    .tournament-banner {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px; margin-bottom: 20px;
+      text-decoration: none; color: var(--text);
+      cursor: pointer;
+    }
+    .tb-icon { font-size: 22px; flex-shrink: 0; }
+    .tb-info { min-width: 0; flex: 1; }
+    .tb-name { font-family: var(--ft); font-size: 13px; font-weight: 700; color: var(--gold2); letter-spacing: 0.5px; }
+    .tb-meta { font-size: 10px; color: var(--dim); margin-top: 2px; }
+    .tb-cta { font-size: 9.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--gold); flex-shrink: 0; }
+
     /* ── CHALLENGE SECTION ── */
     .challenge-section {
       background: var(--s2);
@@ -1130,6 +1143,16 @@
 
       </div>
 
+      <!-- PROXIMO TORNEO (Fase 11: "torneos destacados", que la plataforma se sienta viva) -->
+      <a class="tournament-banner oz-card oz-enter" id="tournament-banner" style="display:none;" href="/tournaments.html">
+        <span class="tb-icon" id="tb-icon">🏆</span>
+        <div class="tb-info">
+          <div class="tb-name" id="tb-name"></div>
+          <div class="tb-meta" id="tb-meta"></div>
+        </div>
+        <span class="tb-cta">Ver torneo →</span>
+      </a>
+
       <!-- DESAFIAR JUGADOR -->
       <div class="challenge-section" id="desafios">
         <div class="challenge-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m6 3 5 5-2 2-5-5V3h2Zm12 0h2v2l-5 5-2-2 5-5ZM4 20l6-6 2 2-6 6H4v-2Zm10-4 2-2 6 6v2h-2l-6-6Z"/></svg></div>
@@ -1557,6 +1580,29 @@
   window.challengePlayer = challengePlayer;
   window.addFriendFromLobby = addFriendFromLobby;
   navigateLobbyHash();
+  loadNextTournamentBanner();
+
+  // Proximo torneo (Fase 11) -- el mas cercano en el tiempo entre los
+  // abiertos a inscripcion, de cualquier juego. Dato real de
+  // /api/events (mismo endpoint que ya usa tournaments.html/
+  // dashboard.html), banner chico, no otro panel gigante.
+  async function loadNextTournamentBanner() {
+    try {
+      const res = await fetch('/api/events', { cache: 'no-store' });
+      const data = await res.json();
+      const upcoming = (data.events || [])
+        .filter((e) => e.type === 'tournament' && e.status !== 'active')
+        .sort((a, b) => new Date(a.startsAt || 0) - new Date(b.startsAt || 0))[0];
+      if (!upcoming) return;
+      const banner = document.getElementById('tournament-banner');
+      const gameLabel = upcoming.gameType === 'checkers' ? '⚫ Damas' : '♟ Ajedrez';
+      document.getElementById('tb-icon').textContent = upcoming.icon || '🏆';
+      document.getElementById('tb-name').textContent = upcoming.title;
+      document.getElementById('tb-meta').textContent = `${gameLabel}${upcoming.timeControl ? ' · ' + upcoming.timeControl : ''}`;
+      banner.href = `/tournaments.html?id=${upcoming._id}`;
+      banner.style.display = 'flex';
+    } catch (_) { /* no critico -- el lobby sigue funcionando sin el banner */ }
+  }
 
   // Entrada directa desde "Desafiar" en la lista de amigos del perfil
   // (Fase K, roadmap PRO 2.0) -- reusa exactamente challengePlayer(),
