@@ -780,7 +780,7 @@
 
                   const matchId = m._id || m.id || '';
                   const shareBtn = (game === 'chess' && matchId)
-                    ? `<button class="match-share-btn" title="Copiar link para compartir esta partida" onclick="shareMatch('${matchId}', this)">🔗</button>`
+                    ? `<button class="match-share-btn" title="Copiar link para compartir esta partida" aria-label="Copiar link para compartir esta partida" onclick="shareMatch('${matchId}', this)">🔗</button>`
                     : '';
 
                   return `
