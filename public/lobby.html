@@ -305,6 +305,16 @@
       min-width: 0;
     }
 
+    /* Correccion especifica (desktop): sin esto, .cards-row ocupaba
+       TODO el ancho disponible -- en un monitor de 1920px cada card
+       principal media 553x102px (ratio 5.4:1), una tira horizontal en
+       vez de un modulo. Mobile/tablet (<900px) no llevan max-width:
+       siguen ocupando el ancho completo, exactamente como ya
+       funciona -- este bloque es 100% aditivo para pantallas grandes. */
+    @media (min-width: 900px) {
+      .lobby-content { max-width: 1100px; margin: 0 auto; }
+    }
+
     /* Title section */
     .lobby-title {
       text-align: center; margin-bottom: 36px;
@@ -353,8 +363,12 @@
       margin-bottom: 14px;
     }
 
-    @media (min-width: 620px) {
-      .cards-row { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    /* Tablet (620-899px) se queda en 2 columnas, igual que mobile --
+       las 3 columnas + la composicion "premium" (mas alta, icono
+       centrado) recien entran en desktop de verdad (900px+), donde ya
+       hay ancho real de sobra sin necesitar estirar cada card. */
+    @media (min-width: 900px) {
+      .cards-row { grid-template-columns: repeat(3, 1fr); gap: 16px; }
     }
 
     /* ── NIVEL 2: SOCIAL (Crear Sala / Unirse) ── */
@@ -370,6 +384,37 @@
       margin-bottom: 20px;
     }
     @media (min-width: 620px) { .social-row { gap: 12px; } }
+
+    /* friends-module: envoltorio de "Jugar con Amigos" -- en mobile/
+       tablet (<900px) es un passthrough invisible (mismo look de
+       siempre: 2 social-card sueltas, sin titulo nuevo arriba). En
+       desktop se convierte en UN modulo con las 2 acciones adentro,
+       separadas por un divisor sutil en vez de ser 2 cards con borde
+       propio compitiendo visualmente con las 3 principales. */
+    .friends-module-title { display: none; }
+    @media (min-width: 900px) {
+      .friends-module {
+        background: var(--s2);
+        border: 1px solid rgba(200,152,60,0.22);
+        padding: 18px 20px;
+        margin-bottom: 20px;
+        position: relative;
+      }
+      .friends-module-title {
+        display: block;
+        font-family: var(--ft); font-size: 12px; font-weight: 700;
+        color: var(--gold2); letter-spacing: 2px; text-transform: uppercase;
+        margin-bottom: 14px; text-align: center;
+      }
+      .friends-module .social-row { gap: 0; margin-bottom: 0; }
+      .friends-module .social-card {
+        background: transparent; border: none; box-shadow: none;
+        padding: 0 20px;
+      }
+      .friends-module .social-card:first-child {
+        border-right: 1px solid rgba(200,152,60,0.14);
+      }
+    }
 
     /* Colonial Card -- modulo de accion compacto, no panel informativo
        (correccion especifica del Lobby: las 5 cards centrales eran
@@ -548,6 +593,34 @@
       color: var(--gold2); letter-spacing: 1.5px; text-transform: uppercase;
     }
     .social-card .btn-primary { padding: 7px 12px; }
+
+    /* ================================================================
+       DESKTOP (900px+): composicion "premium" para las 3 acciones
+       principales -- de tira horizontal (553x102px medido en 1920px,
+       ratio 5.4:1) a modulo equilibrado (~340-360px de ancho, icono
+       centrado, mas aire). Mobile/tablet no tocan ninguna de estas
+       reglas -- son puramente aditivas dentro del media query.
+       ================================================================ */
+    @media (min-width: 900px) {
+      .card {
+        padding: 26px 22px 22px;
+        gap: 14px;
+        text-align: center;
+      }
+      .card-head { flex-direction: column; gap: 10px; }
+      .card-head-main { flex-direction: column; gap: 8px; }
+      .card-icon { font-size: 26px; }
+      .card-icon svg { width: 24px; height: 24px; }
+      .card-title { font-size: 13.5px; letter-spacing: 1.5px; white-space: normal; }
+      .card-desc { font-size: 10.5px; white-space: normal; text-align: center; }
+      .elo-chip { align-self: center; }
+      .card .btn-primary { margin-top: 10px; }
+      /* Bot: selector y boton pasan de fila a columna -- con mas alto
+         disponible, apilados se lee mas prolijo que apretados en una
+         sola linea angosta. */
+      .bot-controls { flex-direction: column; gap: 8px; }
+      .bot-controls .btn-primary { width: 100%; }
+    }
 
     /* Primary button -- comodo al tacto (min ~30px de alto real con el
        padding+linea de abajo) pero no gigante. */
@@ -1114,6 +1187,12 @@
 
     <!-- MAIN CONTENT -->
     <main class="main">
+      <!-- Contenedor centralizado (solo desktop, ver .lobby-content en
+         el <style>): en pantallas grandes el contenido no se estira
+         de punta a punta -- queda concentrado con aire alrededor,
+         igual que un dashboard premium. Mobile/tablet (<900px) no se
+         toca: sigue ocupando el ancho completo como ya funciona. -->
+      <div class="lobby-content">
 
       <!-- TITLE -->
       <div class="lobby-title">
@@ -1196,7 +1275,12 @@
 
       </div>
 
-      <!-- NIVEL 2: SOCIAL (Crear Sala / Unirse) -->
+      <!-- NIVEL 2: SOCIAL (Crear Sala / Unirse) -- "friends-module" es
+           un passthrough invisible en mobile/tablet (mismo look de
+           siempre); en desktop agrupa las 2 acciones en un solo
+           modulo, ver .friends-module en el <style>. -->
+      <div class="friends-module">
+      <div class="friends-module-title">Jugar con Amigos</div>
       <div class="social-row">
 
         <!-- CREAR SALA -->
@@ -1226,6 +1310,7 @@
           <div class="card-status" id="join-status"></div>
         </div>
 
+      </div>
       </div>
 
       <!-- EVENTO TEMATICO (Fase 12) -- bono real de XP, no solo un banner -->
@@ -1272,6 +1357,7 @@
         </div>
       </div>
 
+      </div>
     </main>
   </div>
 </div>
