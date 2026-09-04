@@ -848,22 +848,37 @@ router.get('/damas-history', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/user/leaderboard - top 20 by ELO
+// GET /api/user/leaderboard?game=chess|damas - top 20 by ELO. Damas
+// tiene su propio ranking, separado del de ajedrez (damasElo/
+// damasStats) -- se alias a elo/stats en la respuesta para que el
+// cliente (leaderboard.html) no necesite dos caminos de render
+// distintos, solo pedir el juego que quiere ver.
 router.get('/leaderboard', optionalAuth, async (req, res) => {
   try {
     res.set('Cache-Control', 'no-store');
-    const players = await User.find(publicLeaderboardFilter())
-      .sort({ elo: -1 })
-      .limit(20)
-      .select('username country avatar avatarImage elo stats plan premiumUntil');
+    const game = req.query.game === 'damas' ? 'damas' : 'chess';
+    const players = game === 'damas'
+      ? await User.find(publicLeaderboardFilter())
+        .sort({ damasElo: -1 })
+        .limit(20)
+        .select('username country avatar avatarImage damasElo damasStats plan premiumUntil')
+      : await User.find(publicLeaderboardFilter())
+        .sort({ elo: -1 })
+        .limit(20)
+        .select('username country avatar avatarImage elo stats plan premiumUntil');
 
     const payload = {
       season: currentSeason(),
+      game,
       players: players.map((player) => {
         const json = player.toJSON();
         json.premiumActive = isPremiumActive(player);
         delete json.plan;
         delete json.premiumUntil;
+        if (game === 'damas') {
+          json.elo = json.damasElo;
+          json.stats = json.damasStats;
+        }
         return json;
       }),
     };
@@ -874,9 +889,11 @@ router.get('/leaderboard', optionalAuth, async (req, res) => {
     if (req.user) {
       const isInTop = payload.players.some((p) => String(p._id) === String(req.user._id));
       if (!isInTop) {
-        const ahead = await User.countDocuments({ ...publicLeaderboardFilter(), elo: { $gt: req.user.elo } });
+        const eloField = game === 'damas' ? 'damasElo' : 'elo';
+        const myElo = game === 'damas' ? req.user.damasElo : req.user.elo;
+        const ahead = await User.countDocuments({ ...publicLeaderboardFilter(), [eloField]: { $gt: myElo } });
         payload.yourRank = ahead + 1;
-        payload.yourElo = req.user.elo;
+        payload.yourElo = myElo;
       }
     }
 

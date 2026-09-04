@@ -520,10 +520,16 @@
       </aside>
     </section>
 
-    <div class="period-tabs" id="period-tabs">
-      <button class="period-tab is-active" data-period="global" onclick="switchPeriod('global')">Global</button>
-      <button class="period-tab" data-period="week" onclick="switchPeriod('week')">Esta semana</button>
-      <button class="period-tab" data-period="month" onclick="switchPeriod('month')">Este mes</button>
+    <div style="display:flex; flex-wrap:wrap; gap:16px; align-items:center; margin-bottom:16px;">
+      <div class="period-tabs" id="game-tabs" style="margin-bottom:0;">
+        <button class="period-tab is-active" data-game="chess" onclick="switchGame('chess')">Ajedrez</button>
+        <button class="period-tab" data-game="damas" onclick="switchGame('damas')">Damas</button>
+      </div>
+      <div class="period-tabs" id="period-tabs" style="margin-bottom:0;">
+        <button class="period-tab is-active" data-period="global" onclick="switchPeriod('global')">Global</button>
+        <button class="period-tab" data-period="week" onclick="switchPeriod('week')">Esta semana</button>
+        <button class="period-tab" data-period="month" onclick="switchPeriod('month')">Este mes</button>
+      </div>
     </div>
 
     <div class="your-rank-card" id="your-rank-card" style="display:none;"></div>
@@ -642,12 +648,13 @@
     }
 
     let currentPeriod = 'global';
+    let currentGame = 'chess';
     let rankingRefreshBusy = false;
     async function load() {
       if (rankingRefreshBusy || currentPeriod !== 'global') return;
       rankingRefreshBusy = true;
       try {
-        const response = await fetch('/api/user/leaderboard', {
+        const response = await fetch(`/api/user/leaderboard?game=${currentGame}`, {
           cache: 'no-store',
           headers: storedToken ? { Authorization: `Bearer ${storedToken}` } : {},
         });
@@ -681,7 +688,8 @@
       if (!card) return;
       if (!data.yourRank) { card.style.display = 'none'; return; }
       card.style.display = 'flex';
-      card.innerHTML = `<span>Tu posición en el ranking global</span><strong>#${data.yourRank}</strong><span>ELO ${data.yourElo}</span>`;
+      const gameLabel = currentGame === 'damas' ? 'Damas' : 'Ajedrez';
+      card.innerHTML = `<span>Tu posición en ${gameLabel}</span><strong>#${data.yourRank}</strong><span>ELO ${data.yourElo}</span>`;
     }
 
     function climberRowHtml(c, index) {
@@ -732,7 +740,7 @@
 
     function switchPeriod(period) {
       currentPeriod = period;
-      document.querySelectorAll('.period-tab').forEach((btn) => {
+      document.querySelectorAll('#period-tabs .period-tab').forEach((btn) => {
         btn.classList.toggle('is-active', btn.dataset.period === period);
       });
       if (period === 'global') {
@@ -743,6 +751,19 @@
       }
     }
 
+    // El toggle de juego solo aplica al ranking global (ELO propio de
+    // cada juego) -- "Esta semana"/"Este mes" ya mezclan ajedrez y
+    // Damas de antes (el mayor de los dos ELO ganados), asi que
+    // cambiar de juego vuelve siempre a la pestaña Global en vez de
+    // fingir que tambien filtra esas dos.
+    function switchGame(game) {
+      currentGame = game;
+      document.querySelectorAll('#game-tabs .period-tab').forEach((btn) => {
+        btn.classList.toggle('is-active', btn.dataset.game === game);
+      });
+      switchPeriod('global');
+    }
+
     load();
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') load();
@@ -751,6 +772,7 @@
       if (document.visibilityState === 'visible') load();
     }, 30_000);
     window.switchPeriod = switchPeriod;
+    window.switchGame = switchGame;
     })();
   </script>
 </body>
