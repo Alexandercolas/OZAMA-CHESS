@@ -772,6 +772,14 @@
     </div>
   </div>
 
+  <div class="overlay hidden" id="damas-disconnect-overlay">
+    <div class="overlay-card" style="text-align:center;">
+      <h2>RIVAL DESCONECTADO</h2>
+      <p>Esperando a que regrese...</p>
+      <div id="damas-disconnect-timer" style="font-family:'IBM Plex Mono',monospace;font-size:44px;font-weight:700;color:var(--dama);margin:14px 0;">30</div>
+    </div>
+  </div>
+
   <div class="overlay hidden" id="damas-rematch-overlay">
     <div class="overlay-card" style="text-align:center;">
       <h2>REVANCHA</h2>
@@ -1357,6 +1365,7 @@
 
     function playAgain() {
       hideGameOverOverlay();
+      hideDamasDisconnectOverlay();
       if (mode === 'online') {
         onlineStatus = 'idle';
         onlineRoomCode = null;
@@ -1624,23 +1633,27 @@
       socket.on('damas:opponent-disconnected', () => {
         // No se da la partida por terminada de una vez: el servidor le
         // da 30s al rival para reconectar (damas:rejoin) antes de
-        // cerrar la sala. Mientras tanto solo se avisa.
-        document.getElementById('status-line').textContent = 'El rival se desconecto. Esperando a que regrese (30s)...';
+        // cerrar la sala de verdad (ver damasStartCloseTimer en
+        // server.js) -- la cuenta regresiva de aca es puramente visual,
+        // pegada a ese mismo numero, nunca decide nada por su cuenta.
+        showDamasDisconnectOverlay();
       });
 
       socket.on('damas:opponent-reconnected', () => {
-        document.getElementById('status-line').textContent = '';
+        hideDamasDisconnectOverlay();
       });
 
       // damas:rejoin solo se dispara desde attemptAutoRejoin() al cargar
       // la pagina, asi que un fallo aqui siempre significa eso: la
       // partida guardada ya no existe (se cerro, expiro el grace period).
       socket.on('damas:rejoin-failed', () => {
+        hideDamasDisconnectOverlay();
         clearOnlineSession();
         setMode('local');
       });
 
       socket.on('damas:game-over', (data) => {
+        hideDamasDisconnectOverlay();
         clearOnlineSession();
         gameOver = { over: true, winner: data.winner, reason: data.reason || 'resign' };
         render();
@@ -1826,6 +1839,33 @@
       );
     }
 
+    // ── Overlay de desconexion (cuenta regresiva) ────────────────────
+    // El servidor le da 30s exactos al rival para reconectar
+    // (damasStartCloseTimer en server.js) antes de darle la partida por
+    // ganada a quien se quedo -- este contador es solo el reflejo
+    // visual de ese plazo, nunca decide nada por su cuenta: si el rival
+    // vuelve antes, damas:opponent-reconnected lo corta; si no vuelve,
+    // el propio damas:game-over (reason 'opponent-left') que manda el
+    // servidor termina tapando este overlay con el de fin de partida.
+    let damasDisconnectInterval = null;
+    function showDamasDisconnectOverlay() {
+      clearInterval(damasDisconnectInterval);
+      let secondsLeft = 30;
+      const timerEl = document.getElementById('damas-disconnect-timer');
+      timerEl.textContent = String(secondsLeft);
+      document.getElementById('damas-disconnect-overlay').classList.remove('hidden');
+      damasDisconnectInterval = setInterval(() => {
+        secondsLeft -= 1;
+        timerEl.textContent = String(Math.max(secondsLeft, 0));
+        if (secondsLeft <= 0) clearInterval(damasDisconnectInterval);
+      }, 1000);
+    }
+    function hideDamasDisconnectOverlay() {
+      clearInterval(damasDisconnectInterval);
+      damasDisconnectInterval = null;
+      document.getElementById('damas-disconnect-overlay').classList.add('hidden');
+    }
+
     function damasRequestRematch() {
       if (mode !== 'online' || !onlineRoomCode) return;
       socket.emit('damas:rematch-request', { room: onlineRoomCode });
@@ -1891,6 +1931,7 @@
         }
         document.getElementById('status-line').textContent = '';
       } else {
+        hideDamasDisconnectOverlay();
         document.getElementById('online-panel').classList.add('hidden');
         document.getElementById('board-wrap').classList.remove('hidden');
         document.getElementById('resign-btn').classList.add('hidden');
