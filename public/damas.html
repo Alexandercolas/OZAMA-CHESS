@@ -646,7 +646,8 @@
 
         <div class="controls stacked" id="board-controls">
           <button class="btn-primary" type="button" id="newgame-btn" onclick="newGame()">Nueva partida</button>
-          <button class="btn-resign hidden" type="button" id="resign-btn" onclick="resignOnline()">Rendirse</button>
+          <button class="btn-resign hidden" type="button" id="resign-btn" onclick="confirmResign()">Rendirse</button>
+          <button class="btn-mode hidden" type="button" id="draw-offer-btn" onclick="damasOfferDraw()">Tablas</button>
           <button class="btn-mode" type="button" id="theme-toggle-btn" title="Cambiar tema de tablero (Zona Colonial, Mármol, y más con Premium)" onclick="cycleBoardThemeDamas()">🎨 Zona Colonial</button>
           <a class="btn-mode" href="/damas-training.html" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;">🧩 Entrenamiento</a>
         </div>
@@ -763,9 +764,43 @@
     <div class="overlay-card">
       <h2 id="gameover-title">GANASTE</h2>
       <p id="gameover-reason"></p>
-      <div class="controls" style="justify-content:center;">
-        <button class="btn-primary" type="button" onclick="playAgain()">Jugar de nuevo</button>
+      <div class="controls" style="justify-content:center;" id="gameover-buttons">
+        <button class="btn-primary" type="button" id="gameover-again-btn" onclick="playAgain()">Jugar de nuevo</button>
+        <button class="btn-primary hidden" type="button" id="gameover-rematch-btn" onclick="damasRequestRematch()">Revancha</button>
         <a class="btn-mode" href="/lobby.html" style="text-decoration:none; display:inline-flex; align-items:center;">Volver al lobby</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="damas-rematch-overlay">
+    <div class="overlay-card" style="text-align:center;">
+      <h2>REVANCHA</h2>
+      <p id="damas-rematch-sub">Tu rival quiere la revancha</p>
+      <div class="controls" style="justify-content:center;">
+        <button class="btn-primary" type="button" id="damas-rematch-accept-btn" onclick="damasAcceptRematch()">Aceptar</button>
+        <button class="btn-resign" type="button" id="damas-rematch-decline-btn" onclick="damasDeclineRematch()">Rechazar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="damas-draw-overlay">
+    <div class="overlay-card" style="text-align:center;">
+      <h2>TABLAS</h2>
+      <p id="damas-draw-sub">Tu rival ofrece tablas.</p>
+      <div class="controls" style="justify-content:center;">
+        <button class="btn-primary" type="button" id="damas-draw-accept-btn" onclick="damasAcceptDraw()">Aceptar</button>
+        <button class="btn-resign" type="button" id="damas-draw-decline-btn" onclick="damasDeclineDraw()">Rechazar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="damas-confirm-overlay">
+    <div class="overlay-card" style="text-align:center;">
+      <h2 id="damas-confirm-title">CONFIRMAR</h2>
+      <p id="damas-confirm-message">Esta accion no se puede deshacer.</p>
+      <div class="controls" style="justify-content:center;">
+        <button class="btn-resign" type="button" id="damas-confirm-accept-btn">Confirmar</button>
+        <button class="btn-mode" type="button" id="damas-confirm-cancel-btn">Cancelar</button>
       </div>
     </div>
   </div>
@@ -1293,7 +1328,8 @@
       }
 
       const title = document.getElementById('gameover-title');
-      if (gameOver.winner === null) title.textContent = 'PARTIDA TERMINADA';
+      if (gameOver.reason === 'draw') title.textContent = 'TABLAS';
+      else if (gameOver.winner === null) title.textContent = 'PARTIDA TERMINADA';
       else if (iWon === true) title.textContent = 'GANASTE';
       else if (iWon === false) title.textContent = 'PERDISTE';
       else title.textContent = gameOver.winner === E.COLOR.WHITE ? 'GANARON LAS BLANCAS' : 'GANARON LAS NEGRAS';
@@ -1304,8 +1340,14 @@
         'resign': selfResigned ? 'te rendiste' : 'el rival se rindio',
         'opponent-left': 'el rival se desconecto',
         'admin-closed': 'un administrador cerro la sala',
+        'draw': 'ambos aceptaron las tablas',
       };
       document.getElementById('gameover-reason').textContent = reasonLabels[gameOver.reason] || 'Partida terminada.';
+      const again = document.getElementById('gameover-again-btn');
+      const rematch = document.getElementById('gameover-rematch-btn');
+      const isOnlineFinish = mode === 'online' && gameOver.reason !== 'opponent-left' && gameOver.reason !== 'admin-closed';
+      if (again) again.classList.toggle('hidden', isOnlineFinish);
+      if (rematch) rematch.classList.toggle('hidden', !isOnlineFinish);
       document.getElementById('gameover-overlay').classList.remove('hidden');
     }
 
@@ -1324,6 +1366,7 @@
         gameOver = null;
         document.getElementById('board-wrap').classList.add('hidden');
         document.getElementById('resign-btn').classList.add('hidden');
+        document.getElementById('draw-offer-btn').classList.add('hidden');
         document.getElementById('newgame-btn').classList.remove('hidden');
         document.getElementById('online-panel').classList.remove('hidden');
         document.getElementById('online-setup').classList.remove('hidden');
@@ -1543,6 +1586,7 @@
         document.getElementById('online-panel').classList.add('hidden');
         document.getElementById('board-wrap').classList.remove('hidden');
         document.getElementById('resign-btn').classList.remove('hidden');
+        document.getElementById('draw-offer-btn').classList.remove('hidden');
         document.getElementById('newgame-btn').classList.add('hidden');
         document.getElementById('status-line').textContent = '';
         saveOnlineSession();
@@ -1600,6 +1644,52 @@
         clearOnlineSession();
         gameOver = { over: true, winner: data.winner, reason: data.reason || 'resign' };
         render();
+      });
+
+      // ── Revancha y tablas (online) ────────────────────────────────
+      socket.on('damas:rematch-requested', ({ playerName } = {}) => {
+        document.getElementById('damas-rematch-sub').textContent = `${playerName || 'Tu rival'} quiere la revancha`;
+        document.getElementById('damas-rematch-overlay').classList.remove('hidden');
+      });
+
+      socket.on('damas:rematch-declined', () => {
+        document.getElementById('damas-rematch-overlay').classList.add('hidden');
+      });
+
+      socket.on('damas:rematch-start', (data) => {
+        onlineRoomToken = data.roomToken;
+        onlineStatus = 'playing';
+        selfResigned = false;
+        statsRecordedForThisGame = false;
+        board = data.board;
+        turn = data.turn;
+        selected = null; legalHere = []; lastMove = null; gameOver = null;
+        moveLog = [];
+        reviewIndex = null;
+        hideAnalysisPanel();
+        hideGameOverOverlay();
+        document.getElementById('damas-rematch-overlay').classList.add('hidden');
+        document.getElementById('online-panel').classList.add('hidden');
+        document.getElementById('board-wrap').classList.remove('hidden');
+        document.getElementById('resign-btn').classList.remove('hidden');
+        document.getElementById('draw-offer-btn').classList.remove('hidden');
+        document.getElementById('newgame-btn').classList.add('hidden');
+        document.getElementById('status-line').textContent = '';
+        saveOnlineSession();
+        render();
+      });
+
+      socket.on('damas:draw-offered', ({ playerName } = {}) => {
+        document.getElementById('damas-draw-sub').textContent = `${playerName || 'Tu rival'} ofrece tablas.`;
+        document.getElementById('damas-draw-overlay').classList.remove('hidden');
+      });
+
+      socket.on('damas:draw-declined', () => {
+        document.getElementById('damas-draw-overlay').classList.add('hidden');
+      });
+
+      socket.on('damas:draw-accepted', () => {
+        document.getElementById('damas-draw-overlay').classList.add('hidden');
       });
 
       // ── Jugadores en linea + desafiar (solo con cuenta) ──────────
@@ -1705,6 +1795,67 @@
       socket.emit('damas:resign', { room: onlineRoomCode });
     }
 
+    // ── Confirmacion generica + Revancha/Tablas online ───────────────
+    // Mismo patron que showConfirm/rematch/draw de Ajedrez (script.js),
+    // adaptado a los IDs propios de Damas para no pisar los overlays
+    // de Ajedrez (ambos archivos pueden compartir sesion de navegador).
+    let _damasConfirmHandler = null;
+    function damasConfirm(title, message, onConfirm) {
+      document.getElementById('damas-confirm-title').textContent = title;
+      document.getElementById('damas-confirm-message').textContent = message;
+      _damasConfirmHandler = onConfirm;
+      document.getElementById('damas-confirm-overlay').classList.remove('hidden');
+    }
+    document.getElementById('damas-confirm-accept-btn').addEventListener('click', () => {
+      document.getElementById('damas-confirm-overlay').classList.add('hidden');
+      const fn = _damasConfirmHandler;
+      _damasConfirmHandler = null;
+      if (fn) fn();
+    });
+    document.getElementById('damas-confirm-cancel-btn').addEventListener('click', () => {
+      document.getElementById('damas-confirm-overlay').classList.add('hidden');
+      _damasConfirmHandler = null;
+    });
+
+    function confirmResign() {
+      if (mode !== 'online' || !onlineRoomCode) return;
+      damasConfirm(
+        '¿ABANDONAR PARTIDA?',
+        'Vas a perder esta partida. Esta accion no se puede deshacer.',
+        resignOnline
+      );
+    }
+
+    function damasRequestRematch() {
+      if (mode !== 'online' || !onlineRoomCode) return;
+      socket.emit('damas:rematch-request', { room: onlineRoomCode });
+    }
+    function damasAcceptRematch() {
+      document.getElementById('damas-rematch-overlay').classList.add('hidden');
+      if (mode === 'online' && onlineRoomCode) socket.emit('damas:rematch-accept', { room: onlineRoomCode });
+    }
+    function damasDeclineRematch() {
+      document.getElementById('damas-rematch-overlay').classList.add('hidden');
+      if (mode === 'online' && onlineRoomCode) socket.emit('damas:rematch-decline', { room: onlineRoomCode });
+    }
+
+    function damasOfferDraw() {
+      if (mode !== 'online' || !onlineRoomCode || onlineStatus !== 'playing') return;
+      damasConfirm(
+        'OFRECER TABLAS',
+        'Tu rival podra aceptar y la partida terminara como empate.',
+        () => socket.emit('damas:draw-offer', { room: onlineRoomCode })
+      );
+    }
+    function damasAcceptDraw() {
+      document.getElementById('damas-draw-overlay').classList.add('hidden');
+      if (mode === 'online' && onlineRoomCode) socket.emit('damas:draw-accept', { room: onlineRoomCode });
+    }
+    function damasDeclineDraw() {
+      document.getElementById('damas-draw-overlay').classList.add('hidden');
+      if (mode === 'online' && onlineRoomCode) socket.emit('damas:draw-decline', { room: onlineRoomCode });
+    }
+
     function setMode(newMode) {
       mode = newMode;
       ['local', 'bot', 'online'].forEach((m) => {
@@ -1732,6 +1883,7 @@
         document.getElementById('online-panel').classList.remove('hidden');
         document.getElementById('board-wrap').classList.toggle('hidden', onlineStatus !== 'playing');
         document.getElementById('resign-btn').classList.toggle('hidden', onlineStatus !== 'playing');
+        document.getElementById('draw-offer-btn').classList.toggle('hidden', onlineStatus !== 'playing');
         document.getElementById('newgame-btn').classList.toggle('hidden', onlineStatus === 'playing');
         if (onlineStatus === 'idle') {
           document.getElementById('online-setup').classList.remove('hidden');
@@ -1742,6 +1894,7 @@
         document.getElementById('online-panel').classList.add('hidden');
         document.getElementById('board-wrap').classList.remove('hidden');
         document.getElementById('resign-btn').classList.add('hidden');
+        document.getElementById('draw-offer-btn').classList.add('hidden');
         document.getElementById('newgame-btn').classList.remove('hidden');
         newGame();
       }

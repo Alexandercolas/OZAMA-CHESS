@@ -2548,6 +2548,107 @@ if (room.white && room.black && !room.clockInterval) {
     await finishDamasGame(room, code, { winner, reason: 'resign' });
   });
 
+  // ── REVANCHA Y TABLAS DE DAMAS ──────────────────────────────────
+  // Mismo patron que rematch-request/accept/decline y draw-offer/
+  // accept/decline de Ajedrez (mas arriba en este archivo), adaptado
+  // a que una sala de Damas identifica al jugador por
+  // socket.data.damasColor (nunca requiere cuenta -- un invitado
+  // tambien puede jugar Damas), no por socket.data.userId como
+  // isAuthorizedRoomSocket() exige para Ajedrez. rematchReady/
+  // drawOfferBy se inicializan perezosamente aca en vez de sumarlos a
+  // los 3 sitios que crean una sala de Damas -- ninguna otra parte del
+  // codigo los necesita hasta que se usa revancha/tablas por primera
+  // vez.
+  function isAuthorizedDamasSocket(room, socket, code) {
+    if (!room || !socket.rooms.has(code)) return false;
+    const myColor = socket.data.damasColor;
+    if (!myColor) return false;
+    const assignedSocket = myColor === 'w' ? room.white : room.black;
+    return assignedSocket === socket.id;
+  }
+
+  socket.on('damas:rematch-request', (payload = {}) => {
+    const data = parseSocketPayload(damasSchemas.roomOnly, payload);
+    if (!data) return;
+    const { room: code } = data;
+    const room = damasRooms.get(code);
+    if (!isAuthorizedDamasSocket(room, socket, code) || room.status !== 'finished') return;
+    room.rematchReady = room.rematchReady || new Set();
+    room.rematchReady.add(socket.id);
+    socket.to(code).emit('damas:rematch-requested', { playerName: socket.data.playerName });
+  });
+
+  socket.on('damas:rematch-accept', (payload = {}) => {
+    const data = parseSocketPayload(damasSchemas.roomOnly, payload);
+    if (!data) return;
+    const { room: code } = data;
+    const room = damasRooms.get(code);
+    if (!isAuthorizedDamasSocket(room, socket, code) || room.status !== 'finished') return;
+    room.rematchReady = room.rematchReady || new Set();
+    room.rematchReady.add(socket.id);
+    if (room.rematchReady.size >= 2) {
+      room.board = OzamaCheckers.createInitialBoard();
+      room.turn = OzamaCheckers.COLOR.WHITE;
+      room.status = 'playing';
+      room.rematchReady = new Set();
+      room.drawOfferBy = null;
+      room.hadPromotion = null;
+      room.startedAt = new Date();
+      room.tokens = { w: createRoomToken(), b: createRoomToken() };
+      if (room.white) io.to(room.white).emit('damas:rematch-start', { roomToken: room.tokens.w, board: room.board, turn: room.turn });
+      if (room.black) io.to(room.black).emit('damas:rematch-start', { roomToken: room.tokens.b, board: room.board, turn: room.turn });
+      console.log(`[DAMAS] Revancha en sala ${code}`);
+    }
+  });
+
+  socket.on('damas:rematch-decline', (payload = {}) => {
+    const data = parseSocketPayload(damasSchemas.roomOnly, payload);
+    if (!data) return;
+    const { room: code } = data;
+    const room = damasRooms.get(code);
+    if (!isAuthorizedDamasSocket(room, socket, code)) return;
+    room.rematchReady = new Set();
+    socket.to(code).emit('damas:rematch-declined');
+  });
+
+  socket.on('damas:draw-offer', (payload = {}) => {
+    const data = parseSocketPayload(damasSchemas.roomOnly, payload);
+    if (!data) return;
+    const { room: code } = data;
+    const room = damasRooms.get(code);
+    if (!room || room.status !== 'playing') return;
+    if (!isAuthorizedDamasSocket(room, socket, code)) return;
+    room.drawOfferBy = socket.id;
+    socket.to(code).emit('damas:draw-offered', { playerName: socket.data.playerName });
+  });
+
+  socket.on('damas:draw-decline', (payload = {}) => {
+    const data = parseSocketPayload(damasSchemas.roomOnly, payload);
+    if (!data) return;
+    const { room: code } = data;
+    const room = damasRooms.get(code);
+    if (!isAuthorizedDamasSocket(room, socket, code)) return;
+    if (!room.drawOfferBy || room.drawOfferBy === socket.id) return;
+    room.drawOfferBy = null;
+    socket.to(code).emit('damas:draw-declined', { playerName: socket.data.playerName });
+  });
+
+  socket.on('damas:draw-accept', async (payload = {}) => {
+    const data = parseSocketPayload(damasSchemas.roomOnly, payload);
+    if (!data) return;
+    const { room: code } = data;
+    const room = damasRooms.get(code);
+    if (!room || room.status !== 'playing' || !room.drawOfferBy) return;
+    if (!isAuthorizedDamasSocket(room, socket, code)) return;
+    if (room.drawOfferBy === socket.id) return;
+    damasCancelCloseTimer(room);
+    room.status = 'finished';
+    room.drawOfferBy = null;
+    io.to(code).emit('damas:draw-accepted', { playerName: socket.data.playerName });
+    io.to(code).emit('damas:game-over', { winner: null, reason: 'draw' });
+    await finishDamasGame(room, code, { winner: null, reason: 'draw' });
+  });
+
   // Reconectar a una partida de Damas en curso tras perder el socket
   // (recargar la pagina, WiFi, la app pasando a segundo plano). El
   // token de sala es lo unico que hace falta -- no requiere sesion,
