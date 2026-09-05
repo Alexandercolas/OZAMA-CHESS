@@ -844,6 +844,20 @@
     </div>
   </div>
 
+  <!-- Captura obligatoria, pero con mas de una opcion legal: el motor
+       nunca elige por el jugador (ver checkers-engine.js / seccion
+       "REGLA DE ORO" del roadmap). -->
+  <div class="overlay hidden" id="damas-capture-choice-overlay">
+    <div class="overlay-card" style="text-align:center;">
+      <h2>CAPTURA OBLIGATORIA</h2>
+      <p>Hay mas de una captura legal. Elige una:</p>
+      <div class="controls" style="justify-content:center; flex-direction:column;" id="damas-capture-choice-options"></div>
+      <div class="controls" style="justify-content:center; margin-top:8px;">
+        <button class="btn-mode" type="button" onclick="damasCancelCaptureChoice()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
   <div class="overlay hidden" id="damas-challenge-modal">
     <div class="overlay-card" style="text-align:center;">
       <h2>DESAFIO RECIBIDO</h2>
@@ -1445,11 +1459,19 @@
       if (mode === 'online' && (onlineStatus !== 'playing' || turn !== onlineColor)) return;
       const clicked = board[r][c];
 
-      // Clicking a destination while something is selected.
+      // Clicking a destination while something is selected. Cuando dos
+      // secuencias de captura DISTINTAS (capturan piezas diferentes)
+      // terminan en la misma casilla, no se puede elegir "la primera
+      // que aparece" -- eso es justamente decidir la jugada por el
+      // jugador. Se le pregunta cual de las dos quiere.
       if (selected) {
-        const seq = legalHere.find((s) => s[s.length - 1].toR === r && s[s.length - 1].toC === c);
-        if (seq) {
-          commitMove(selected.r, selected.c, seq);
+        const matches = legalHere.filter((s) => s[s.length - 1].toR === r && s[s.length - 1].toC === c);
+        if (matches.length === 1) {
+          commitMove(selected.r, selected.c, matches[0]);
+          return;
+        }
+        if (matches.length > 1) {
+          showCaptureChoiceOverlay(selected.r, selected.c, matches);
           return;
         }
       }
@@ -1472,6 +1494,40 @@
       selected = null;
       legalHere = [];
       render();
+    }
+
+    // Notacion algebraica de una casilla (misma convencion que ya usan
+    // las etiquetas de fila/columna del tablero: 'abcdefgh' + fila
+    // contada desde abajo).
+    function squareLabel(r, c) {
+      return `${'abcdefgh'[c]}${E.SIZE - r}`;
+    }
+
+    // Captura obligatoria, pero CUAL captura es libre: cuando dos (o
+    // mas) secuencias legales de igual longitud terminan en la misma
+    // casilla capturando piezas distintas, el jugador elige. El motor
+    // nunca decide esto por su cuenta (ver checkers-engine.js).
+    let pendingCaptureChoice = null; // { fromR, fromC, options }
+    function showCaptureChoiceOverlay(fromR, fromC, options) {
+      pendingCaptureChoice = { fromR, fromC, options };
+      const list = document.getElementById('damas-capture-choice-options');
+      list.innerHTML = options.map((seq, idx) => {
+        const captured = seq.filter((step) => step.capturedR !== -1).map((step) => squareLabel(step.capturedR, step.capturedC));
+        const label = captured.length > 1 ? `Captura en ${captured.join(' y ')}` : `Captura en ${captured[0]}`;
+        return `<button class="btn-primary" type="button" onclick="damasChooseCaptureOption(${idx})">${label}</button>`;
+      }).join('');
+      document.getElementById('damas-capture-choice-overlay').classList.remove('hidden');
+    }
+    function damasChooseCaptureOption(idx) {
+      if (!pendingCaptureChoice) return;
+      const { fromR, fromC, options } = pendingCaptureChoice;
+      pendingCaptureChoice = null;
+      document.getElementById('damas-capture-choice-overlay').classList.add('hidden');
+      commitMove(fromR, fromC, options[idx]);
+    }
+    function damasCancelCaptureChoice() {
+      pendingCaptureChoice = null;
+      document.getElementById('damas-capture-choice-overlay').classList.add('hidden');
     }
 
     // Confirma una jugada: en modo online la manda al servidor y espera
