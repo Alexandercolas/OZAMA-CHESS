@@ -380,6 +380,37 @@
       to   { transform: scale(1); }
     }
 
+    /* Coronacion: destello dorado en la ficha + una corona que aparece
+       y se disuelve arriba. Se aplica una sola vez, justo en el
+       render que sigue a la jugada que corono -- ver crownFxSquare en
+       el script de abajo. */
+    .piece.just-crowned { animation: crownGlow 0.9s ease-out; }
+    @keyframes crownGlow {
+      0%   { box-shadow: 0 3px 6px rgba(0,0,0,0.5), 0 0 0 0 rgba(226,185,96,0.9); transform: scale(1); }
+      35%  { box-shadow: 0 3px 6px rgba(0,0,0,0.5), 0 0 0 11px rgba(226,185,96,0); transform: scale(1.2); }
+      100% { box-shadow: 0 3px 6px rgba(0,0,0,0.5), 0 0 0 11px rgba(226,185,96,0); transform: scale(1); }
+    }
+    .crown-fx {
+      position: absolute;
+      left: 50%;
+      top: 8%;
+      transform: translate(-50%, 0);
+      font-size: clamp(15px, 3.4vw, 24px);
+      pointer-events: none;
+      z-index: 5;
+      filter: drop-shadow(0 2px 3px rgba(0,0,0,0.55));
+      animation: crownFloat 0.9s ease-out forwards;
+    }
+    @keyframes crownFloat {
+      0%   { opacity: 0; transform: translate(-50%, 10px) scale(0.5); }
+      28%  { opacity: 1; transform: translate(-50%, -8px) scale(1.15); }
+      100% { opacity: 0; transform: translate(-50%, -30px) scale(1); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .piece.just-crowned { animation: none; }
+      .crown-fx { animation: none; opacity: 0; }
+    }
+
     .controls {
       display: flex;
       justify-content: center;
@@ -888,6 +919,9 @@
     function playLoseSound() {
       [330, 262].forEach((f, i) => setTimeout(() => playTone(f, 0.22, 'sine', 0.11), i * 130));
     }
+    function playCrownSound() {
+      [660, 990].forEach((f, i) => setTimeout(() => playTone(f, 0.14, 'sine', 0.13), i * 90));
+    }
     ['pointerdown', 'touchstart', 'keydown'].forEach((eventName) => {
       document.addEventListener(eventName, () => getAudioCtx(), { once: true, passive: true });
     });
@@ -918,6 +952,11 @@
     let legalHere = [];       // sequences for the selected square
     let lastMove = null;      // { fromR, fromC, toR, toC }
     let gameOver = null;
+    // Casilla que se corono en la ULTIMA jugada aplicada -- se lee una
+    // sola vez dentro de render() (para el destello + la corona) y se
+    // apaga ahi mismo, para que no se repita si render() se vuelve a
+    // llamar por otro motivo (revisar el historial, redimensionar).
+    let crownFxSquare = null; // { r, c } | null
     // Historial de jugadas de la partida ACTUAL, para el analisis
     // post-partida (Premium, ver analyzeGameForBlunders() mas abajo) Y
     // para la revision de jugadas (ver SECCION mas abajo). Cada
@@ -1030,6 +1069,13 @@
             const el = pieceEl(piece);
             if (mustMoveSet.has(`${r},${c}`)) el.classList.add('must-move');
             if (lastMoveToShow && lastMoveToShow.toR === r && lastMoveToShow.toC === c) el.classList.add('landed');
+            if (!reviewing && crownFxSquare && crownFxSquare.r === r && crownFxSquare.c === c) {
+              el.classList.add('just-crowned');
+              const crownGlyph = document.createElement('span');
+              crownGlyph.className = 'crown-fx';
+              crownGlyph.textContent = '👑';
+              sq.appendChild(crownGlyph);
+            }
             sq.appendChild(el);
           }
 
@@ -1056,6 +1102,7 @@
           boardEl.appendChild(sq);
         }
       }
+      crownFxSquare = null;
 
       // El conteo de capturadas refleja lo que se esta VIENDO (la
       // posicion revisada, si se esta revisando), no siempre la
@@ -1452,8 +1499,10 @@
       selected = null;
       legalHere = [];
       turn = E.otherColor(turn);
+      if (result.promoted) crownFxSquare = { r: result.to.r, c: result.to.c };
 
       if (wasCapture) playCaptureSound(); else playMoveSound();
+      if (result.promoted) setTimeout(playCrownSound, 90);
 
       const status = E.checkGameOver(board, turn);
       gameOver = status.over ? status : null;
@@ -1614,8 +1663,10 @@
         selected = null;
         legalHere = [];
         gameOver = data.gameOver || null;
+        if (data.promoted && data.lastMove) crownFxSquare = { r: data.lastMove.toR, c: data.lastMove.toC };
         document.getElementById('status-line').textContent = '';
         if (data.capturedCount > 0) playCaptureSound(); else playMoveSound();
+        if (data.promoted) setTimeout(playCrownSound, 90);
         render();
       });
 

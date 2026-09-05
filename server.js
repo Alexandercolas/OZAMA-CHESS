@@ -2527,6 +2527,7 @@ if (room.white && room.black && !room.clockInterval) {
       turn: room.turn,
       lastMove: { fromR, fromC, toR: result.to.r, toC: result.to.c },
       capturedCount: result.captured.length,
+      promoted: result.promoted,
       gameOver: status.over ? status : null,
     });
 
