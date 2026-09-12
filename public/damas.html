@@ -181,6 +181,30 @@
     .capture-tally .dot.w { background: radial-gradient(circle at 35% 30%, #F2E4C4, #C8983C 70%); }
     .capture-tally .dot.b { background: radial-gradient(circle at 35% 30%, #4a4038, #16130E 70%); }
 
+    /* Reloj de Damas (Fase 2, Blitz -- antes de esta fase Damas no
+       tenia reloj en ninguna modalidad). Misma logica visual que ya
+       usa Ajedrez (game.html): el reloj de quien tiene el turno se
+       resalta, y por debajo de 30s pasa a rojo. */
+    .damas-clocks { display: flex; gap: 8px; }
+    .damas-clock {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 8px 10px;
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(200,152,60,0.18);
+      background: var(--s2);
+      transition: border-color 220ms ease, background 220ms ease;
+    }
+    .damas-clock.active { border-color: var(--dama); background: var(--s3); }
+    .damas-clock-label {
+      font-size: 9px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; color: var(--dim);
+    }
+    .damas-clock-time { font-family: var(--fm); font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: 1px; }
+    .damas-clock.low .damas-clock-time { color: #ef4444; }
+
     .board-wrap {
       display: flex;
       justify-content: center;
@@ -673,6 +697,16 @@
           <span class="turn-dot w" id="turn-dot"></span>
           <span id="turn-text">Turno: Blancas</span>
         </div>
+        <div class="damas-clocks" id="damas-clocks">
+          <div class="damas-clock" id="damas-clock-b">
+            <span class="damas-clock-label">Negras</span>
+            <span class="damas-clock-time" id="damas-clock-b-time">10:00</span>
+          </div>
+          <div class="damas-clock" id="damas-clock-w">
+            <span class="damas-clock-label">Blancas</span>
+            <span class="damas-clock-time" id="damas-clock-w-time">10:00</span>
+          </div>
+        </div>
         <div class="capture-tally" id="capture-tally"></div>
 
         <div class="controls stacked" id="board-controls">
@@ -939,6 +973,71 @@
     ['pointerdown', 'touchstart', 'keydown'].forEach((eventName) => {
       document.addEventListener(eventName, () => getAudioCtx(), { once: true, passive: true });
     });
+
+    // ── Reloj (Fase 2, Blitz) ──────────────────────────────────────
+    // Mismo diseno que el CLOCK de Ajedrez (public/script.js): tickea
+    // localmente cada segundo para que se vea fluido, y en modo online
+    // se resincroniza con el valor real del servidor en cada
+    // damas:clock-tick/damas:board-update (el servidor es la unica
+    // autoridad -- este contador nunca decide un timeout por su
+    // cuenta en modo online, ver handleDamasClockTimeout).
+    const DAMAS_CLOCK = (() => {
+      let _intervalId = null;
+      let _times = { w: 600000, b: 600000 };
+
+      function _fmt(ms) {
+        const total = Math.max(0, Math.ceil(ms / 1000));
+        return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+      }
+
+      function _render() {
+        const wTimeEl = document.getElementById('damas-clock-w-time');
+        const bTimeEl = document.getElementById('damas-clock-b-time');
+        if (wTimeEl) wTimeEl.textContent = _fmt(_times.w);
+        if (bTimeEl) bTimeEl.textContent = _fmt(_times.b);
+        document.getElementById('damas-clock-w')?.classList.toggle('low', _times.w < 30000);
+        document.getElementById('damas-clock-b')?.classList.toggle('low', _times.b < 30000);
+      }
+
+      function stop() {
+        if (_intervalId) { clearInterval(_intervalId); _intervalId = null; }
+        document.getElementById('damas-clock-w')?.classList.remove('active');
+        document.getElementById('damas-clock-b')?.classList.remove('active');
+      }
+
+      function start(color) {
+        stop();
+        document.getElementById(color === 'w' ? 'damas-clock-w' : 'damas-clock-b')?.classList.add('active');
+        _intervalId = setInterval(() => {
+          _times[color] = Math.max(0, _times[color] - 1000);
+          _render();
+          if (_times[color] === 0) {
+            stop();
+            handleDamasClockTimeout(color);
+          }
+        }, 1000);
+      }
+
+      function switchTo(color) { start(color); }
+      function set(w, b) { _times.w = w; _times.b = b; _render(); }
+      function get() { return { w: _times.w, b: _times.b }; }
+
+      return { start, stop, switchTo, set, get };
+    })();
+
+    // En modo online el SERVIDOR ya decide el timeout (damas:game-over
+    // reason:'timeout' via damasStartClock en server.js) -- este
+    // handler solo actua en local/bot, donde no hay servidor que
+    // arbitre. Mismo principio que handleClockTimeout() en Ajedrez.
+    function handleDamasClockTimeout(loserColor) {
+      if (mode === 'online') return;
+      if (gameOver) return;
+      gameOver = { over: true, winner: E.otherColor(loserColor), reason: 'timeout' };
+      selected = null;
+      legalHere = [];
+      botThinking = false;
+      render();
+    }
 
     const E = window.OzamaCheckers;
     const AI = window.OzamaCheckersAI;
@@ -1410,6 +1509,7 @@
         'opponent-left': 'el rival se desconecto',
         'admin-closed': 'un administrador cerro la sala',
         'draw': 'ambos aceptaron las tablas',
+        'timeout': 'se acabo el tiempo',
       };
       document.getElementById('gameover-reason').textContent = reasonLabels[gameOver.reason] || 'Partida terminada.';
       const again = document.getElementById('gameover-again-btn');
@@ -1562,6 +1662,7 @@
 
       const status = E.checkGameOver(board, turn);
       gameOver = status.over ? status : null;
+      if (gameOver) DAMAS_CLOCK.stop(); else DAMAS_CLOCK.switchTo(turn);
       render();
 
       if (mode === 'bot' && !gameOver && turn === BOT_COLOR) scheduleBotMove();
@@ -1703,8 +1804,14 @@
         document.getElementById('draw-offer-btn').classList.remove('hidden');
         document.getElementById('newgame-btn').classList.add('hidden');
         document.getElementById('status-line').textContent = '';
+        if (Number.isFinite(data.clockW) && Number.isFinite(data.clockB)) DAMAS_CLOCK.set(data.clockW, data.clockB);
+        DAMAS_CLOCK.switchTo(turn);
         saveOnlineSession();
         render();
+      });
+
+      socket.on('damas:clock-tick', ({ w, b } = {}) => {
+        if (Number.isFinite(w) && Number.isFinite(b)) DAMAS_CLOCK.set(w, b);
       });
 
       socket.on('damas:board-update', (data) => {
@@ -1721,6 +1828,8 @@
         gameOver = data.gameOver || null;
         if (data.promoted && data.lastMove) crownFxSquare = { r: data.lastMove.toR, c: data.lastMove.toC };
         document.getElementById('status-line').textContent = '';
+        if (Number.isFinite(data.clockW) && Number.isFinite(data.clockB)) DAMAS_CLOCK.set(data.clockW, data.clockB);
+        if (gameOver) DAMAS_CLOCK.stop(); else DAMAS_CLOCK.switchTo(turn);
         if (data.capturedCount > 0) playCaptureSound(); else playMoveSound();
         if (data.promoted) setTimeout(playCrownSound, 90);
         render();
@@ -1744,10 +1853,12 @@
         // server.js) -- la cuenta regresiva de aca es puramente visual,
         // pegada a ese mismo numero, nunca decide nada por su cuenta.
         showDamasDisconnectOverlay();
+        DAMAS_CLOCK.stop(); // el servidor tambien pausa el reloj mientras dura el grace period
       });
 
       socket.on('damas:opponent-reconnected', () => {
         hideDamasDisconnectOverlay();
+        DAMAS_CLOCK.switchTo(turn);
       });
 
       // damas:rejoin solo se dispara desde attemptAutoRejoin() al cargar
@@ -1762,6 +1873,7 @@
       socket.on('damas:game-over', (data) => {
         hideDamasDisconnectOverlay();
         clearOnlineSession();
+        DAMAS_CLOCK.stop();
         gameOver = { over: true, winner: data.winner, reason: data.reason || 'resign' };
         render();
       });
@@ -1795,6 +1907,8 @@
         document.getElementById('draw-offer-btn').classList.remove('hidden');
         document.getElementById('newgame-btn').classList.add('hidden');
         document.getElementById('status-line').textContent = '';
+        if (Number.isFinite(data.clockW) && Number.isFinite(data.clockB)) DAMAS_CLOCK.set(data.clockW, data.clockB);
+        DAMAS_CLOCK.switchTo(turn);
         saveOnlineSession();
         render();
       });
@@ -2063,6 +2177,11 @@
       botThinking = false;
       document.getElementById('thinking-line').textContent = '';
       document.getElementById('status-line').textContent = '';
+      // Local/bot: sin servidor que arbitre, el reloj corre del lado
+      // del cliente (igual que Ajedrez) -- 10+0 por defecto, todavia
+      // sin selector de ritmo para estos modos.
+      DAMAS_CLOCK.set(600000, 600000);
+      DAMAS_CLOCK.start(E.COLOR.WHITE);
       render();
     }
 
