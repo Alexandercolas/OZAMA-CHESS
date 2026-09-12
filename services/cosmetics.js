@@ -23,6 +23,12 @@ const FRAMES = [
   { key: 'cazador', name: 'Marco de Cazador', description: 'Logra el logro "Caza Mayor" (gana a un rival de ELO mas alto).', unlock: { type: 'achievement', value: 'caza_mayor' }, rarity: 'epico' },
   { key: 'centenario', name: 'Marco de Roble', description: 'Logra el logro "Cien Partidas".', unlock: { type: 'achievement', value: 'cien_partidas' }, rarity: 'epico' },
   { key: 'campeon', name: 'Marco de Campeón', description: 'Gana un torneo de eliminación directa (logro "Campeón de Torneo").', unlock: { type: 'achievement', value: 'campeon_torneo' }, rarity: 'legendario' },
+  // value es un ARRAY a proposito (unico caso): se desbloquea siendo
+  // campeon de temporada de Ajedrez O de Damas -- un solo marco para
+  // los dos juegos, en vez de duplicar el marco por juego. isUnlocked()
+  // ya soporta ambas formas (string o array) sin romper los marcos de
+  // arriba.
+  { key: 'temporada', name: 'Marco de Temporada', description: 'Termina #1 en el ranking de una temporada (Ajedrez o Damas).', unlock: { type: 'achievement', value: ['temporada_campeon_ajedrez', 'temporada_campeon_damas'] }, rarity: 'legendario' },
 ];
 
 const FRAME_KEYS = new Set(FRAMES.map((f) => f.key));
@@ -30,7 +36,13 @@ const FRAME_KEYS = new Set(FRAMES.map((f) => f.key));
 function isUnlocked(frame, { level, achievementKeys }) {
   if (frame.unlock.type === 'always') return true;
   if (frame.unlock.type === 'level') return level >= frame.unlock.value;
-  if (frame.unlock.type === 'achievement') return achievementKeys.has(frame.unlock.value);
+  if (frame.unlock.type === 'achievement') {
+    // value normalmente es un solo logro; el marco de Temporada usa un
+    // array ("cualquiera de estos dos") -- se soportan ambas formas
+    // sin cambiar el comportamiento de los marcos existentes.
+    const values = Array.isArray(frame.unlock.value) ? frame.unlock.value : [frame.unlock.value];
+    return values.some((v) => achievementKeys.has(v));
+  }
   return false;
 }
 

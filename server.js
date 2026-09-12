@@ -26,6 +26,7 @@ const Event           = require('./models/Event');
 const { generateNextRound } = require('./services/tournament');
 const { xpForResult, buildContext, checkNewAchievements } = require('./services/achievements');
 const { activeThematicEvent } = require('./services/thematicEvents');
+const { grantAchievementReward } = require('./services/rewards');
 
 const authRoutes      = require('./routes/auth');
 const userRoutes      = require('./routes/user');
@@ -449,26 +450,6 @@ function startCloseTimer(code) {
 const TOURNAMENT_CHAMPION_XP = 200;
 const TOURNAMENT_FINALIST_XP = 60;
 const TOURNAMENT_FIRST_MATCH_XP = 15;
-
-// Otorga un logro (si todavia no lo tiene) mas un bono de XP -- helper
-// compartido para los 3 premios de torneo (Fase 5, "OZAMA Torneos +
-// Experiencia Visual": recompensas FREE para todos los que participan,
-// no solo para quien gana).
-async function grantAchievementReward(userId, achievementKey, xpBonus) {
-  if (!userId) return;
-  try {
-    const user = await User.findById(userId).select('achievements xp');
-    if (!user) return;
-    const already = (user.achievements || []).some((a) => a.key === achievementKey);
-    if (!already) {
-      user.achievements = [...(user.achievements || []), { key: achievementKey, unlockedAt: new Date() }];
-    }
-    if (xpBonus) user.xp = Number(user.xp || 0) + xpBonus;
-    await user.save();
-  } catch (err) {
-    console.warn(`[Tournament] No se pudo otorgar ${achievementKey}:`, err.message);
-  }
-}
 
 function grantTournamentChampionReward(userId) {
   return grantAchievementReward(userId, 'campeon_torneo', TOURNAMENT_CHAMPION_XP);

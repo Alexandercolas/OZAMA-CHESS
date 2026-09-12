@@ -160,6 +160,41 @@ const ACHIEVEMENTS = [
     // desde handleTournamentMatchFinished().
     check: () => false,
   },
+  {
+    key: 'temporada_campeon_ajedrez',
+    name: 'Campeón de Temporada (Ajedrez)',
+    description: 'Termina #1 en el ranking de Ajedrez al cerrar una temporada.',
+    icon: '👑',
+    rarity: 'legendario',
+    // Mismo motivo que campeon_torneo: no es algo que pase "durante"
+    // una partida, es el resultado de cerrar toda una temporada. Se
+    // otorga directo desde closeSeason() en services/seasons.js.
+    check: () => false,
+  },
+  {
+    key: 'temporada_campeon_damas',
+    name: 'Campeón de Temporada (Damas)',
+    description: 'Termina #1 en el ranking de Damas al cerrar una temporada.',
+    icon: '👑',
+    rarity: 'legendario',
+    check: () => false,
+  },
+  {
+    key: 'temporada_top10_ajedrez',
+    name: 'Top 10 de Temporada (Ajedrez)',
+    description: 'Termina entre los 10 primeros del ranking de Ajedrez al cerrar una temporada.',
+    icon: '🏅',
+    rarity: 'epico',
+    check: () => false,
+  },
+  {
+    key: 'temporada_top10_damas',
+    name: 'Top 10 de Temporada (Damas)',
+    description: 'Termina entre los 10 primeros del ranking de Damas al cerrar una temporada.',
+    icon: '🏅',
+    rarity: 'epico',
+    check: () => false,
+  },
 ];
 
 const ACHIEVEMENT_MAP = new Map(ACHIEVEMENTS.map((a) => [a.key, a]));

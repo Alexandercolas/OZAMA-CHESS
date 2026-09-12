@@ -12,7 +12,7 @@ const { ACHIEVEMENTS, ACHIEVEMENT_MAP, levelFromXp, xpIntoLevel, achievementProg
 const { titleForLevel } = require('../services/titles');
 const { detectOpening } = require('../services/openings');
 const { FRAMES, framesFor, isValidFrame, isUnlocked } = require('../services/cosmetics');
-const { currentSeason, seasonProgressFor } = require('../services/seasons');
+const { getActiveSeason, seasonProgressFor, seasonHistoryFor } = require('../services/seasons');
 const { activeThematicEvent } = require('../services/thematicEvents');
 const { weeklyProgressFor } = require('../services/weeklyChallenges');
 
@@ -97,7 +97,7 @@ router.get('/me', requireAuth, async (req, res) => {
       ...req.user.toJSON(),
       isAdmin: userIsAdmin(req.user),
       globalTitle: titleForLevel(levelFromXp(req.user.xp)),
-      season: currentSeason(),
+      season: await getActiveSeason('chess'),
       activeEvent: activeThematicEvent(),
     },
   });
@@ -646,9 +646,11 @@ router.get('/weekly-challenges', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/user/season-progress - Fase 23: contador real de
-// victorias/partidas desde que arranco la temporada actual. NO es un
-// rating -- el ELO permanente (User.elo) no cambia por esto.
+// GET /api/user/season-progress - Fase 23 (y Fase 1 del roadmap PRO -
+// FASE FINAL): contador real de victorias/partidas desde que arranco
+// la temporada actual, posicion actual, mejor posicion historica y
+// cuantas temporadas ya completo -- separado por juego. NO es un
+// rating -- el ELO permanente (User.elo/damasElo) no cambia por esto.
 router.get('/season-progress', requireAuth, async (req, res) => {
   try {
     res.set('Cache-Control', 'no-store');
@@ -656,6 +658,22 @@ router.get('/season-progress', requireAuth, async (req, res) => {
     res.json(progress);
   } catch (err) {
     serverError(res, 'Season progress', err);
+  }
+});
+
+// GET /api/user/season-history?game=chess|damas - temporadas ya
+// cerradas de este usuario (Fase 1: HISTORIAL, "no borrar temporadas
+// anteriores"). Cada fila viene de SeasonHistory, escrita una sola vez
+// por (usuario, juego, temporada) al cerrar -- no depende de estar en
+// el top 20 publico de esa temporada.
+router.get('/season-history', requireAuth, async (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    const game = req.query.game === 'damas' ? 'damas' : 'chess';
+    const history = await seasonHistoryFor(req.user._id, game);
+    res.json({ game, history });
+  } catch (err) {
+    serverError(res, 'Season history', err);
   }
 });
 
@@ -868,7 +886,7 @@ router.get('/leaderboard', optionalAuth, async (req, res) => {
         .select('username country avatar avatarImage elo stats plan premiumUntil');
 
     const payload = {
-      season: currentSeason(),
+      season: await getActiveSeason(game),
       game,
       players: players.map((player) => {
         const json = player.toJSON();

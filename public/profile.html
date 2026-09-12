@@ -339,6 +339,21 @@
     }
     .adv-locked a { color: var(--gold); font-weight: 700; text-decoration: none; }
 
+    .season-current { display: flex; flex-direction: column; gap: 6px; }
+    .season-name { font-family: var(--ft); font-size: 16px; color: var(--gold); letter-spacing: 1px; }
+    .season-meta { font-size: 12.5px; color: rgba(233,228,218,0.72); }
+    .season-meta strong { color: var(--gold); font-family: var(--fm); }
+    .season-panel .btn-save.secondary { margin-top: 12px; }
+    .season-history-list { display: flex; flex-direction: column; margin-top: 10px; }
+    .season-history-row {
+      display: grid; grid-template-columns: 1fr auto auto 1fr;
+      gap: 10px; align-items: center;
+      padding: 8px 0; border-bottom: 1px solid rgba(200,152,60,0.06);
+      font-size: 12px; color: rgba(233,228,218,0.8);
+    }
+    .season-history-row:last-child { border-bottom: none; }
+    .season-history-row span:nth-child(2) { color: var(--gold); font-weight: 700; font-family: var(--fm); }
+
     /* Seccion historial */
     .section-title {
       font-family: var(--ft);
@@ -879,6 +894,69 @@
       loadAdvancedStats(game);
       renderIdentityPanel(game);
       loadEloHistory(game);
+      loadSeasonPanel(game);
+    }
+
+    // Temporada (Fase 1 + Fase 5 del roadmap "OZAMA PRO - FASE FINAL"):
+    // Ajedrez y Damas tienen su propia temporada, con su propio
+    // progreso/posicion -- nunca se mezclan. El ELO permanente no
+    // cambia por nada de esto, solo se muestra el progreso de esta
+    // ventana de tiempo.
+    async function loadSeasonPanel(game) {
+      const body = document.getElementById('season-body');
+      if (!body || !currentUser) return;
+      body.innerHTML = '<div class="empty-msg">Cargando...</div>';
+      try {
+        const res = await fetch('/api/user/season-progress', { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const g = game === 'damas' ? data.damas : data.chess;
+        if (!g || !g.season) {
+          body.innerHTML = '<div class="empty-msg">Sin temporada activa todavía.</div>';
+          return;
+        }
+        const rankLine = g.myRank ? `Tu posición: <strong>#${g.myRank}</strong>` : 'Todavía no jugaste esta temporada.';
+        const bestRankLine = g.bestRank ? `<div class="season-meta">Mejor posición histórica: <strong>#${g.bestRank}</strong></div>` : '';
+        const gamesLine = g.games > 0 ? `<div class="season-meta">${g.wins}V en ${g.games} partida${g.games === 1 ? '' : 's'} esta temporada</div>` : '';
+        body.innerHTML = `
+          <div class="season-current">
+            <div class="season-name">🏆 ${escapeHtml(g.season.name)}</div>
+            <div class="season-meta">Termina en ${g.season.daysRemaining} día${g.season.daysRemaining === 1 ? '' : 's'}</div>
+            <div class="season-meta">${rankLine}</div>
+            ${bestRankLine}
+            <div class="season-meta">Temporadas completadas: ${g.seasonsCompleted}</div>
+            ${gamesLine}
+          </div>
+          ${g.seasonsCompleted > 0 ? `<button class="btn-save secondary" type="button" onclick="toggleSeasonHistory('${game}')">Ver historial de temporadas</button>` : ''}
+          <div id="season-history-list" class="season-history-list hidden"></div>
+        `;
+      } catch (_) {
+        body.innerHTML = '<div class="empty-msg">No se pudo cargar la temporada.</div>';
+      }
+    }
+
+    async function toggleSeasonHistory(game) {
+      const list = document.getElementById('season-history-list');
+      if (!list) return;
+      if (!list.classList.contains('hidden')) { list.classList.add('hidden'); return; }
+      list.classList.remove('hidden');
+      list.innerHTML = '<div class="empty-msg">Cargando...</div>';
+      try {
+        const res = await fetch(`/api/user/season-history?game=${game}`, { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        if (!data.history.length) { list.innerHTML = '<div class="empty-msg">Sin temporadas anteriores.</div>'; return; }
+        list.innerHTML = data.history.map((h) => `
+          <div class="season-history-row">
+            <span>${escapeHtml(h.seasonName)}</span>
+            <span>#${h.rank}</span>
+            <span>${h.wins}V-${h.losses}D-${h.draws}E</span>
+            <span>${escapeHtml(h.reward || '—')}</span>
+          </div>
+        `).join('');
+      } catch (_) {
+        list.innerHTML = '<div class="empty-msg">No se pudo cargar el historial.</div>';
+      }
     }
 
     function formatDuration(seconds) {
@@ -1184,6 +1262,11 @@
                     <div id="adv-stats-body"><div class="empty-msg">Cargando...</div></div>
                   </div>
 
+                  <div class="season-panel oz-card oz-enter" id="season-panel" style="--d:4">
+                    <div class="section-title">Temporada</div>
+                    <div id="season-body"><div class="empty-msg">Cargando...</div></div>
+                  </div>
+
                   <div class="friends-panel oz-card oz-enter" id="amigos" style="--d:6">
                     <div class="section-title">Amigos</div>
                     <div class="friends-form">
@@ -1284,6 +1367,7 @@
         loadAdvancedStats(currentGame);
         loadIdentityStats();
         loadAchievements();
+        loadSeasonPanel(currentGame);
       } catch (_) {}
     }
 
@@ -1306,6 +1390,7 @@
         loadAdvancedStats(currentGame);
         loadIdentityStats();
         loadAchievements();
+        loadSeasonPanel(currentGame);
       } catch (err) {
         document.getElementById('main-content').innerHTML =
           '<div class="loading">Error cargando el perfil. Recarga la pagina.</div>';

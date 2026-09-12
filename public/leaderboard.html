@@ -155,6 +155,23 @@
       font-size: 11.5px;
       font-weight: 700;
       letter-spacing: 0.5px;
+      transition: border-color 220ms ease, background 220ms ease;
+    }
+    /* Aviso cuando la temporada esta por terminar (Fase 1 del roadmap
+       "OZAMA PRO - FASE FINAL") -- mismo badge, tratamiento visual
+       distinto para que se note sin agregar un elemento nuevo. */
+    .season-badge.ending-soon {
+      border-color: rgba(192,57,43,0.5);
+      background: rgba(192,57,43,0.1);
+      color: #E39494;
+      animation: seasonEndingPulse 2.2s ease-in-out infinite;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .season-badge.ending-soon { animation: none; }
+    }
+    @keyframes seasonEndingPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(192,57,43,0.25); }
+      50%      { box-shadow: 0 0 0 5px rgba(192,57,43,0); }
     }
 
     h1 {
@@ -674,13 +691,20 @@
     // Temporada (Fase I): puramente informativa -- no reinicia ELO ni
     // otorga nada todavia, es solo para que el ranking no se sienta
     // como un numero fijo para siempre.
+    // Aviso "la temporada termina pronto" (Fase 1 del roadmap "OZAMA
+    // PRO - FASE FINAL"): mismo badge de siempre, pero con un
+    // tratamiento visual distinto cuando quedan 3 dias o menos, para
+    // que se note sin agregar un elemento nuevo a la pagina.
+    const SEASON_ENDING_SOON_DAYS = 3;
     function renderSeasonBadge(season) {
       const badge = document.getElementById('season-badge');
       if (!badge || !season) return;
       badge.style.display = '';
       const days = season.daysRemaining;
+      const endingSoon = days <= SEASON_ENDING_SOON_DAYS;
+      badge.classList.toggle('ending-soon', endingSoon);
       const daysText = days === 0 ? 'termina hoy' : `termina en ${days} día${days === 1 ? '' : 's'}`;
-      badge.textContent = `🏆 ${season.name} · ${daysText}`;
+      badge.textContent = endingSoon ? `🏆 ${season.name} termina pronto · ${daysText}` : `🏆 ${season.name} · ${daysText}`;
     }
 
     function renderYourRank(data) {
