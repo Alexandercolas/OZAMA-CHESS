@@ -581,6 +581,8 @@
       type: $('#event-type').value,
       gameType: $('#event-game-type').value,
       status: $('#event-status').value,
+      format: $('#event-format').value,
+      timeControl: $('#event-time-control').value,
       startsAt: $('#event-start').value || null,
       endsAt: $('#event-end').value || null,
       maxPlayers: Number($('#event-max').value || 16),

@@ -3,7 +3,7 @@
 const express = require('express');
 const Event = require('../models/Event');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
-const { ensureCurrentEditions } = require('../services/recurringTournaments');
+const { ensureCurrentEditions, startDueTournaments } = require('../services/recurringTournaments');
 
 const router = express.Router();
 
@@ -24,6 +24,23 @@ async function maybeEnsureRecurringEditions() {
   await ensureCurrentEditions().catch((err) => console.warn('[Events] ensureCurrentEditions:', err.message));
 }
 
+// Arranca los torneos ya vencidos (Fase 3, Torneos PRO) -- throttle
+// mas corto que el de arriba: empezar a horario importa mas que
+// simplemente existir un rato antes, y esta consulta es liviana
+// (un puñado de torneos "published" como mucho).
+let _lastAutostartCheck = 0;
+// Override SOLO para pruebas E2E (nunca en produccion, donde la
+// variable no existe): sin esto, los scripts de verificacion
+// tendrian que esperar 60s reales entre cada escenario para que el
+// throttle no les esconda el auto-inicio del siguiente torneo.
+const AUTOSTART_CHECK_INTERVAL_MS = Number(process.env.OZAMA_AUTOSTART_THROTTLE_MS) || 60 * 1000;
+async function maybeStartDueTournaments() {
+  const now = Date.now();
+  if (now - _lastAutostartCheck < AUTOSTART_CHECK_INTERVAL_MS) return;
+  _lastAutostartCheck = now;
+  await startDueTournaments().catch((err) => console.warn('[Events] startDueTournaments:', err.message));
+}
+
 // ?status=finished pide el historial en vez de la lista activa por
 // defecto -- se mantiene como parametro opcional para no romper a
 // quien ya llama GET /api/events sin nada (tournaments.html antes de
@@ -33,6 +50,7 @@ async function maybeEnsureRecurringEditions() {
 router.get('/', async (req, res) => {
   try {
     await maybeEnsureRecurringEditions();
+    await maybeStartDueTournaments();
     const wantsHistory = req.query.status === 'finished';
     const filter = wantsHistory ? { status: 'finished' } : { status: { $in: ['published', 'active'] } };
     const events = await Event.find(filter)
@@ -75,6 +93,10 @@ function findYourMatch(bracket, userId) {
 router.get('/:id', optionalAuth, async (req, res) => {
   try {
     if (!validObjectId(req.params.id)) return res.status(400).json({ error: 'Evento invalido.' });
+    // Quien esta mirando un torneo especifico (con la cuenta regresiva
+    // en pantalla) es justo a quien mas le importa que arranque a
+    // horario -- se asegura aca tambien, no solo en el listado.
+    await maybeStartDueTournaments();
     const event = await Event.findById(req.params.id)
       .populate('participants', 'username country elo avatarImage avatar')
       .lean();

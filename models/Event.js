@@ -80,7 +80,18 @@ const EventSchema = new mongoose.Schema(
       enum: ['none', 'daily', 'weekly', 'monthly'],
       default: 'none',
     },
-    recurrenceKey: { type: String, default: null },
+    // Sin default (a proposito, BUG real encontrado en la Fase 3 de
+    // "OZAMA PRO"): con default:null, Mongoose escribia recurrenceKey
+    // EXPLICITAMENTE en null para cualquier torneo creado a mano (no
+    // recurrente) -- y un indice sparse-unique SI considera null como
+    // un valor indexado si el campo esta presente (aunque sea null),
+    // asi que el SEGUNDO torneo manual que se creara siempre chocaba
+    // con "E11000 duplicate key... recurrenceKey: null". Dejando el
+    // campo sin default, Mongoose no lo incluye en el documento salvo
+    // que algo lo pase explicito (services/recurringTournaments.js
+    // siempre lo hace), que es lo que un indice sparse de verdad
+    // necesita para funcionar.
+    recurrenceKey: { type: String },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

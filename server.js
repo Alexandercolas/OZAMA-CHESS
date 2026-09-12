@@ -23,7 +23,7 @@ const DamasMatch      = require('./models/DamasMatch');
 const Room            = require('./models/Room');
 const User            = require('./models/User');
 const Event           = require('./models/Event');
-const { generateNextRound } = require('./services/tournament');
+const { generateNextRound, swissRoundsNeeded, generateSwissRound, swissStandings } = require('./services/tournament');
 const { xpForResult, buildContext, checkNewAchievements } = require('./services/achievements');
 const { activeThematicEvent } = require('./services/thematicEvents');
 const { grantAchievementReward } = require('./services/rewards');
@@ -520,12 +520,54 @@ async function handleTournamentMatchFinished(tournamentMeta, winner, room) {
 
     // Releer el estado real (puede ya incluir el resultado de otro
     // partido de la misma ronda que termino casi en simultaneo).
-    const event = await Event.findById(eventId).select('title bracket.rounds').lean();
+    const event = await Event.findById(eventId).select('title format bracket.rounds participants')
+      .populate('participants', 'username').lean();
     const roundMatches = event?.bracket?.rounds?.[round]?.matches || [];
     if (!roundMatches.length) return;
     const allDecided = roundMatches.every((m) => m.status === 'finished' || m.status === 'bye');
     if (!allDecided) return;
 
+    const expectedRoundCount = round + 1;
+
+    if (event.format === 'swiss') {
+      // Suizo: nadie queda afuera al perder -- el torneo termina por
+      // CANTIDAD DE RONDAS (swissRoundsNeeded), no porque solo quede
+      // un ganador. El campeon es quien mas puntos acumulo, no quien
+      // "sobrevivio".
+      const allParticipants = (event.participants || []).map((p) => ({ userId: p._id, name: p.username }));
+      const roundsNeeded = swissRoundsNeeded(allParticipants.length);
+
+      if (expectedRoundCount >= roundsNeeded) {
+        const standings = swissStandings(allParticipants, event.bracket.rounds);
+        const champion = standings[0] || null;
+        const updated = await Event.findOneAndUpdate(
+          { _id: eventId, 'bracket.championId': null, $expr: { $eq: [{ $size: '$bracket.rounds' }, expectedRoundCount] } },
+          { $set: { 'bracket.championId': champion?.userId || null, 'bracket.championName': champion?.name || '', status: 'finished' } },
+          { new: true }
+        ).select('title bracket.championName');
+        if (updated) {
+          console.log(`[Tournament] ${updated.title} (suizo) — campeon: ${updated.bracket.championName}`);
+          if (champion?.userId) await grantTournamentChampionReward(champion.userId);
+          // Subcampeon = segundo en la clasificacion final, no "el
+          // perdedor de este partido" (en suizo el ultimo partido no
+          // necesariamente involucra al campeon ni al subcampeon).
+          const runnerUp = standings[1];
+          if (runnerUp?.userId) await grantAchievementReward(runnerUp.userId, 'finalista_torneo', TOURNAMENT_FINALIST_XP);
+        }
+      } else {
+        const nextRound = generateSwissRound(allParticipants, event.bracket.rounds);
+        const updated = await Event.findOneAndUpdate(
+          { _id: eventId, $expr: { $eq: [{ $size: '$bracket.rounds' }, expectedRoundCount] } },
+          { $push: { 'bracket.rounds': nextRound } },
+          { new: true }
+        ).select('title bracket.rounds');
+        if (updated) console.log(`[Tournament] ${updated.title} (suizo) — ronda ${expectedRoundCount + 1} de ${roundsNeeded} generada.`);
+      }
+      return;
+    }
+
+    // Eliminacion directa (default): el torneo termina cuando de la
+    // ronda que se acaba de decidir sale UN solo ganador.
     const winners = roundMatches
       .map((m) => ({
         userId: m.winner,
@@ -533,7 +575,6 @@ async function handleTournamentMatchFinished(tournamentMeta, winner, room) {
       }))
       .filter((w) => w.userId);
 
-    const expectedRoundCount = round + 1;
     if (winners.length <= 1) {
       const updated = await Event.findOneAndUpdate(
         { _id: eventId, 'bracket.championId': null, $expr: { $eq: [{ $size: '$bracket.rounds' }, expectedRoundCount] } },

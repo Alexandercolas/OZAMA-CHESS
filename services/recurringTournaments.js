@@ -158,4 +158,58 @@ async function ensureCurrentEditions(now = new Date()) {
   return results;
 }
 
-module.exports = { RECURRING_TEMPLATES, editionKeyFor, editionStartsAtFor, ensureCurrentEditions };
+// ── Auto-inicio de torneos (Fase 3, Torneos PRO) ──────────────────
+// Antes de esta fase, NINGUN torneo arrancaba solo -- ni siquiera los
+// "automaticos" de arriba: ensureCurrentEditions() solo los CREA
+// (status:'published'), pero cerrar la inscripcion y armar el bracket
+// exigia SIEMPRE que un admin entrara a mano y generara el bracket
+// (POST /api/admin/events/:id/bracket/generate). En la practica, el
+// "Blitz Diario" nunca arrancaba solo.
+//
+// Mismo principio de siempre (sin cron real, Render puede reiniciar
+// el proceso): se revisa al vuelo que torneo ya esta vencido, se
+// arma el bracket (formato suizo o eliminacion -- swissRoundsNeeded/
+// generateSwissRound de services/tournament.js) y se pasa a
+// status:'active' en UNA sola escritura atomica por torneo, para que
+// dos requests casi simultaneas nunca lo arranquen dos veces.
+const { generateFirstRound } = require('./tournament');
+
+async function startDueTournaments(now = new Date()) {
+  const due = await Event.find({
+    type: 'tournament',
+    status: 'published',
+    startsAt: { $lte: now },
+  }).populate('participants', 'username').select('participants format bracket.rounds');
+
+  const started = [];
+  for (const event of due) {
+    if (event.bracket?.rounds?.length) continue; // ya tiene bracket -- no deberia pasar, pero defensivo
+    const participants = (event.participants || []).map((p) => ({ userId: p._id, name: p.username }));
+
+    // Ronda 1 es igual sea cual sea el formato: mezclar al azar y
+    // emparejar -- sin historial todavia, un suizo "ordenado por
+    // puntaje" seria simplemente el orden de inscripcion, nada justo.
+    // Recien la ronda 2 en adelante es donde Suizo se diferencia de
+    // Eliminacion (ver el ramal por event.format en
+    // handleTournamentMatchFinished, server.js).
+    const update = participants.length >= 2
+      ? { $set: { status: 'active', bracket: { rounds: [generateFirstRound(participants)], championId: null, championName: '' } } }
+      : { $set: { status: 'cancelled' } };
+
+    // Reclamo atomico: si dos requests casi simultaneas llegan hasta
+    // aca para el MISMO torneo, solo la primera encuentra
+    // status:'published' todavia -- la segunda no matchea nada.
+    const claimed = await Event.findOneAndUpdate({ _id: event._id, status: 'published' }, update);
+    if (!claimed) continue;
+
+    started.push(String(event._id));
+    if (participants.length >= 2) {
+      console.log(`[Tournament] Auto-inicio: "${claimed.title}" arranco con ${participants.length} jugadores (${event.format || 'elimination'}).`);
+    } else {
+      console.log(`[Tournament] "${claimed.title}" cancelado automaticamente: no llego a 2 inscritos.`);
+    }
+  }
+  return started;
+}
+
+module.exports = { RECURRING_TEMPLATES, editionKeyFor, editionStartsAtFor, ensureCurrentEditions, startDueTournaments };

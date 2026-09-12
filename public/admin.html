@@ -537,7 +537,15 @@
         <label class="field full">Título<input id="event-title" maxlength="90" required placeholder="Copa Ozama"></label>
         <label class="field">Tipo<select id="event-type"><option value="tournament">Torneo</option><option value="event">Evento</option><option value="announcement">Anuncio</option><option value="maintenance">Mantenimiento</option></select></label>
         <label class="field">Juego (solo torneos)<select id="event-game-type"><option value="chess">Ajedrez</option><option value="checkers">Damas</option></select></label>
-        <label class="field">Estado<select id="event-status"><option value="draft">Borrador</option><option value="active">Activo</option><option value="finished">Finalizado</option><option value="cancelled">Cancelado</option></select></label>
+        <label class="field">Estado<select id="event-status"><option value="draft">Borrador (oculto, no listado)</option><option value="published" selected>Publicado (listado, abierto a inscripción)</option><option value="active">Activo</option><option value="finished">Finalizado</option><option value="cancelled">Cancelado</option></select></label>
+        <!-- "Arena" existe en el schema (Event.format) pero todavia no
+             tiene logica de torneo real detras (ver services/
+             tournament.js) -- se deja afuera del selector a proposito
+             para no ofrecer algo que hoy se comportaria identico a
+             Eliminacion sin avisar. Queda documentado como pendiente,
+             no oculto. -->
+        <label class="field">Formato (solo torneos)<select id="event-format"><option value="elimination">Eliminación directa</option><option value="swiss">Suizo</option></select></label>
+        <label class="field">Ritmo de tiempo (solo torneos)<select id="event-time-control"><option value="1+0">1+0 · Bullet</option><option value="2+1">2+1 · Blitz</option><option value="3+0">3+0 · Blitz</option><option value="5+0">5+0 · Blitz</option><option value="10+0" selected>10+0 · Rápida</option></select></label>
         <label class="field">Inicio<input id="event-start" type="datetime-local"></label>
         <label class="field">Final<input id="event-end" type="datetime-local"></label>
         <label class="field full">Máximo de jugadores<input id="event-max" type="number" min="2" max="512" value="16"></label>
