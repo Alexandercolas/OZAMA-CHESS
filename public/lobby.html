@@ -1219,6 +1219,14 @@
           </div>
           <div class="card-desc">Encuentra un rival al instante</div>
 
+          <select class="card-input" id="quick-time-control" aria-label="Ritmo de tiempo">
+            <option value="1+0">1+0 · Bullet</option>
+            <option value="2+1">2+1 · Blitz</option>
+            <option value="3+0">3+0 · Blitz</option>
+            <option value="5+0">5+0 · Blitz</option>
+            <option value="10+0" selected>10+0 · Rápida</option>
+          </select>
+
           <!-- Waiting indicator (hidden by default) -->
           <div class="waiting-indicator" id="waiting-indicator">
             <div class="waiting-dots">
@@ -1287,6 +1295,13 @@
         <div class="social-card oz-enter" id="card-create" style="--d:3">
           <div class="social-title">Crear Sala</div>
           <input class="card-input" id="create-username-input" type="text" placeholder="Tu nombre" maxlength="20"/>
+          <select class="card-input" id="create-time-control" aria-label="Ritmo de tiempo">
+            <option value="1+0">1+0 · Bullet</option>
+            <option value="2+1">2+1 · Blitz</option>
+            <option value="3+0">3+0 · Blitz</option>
+            <option value="5+0">5+0 · Blitz</option>
+            <option value="10+0" selected>10+0 · Rápida</option>
+          </select>
 
           <!-- Room code display (after creating) -->
           <div class="room-code-display" id="room-code-display">
@@ -1562,7 +1577,8 @@
       setStatus('quick-status', '');
       return;
     }
-    socket.emit('quick-match', { playerName: user?.username || 'Jugador', country: user?.country || 'DO' });
+    const quickTimeControl = document.getElementById('quick-time-control')?.value || '10+0';
+    socket.emit('quick-match', { playerName: user?.username || 'Jugador', country: user?.country || 'DO', timeControl: quickTimeControl });
     _searching = true;
     document.getElementById('find-match-btn').textContent = 'Cancelar';
     document.getElementById('waiting-indicator').classList.add('show');
@@ -1618,7 +1634,8 @@
   document.getElementById('create-room-btn')?.addEventListener('click', () => {
     const username = document.getElementById('create-username-input').value.trim() || user?.username;
     if (!username) { setStatus('create-status', 'Ingresa tu nombre', '#ef4444'); return; }
-    socket.emit('create-room', { playerName: username, country: user?.country || 'DO' });
+    const createTimeControl = document.getElementById('create-time-control')?.value || '10+0';
+    socket.emit('create-room', { playerName: username, country: user?.country || 'DO', timeControl: createTimeControl });
     setStatus('create-status', 'Creando sala…');
     document.getElementById('create-room-btn').disabled = true;
   });

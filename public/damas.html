@@ -745,6 +745,15 @@
             <div class="online-row" style="margin-top:14px;">
               <input class="online-input" id="guest-name-input" type="text" maxlength="20" placeholder="TU NOMBRE" style="text-transform:none; letter-spacing:0.5px;"/>
             </div>
+            <div class="online-row" style="margin-top:14px;">
+              <select class="online-input" id="damas-time-control" aria-label="Ritmo de tiempo">
+                <option value="1+0">1+0 · Bullet</option>
+                <option value="2+1">2+1 · Blitz</option>
+                <option value="3+0">3+0 · Blitz</option>
+                <option value="5+0">5+0 · Blitz</option>
+                <option value="10+0" selected>10+0 · Rápida</option>
+              </select>
+            </div>
             <div class="controls" style="margin-top:14px;">
               <button class="btn-primary" type="button" onclick="createOnlineRoom()">Crear sala</button>
             </div>
@@ -2012,7 +2021,8 @@
     function createOnlineRoom() {
       ensureSocket();
       const user = readStoredUser();
-      socket.emit('damas:create-room', { playerName: resolvePlayerName(), country: user?.country || 'DO' });
+      const timeControl = document.getElementById('damas-time-control')?.value || '10+0';
+      socket.emit('damas:create-room', { playerName: resolvePlayerName(), country: user?.country || 'DO', timeControl });
     }
 
     function joinOnlineRoom() {
