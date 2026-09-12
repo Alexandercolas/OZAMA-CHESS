@@ -845,7 +845,7 @@
         }
 
     function statCardsHtml(game, user) {
-      const stats = (game === 'damas' ? user.damasStats : user.stats) || { wins: 0, losses: 0, draws: 0, streak: 0, bestStreak: 0 };
+      const stats = (game === 'damas' ? user.damasStats : user.stats) || { wins: 0, losses: 0, draws: 0, streak: 0, bestStreak: 0, bestElo: 1200 };
       const wins = stats.wins || 0, losses = stats.losses || 0, draws = stats.draws || 0;
       const gamesPlayed = wins + losses + draws;
       const winRate = gamesPlayed > 0 ? Math.round(wins / gamesPlayed * 100) : 0;
@@ -867,12 +867,20 @@
           <div class="stat-label">% Victorias</div>
         </div>
         <div class="stat-card oz-card">
+          <div class="stat-value">${gamesPlayed}</div>
+          <div class="stat-label">Partidas jugadas</div>
+        </div>
+        <div class="stat-card oz-card">
           <div class="stat-value">${stats.streak || 0}</div>
           <div class="stat-label">Racha actual</div>
         </div>
         <div class="stat-card oz-card">
           <div class="stat-value">${stats.bestStreak || 0}</div>
           <div class="stat-label">Mejor racha</div>
+        </div>
+        <div class="stat-card oz-card">
+          <div class="stat-value">${stats.bestElo || heroEloValue(game, user)}</div>
+          <div class="stat-label">Mejor ELO</div>
         </div>
       `;
     }

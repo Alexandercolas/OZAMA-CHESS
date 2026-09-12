@@ -76,6 +76,11 @@ const UserSchema = new mongoose.Schema(
       draws:  { type: Number, default: 0 },
       streak: { type: Number, default: 0 },
       bestStreak: { type: Number, default: 0 },
+      // Mejor ELO de siempre (Fase 5, "Perfil Competitivo"). Arranca en
+      // 1200 (el ELO inicial), no en 0 -- 0 se veria como una caida real
+      // para alguien que ni jugo su primera partida. updateElo() de mas
+      // abajo es el unico lugar que lo actualiza.
+      bestElo: { type: Number, default: 1200 },
     },
 
     // ELO y estadisticas de Damas, separados de los de ajedrez -- son
@@ -87,6 +92,7 @@ const UserSchema = new mongoose.Schema(
       draws:  { type: Number, default: 0 },
       streak: { type: Number, default: 0 },
       bestStreak: { type: Number, default: 0 },
+      bestElo: { type: Number, default: 1200 },
     },
 
     // Progresion (Fase 4 del roadmap PRO): XP acumulada de ajedrez +
@@ -180,6 +186,10 @@ UserSchema.methods.updateElo = function (opponentElo, result) {
   const K  = this.elo < 2100 ? 32 : this.elo < 2400 ? 24 : 16;
   const Ea = 1 / (1 + Math.pow(10, (opponentElo - this.elo) / 400));
   this.elo  = Math.max(100, Math.round(this.elo + K * (result - Ea)));
+  // Mejor ELO de siempre (Fase 5 del roadmap PRO, tarjeta de perfil) --
+  // un solo lugar, igual que bumpStreak en server.js: se actualiza en
+  // la MISMA operacion que ya cambia el ELO, nunca aparte.
+  if (this.elo > Number(this.stats.bestElo || 0)) this.stats.bestElo = this.elo;
 };
 
 // Misma formula K-factor que updateElo, pero sobre damasElo -- Damas
@@ -188,6 +198,7 @@ UserSchema.methods.updateDamasElo = function (opponentElo, result) {
   const K  = this.damasElo < 2100 ? 32 : this.damasElo < 2400 ? 24 : 16;
   const Ea = 1 / (1 + Math.pow(10, (opponentElo - this.damasElo) / 400));
   this.damasElo = Math.max(100, Math.round(this.damasElo + K * (result - Ea)));
+  if (this.damasElo > Number(this.damasStats.bestElo || 0)) this.damasStats.bestElo = this.damasElo;
 };
 
 UserSchema.set('toJSON', {

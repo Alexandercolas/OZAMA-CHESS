@@ -998,10 +998,17 @@ router.get('/elo-history', requireAuth, async (req, res) => {
     const Model = game === 'damas' ? DamasMatch : Match;
     const userId = req.user._id;
 
+    // sort DESC + limit trae las 200 mas RECIENTES (lo que el grafico
+    // de perfil.html en verdad quiere mostrar) -- antes ordenaba ASC,
+    // asi que un jugador con mas de 200 partidas nunca veia progreso
+    // reciente en el grafico, solo sus primeras 200 partidas de
+    // siempre, congeladas. Se revierte a orden cronologico despues de
+    // traerlas, para que el grafico siga dibujandose de izq a derecha.
     const matches = await Model.find({
       $or: [{ 'whitePlayer.userId': userId }, { 'blackPlayer.userId': userId }],
       result: { $in: ['white_win', 'black_win', 'draw'] },
-    }).sort({ endedAt: 1 }).limit(200).select('whitePlayer.userId whitePlayer.elo blackPlayer.elo eloChange endedAt').lean();
+    }).sort({ endedAt: -1 }).limit(200).select('whitePlayer.userId whitePlayer.elo blackPlayer.elo eloChange endedAt').lean();
+    matches.reverse();
 
     const history = matches.map((m) => {
       const isWhite = String(m.whitePlayer?.userId) === String(userId);
