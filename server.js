@@ -27,6 +27,10 @@ const { generateNextRound } = require('./services/tournament');
 const { xpForResult, buildContext, checkNewAchievements } = require('./services/achievements');
 const { activeThematicEvent } = require('./services/thematicEvents');
 const { grantAchievementReward } = require('./services/rewards');
+const {
+  DEFAULT_TIME_CONTROL_KEY, TIME_CONTROL_KEYS,
+  initialMsFor, incrementMsFor, isValidTimeControl,
+} = require('./services/timeControls');
 
 const authRoutes      = require('./routes/auth');
 const userRoutes      = require('./routes/user');
@@ -783,8 +787,8 @@ const colorSchema = z.enum([COLOR.WHITE, COLOR.BLACK, 'white', 'black']).transfo
   return value;
 });
 const socketSchemas = {
-  quickMatch: z.object({ playerName: z.string().max(30).optional(), country: z.string().max(2).optional() }).strict().default({}),
-  createRoom: z.object({ playerName: z.string().max(30).optional(), country: z.string().max(2).optional() }).strict().default({}),
+  quickMatch: z.object({ playerName: z.string().max(30).optional(), country: z.string().max(2).optional(), timeControl: z.enum(TIME_CONTROL_KEYS).optional() }).strict().default({}),
+  createRoom: z.object({ playerName: z.string().max(30).optional(), country: z.string().max(2).optional(), timeControl: z.enum(TIME_CONTROL_KEYS).optional() }).strict().default({}),
   joinRoom: z.object({ code: roomCodeSchema, playerName: z.string().max(30).optional(), country: z.string().max(2).optional() }).strict(),
   rejoin: z.object({ roomCode: roomCodeSchema, color: colorSchema, token: z.string().length(48) }).strict(),
   roomOnly: z.object({ room: roomCodeSchema }).strict(),
@@ -946,6 +950,8 @@ async function getOrRestoreRoom(roomCode) {
     matchId: saved.match || null,
     game: restoreGameFromSnapshot(saved.gameState),
     moves,
+    timeControl: saved.timeControl || DEFAULT_TIME_CONTROL_KEY,
+    incrementMs: incrementMsFor(saved.timeControl || DEFAULT_TIME_CONTROL_KEY),
     clockW: saved.clockW || DEFAULT_TIME_MS,
     clockB: saved.clockB || DEFAULT_TIME_MS,
     clockInterval: null,
@@ -1443,14 +1449,16 @@ io.on('connection', (socket) => {
     return { userId: userId || null, name: fallbackName || 'Jugador', country: 'DO', avatar: 0, avatarImage: '', elo: 1200 };
   }
 
-  async function createMatchBetween(wSocket, wInfo, bSocket, bInfo, code) {
+  async function createMatchBetween(wSocket, wInfo, bSocket, bInfo, code, timeControl = DEFAULT_TIME_CONTROL_KEY) {
+    const initialMs = initialMsFor(timeControl);
     rooms.set(code, {
       white: wSocket.id, black: bSocket.id,
       currentTurn: 'w', rematchReady: new Set(), drawOfferBy: null,
       timer: null, status: 'playing', playerInfo: { w: wInfo, b: bInfo }, matchId: null,
       tokens: { w: createRoomToken(), b: createRoomToken() },
       game: createGameState(), moves: [],
-      clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS, clockInterval: null,
+      timeControl, incrementMs: incrementMsFor(timeControl),
+      clockW: initialMs, clockB: initialMs, clockInterval: null,
     });
 
     const room = rooms.get(code);
@@ -1471,7 +1479,7 @@ io.on('connection', (socket) => {
         'players.black.socketId': bSocket.id, 'players.black.userId': bInfo.userId, 'players.black.name': bInfo.name, 'players.black.country': bInfo.country, 'players.black.avatar': bInfo.avatar, 'players.black.avatarImage': bInfo.avatarImage || '',
         match: match?._id || null, fen: 'startpos', turn: 'w', gameState: createGameSnapshot(room.game),
         'tokens.w': room.tokens.w, 'tokens.b': room.tokens.b,
-        clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS, status: 'playing', lastActivityAt: new Date(),
+        clockW: initialMs, clockB: initialMs, timeControl, status: 'playing', lastActivityAt: new Date(),
       }},
       { upsert: true, new: true }
     ).catch(() => {});
@@ -1482,8 +1490,8 @@ io.on('connection', (socket) => {
     if (onlinePlayers.has(bSocket.id)) onlinePlayers.get(bSocket.id).inGame = true;
     broadcastOnlinePlayers();
 
-    wSocket.emit('game-start', { code, color: 'w', roomToken: room.tokens.w, playerInfo: { w: wInfo, b: bInfo }, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
-    bSocket.emit('game-start', { code, color: 'b', roomToken: room.tokens.b, playerInfo: { w: wInfo, b: bInfo }, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
+    wSocket.emit('game-start', { code, color: 'w', roomToken: room.tokens.w, playerInfo: { w: wInfo, b: bInfo }, clockW: initialMs, clockB: initialMs, timeControl });
+    bSocket.emit('game-start', { code, color: 'b', roomToken: room.tokens.b, playerInfo: { w: wInfo, b: bInfo }, clockW: initialMs, clockB: initialMs, timeControl });
     startClock(code);
 
     console.log(`[MM] Partida creada: ${wInfo.name} (w) vs ${bInfo.name} (b) — sala ${code}`);
@@ -1493,7 +1501,7 @@ io.on('connection', (socket) => {
   socket.on('quick-match', async (payload = {}) => {
     const data = parseSocketPayload(socketSchemas.quickMatch, payload);
     if (!data) return;
-    const { playerName = 'Jugador', country = 'DO' } = data;
+    const { playerName = 'Jugador', country = 'DO', timeControl = DEFAULT_TIME_CONTROL_KEY } = data;
     if (!requireSocketAuth()) return;
     const existingIdx = matchQueue.findIndex(e => e.socketId === socket.id);
     if (existingIdx !== -1) matchQueue.splice(existingIdx, 1);
@@ -1510,8 +1518,12 @@ io.on('connection', (socket) => {
       : null;
     const myBlocked = (myBlockedDoc?.blockedUsers || []).map(String);
 
+    // Emparejar solo con quien pidio el MISMO ritmo de tiempo (Fase 2,
+    // Blitz) -- no tendria sentido mezclar a alguien que quiere 1+0 con
+    // alguien que quiere 10+0 en la misma cola.
     const rivalIdx = matchQueue.findIndex(e => {
       if (e.socketId === socket.id) return false;
+      if (e.timeControl !== timeControl) return false;
       if (pInfo.userId && e.playerInfo.userId.toString() === pInfo.userId.toString()) return false;
       if (pInfo.userId && myBlocked.includes(e.playerInfo.userId?.toString())) return false;
       if (pInfo.userId && (e.blockedUsers || []).includes(pInfo.userId.toString())) return false;
@@ -1524,7 +1536,7 @@ io.on('connection', (socket) => {
       const rivalSocket = io.sockets.sockets.get(rival.socketId);
 
       if (!rivalSocket.connected) {
-        matchQueue.push({ socketId: socket.id, playerInfo: pInfo, joinedAt: Date.now(), blockedUsers: myBlocked });
+        matchQueue.push({ socketId: socket.id, playerInfo: pInfo, joinedAt: Date.now(), blockedUsers: myBlocked, timeControl });
         socket.emit('matchmaking-searching', { position: matchQueue.length });
         return;
       }
@@ -1538,12 +1550,12 @@ io.on('connection', (socket) => {
       const wSock = flip ? socket      : rivalSocket;
       const bSock = flip ? rivalSocket : socket;
 
-      await createMatchBetween(wSock, wInfo, bSock, bInfo, code);
+      await createMatchBetween(wSock, wInfo, bSock, bInfo, code, timeControl);
 
     } else {
-      matchQueue.push({ socketId: socket.id, playerInfo: pInfo, joinedAt: Date.now(), blockedUsers: myBlocked });
+      matchQueue.push({ socketId: socket.id, playerInfo: pInfo, joinedAt: Date.now(), blockedUsers: myBlocked, timeControl });
       socket.emit('matchmaking-searching', { position: matchQueue.length });
-      console.log(`[MM] ${pInfo.name} en cola. Cola: ${matchQueue.length}`);
+      console.log(`[MM] ${pInfo.name} en cola (${timeControl}). Cola: ${matchQueue.length}`);
     }
   });
 
@@ -1560,12 +1572,13 @@ io.on('connection', (socket) => {
     const data = parseSocketPayload(socketSchemas.createRoom, payload);
     if (!data) return;
     if (!(await consumeSocketLimit('createRoom'))) return;
-    const { playerName = 'Jugador 1', country = 'DO' } = data;
+    const { playerName = 'Jugador 1', country = 'DO', timeControl = DEFAULT_TIME_CONTROL_KEY } = data;
     if (!requireSocketAuth()) return;
     let code;
     do { code = generateCode(); } while (rooms.has(code));
 
     const pInfo = await getPlayerInfo(playerName, country);
+    const initialMs = initialMsFor(timeControl);
 
     rooms.set(code, {
       white: socket.id, black: null,
@@ -1573,7 +1586,8 @@ io.on('connection', (socket) => {
       timer: null, status: 'waiting', playerInfo: { w: pInfo, b: null }, matchId: null,
       tokens: { w: createRoomToken(), b: null },
       game: createGameState(), moves: [],
-      clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS, clockInterval: null,
+      timeControl, incrementMs: incrementMsFor(timeControl),
+      clockW: initialMs, clockB: initialMs, clockInterval: null,
     });
 
     socket.join(code);
@@ -1585,7 +1599,7 @@ io.on('connection', (socket) => {
       broadcastOnlinePlayers();
     }
 
-    socket.emit('room-created', { code, color: 'w', roomToken: rooms.get(code).tokens.w, playerInfo: pInfo });
+    socket.emit('room-created', { code, color: 'w', roomToken: rooms.get(code).tokens.w, playerInfo: pInfo, timeControl });
 
     await Room.findOneAndUpdate(
       { roomCode: code },
@@ -1596,7 +1610,7 @@ io.on('connection', (socket) => {
         'players.black.socketId': null, 'players.black.name': '',
         fen: 'startpos', turn: 'w', gameState: createGameSnapshot(rooms.get(code).game),
         'tokens.w': rooms.get(code).tokens.w,
-        clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS, status: 'waiting', lastActivityAt: new Date(),
+        clockW: initialMs, clockB: initialMs, timeControl, status: 'waiting', lastActivityAt: new Date(),
       }},
       { upsert: true, new: true }
     ).catch((err) => console.warn('[DB] No se pudo guardar sala:', err.message));
@@ -1656,8 +1670,8 @@ io.on('connection', (socket) => {
     broadcastOnlinePlayers();
 
     socket.emit('room-joined', { code: cleanCode, color: 'b', roomToken: room.tokens.b, playerInfo: pInfo });
-    io.to(room.white).emit('game-start', { code: cleanCode, color: 'w', roomToken: room.tokens.w, playerInfo: { w: wInfo, b: pInfo }, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
-    socket.emit('game-start',            { code: cleanCode, color: 'b', roomToken: room.tokens.b, playerInfo: { w: wInfo, b: pInfo }, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
+    io.to(room.white).emit('game-start', { code: cleanCode, color: 'w', roomToken: room.tokens.w, playerInfo: { w: wInfo, b: pInfo }, clockW: room.clockW, clockB: room.clockB, timeControl: room.timeControl });
+    socket.emit('game-start',            { code: cleanCode, color: 'b', roomToken: room.tokens.b, playerInfo: { w: wInfo, b: pInfo }, clockW: room.clockW, clockB: room.clockB, timeControl: room.timeControl });
     startClock(cleanCode);
 
     console.log(`[R] Sala ${cleanCode} — ${wInfo.name} vs ${pInfo.name}`);
@@ -1769,6 +1783,14 @@ if (room.white && room.black && !room.clockInterval) {
     }
 
     room.currentTurn = room.game.turn;
+    // Incremento (Fase 2, Blitz -- ej. "2+1" suma 1s por jugada): se
+    // acredita a quien ACABA de mover, no a quien le toca ahora. Sin
+    // incremento configurado (partidas "X+0", que son casi todas)
+    // room.incrementMs es 0 y esto no hace nada.
+    if (room.incrementMs) {
+      if (playerColor === COLOR.WHITE) room.clockW = (room.clockW || 0) + room.incrementMs;
+      else room.clockB = (room.clockB || 0) + room.incrementMs;
+    }
     (room.moves = room.moves || []).push({ from: validation.from, to: validation.to, promotion: validation.promotion || null });
     socket.to(code).emit('opponent-move', {
       from: validation.from,
@@ -1878,8 +1900,10 @@ if (room.white && room.black && !room.clockInterval) {
       room.drawOfferBy  = null;
       room.game = createGameState();
       room.moves = [];
-      room.clockW = DEFAULT_TIME_MS;
-      room.clockB = DEFAULT_TIME_MS;
+      // La revancha mantiene el MISMO ritmo de tiempo que la partida
+      // original (room.timeControl/incrementMs no se tocan aca).
+      room.clockW = initialMsFor(room.timeControl);
+      room.clockB = initialMsFor(room.timeControl);
       room.tokens = { w: createRoomToken(), b: createRoomToken() };
       const wInfo = room.playerInfo.w;
       const bInfo = room.playerInfo.b;
@@ -1894,13 +1918,14 @@ if (room.white && room.black && !room.clockInterval) {
         turn: 'w',
         gameState: createGameSnapshot(room.game),
         'tokens.w': room.tokens.w, 'tokens.b': room.tokens.b,
-        clockW: DEFAULT_TIME_MS,
-        clockB: DEFAULT_TIME_MS,
+        clockW: room.clockW,
+        clockB: room.clockB,
+        timeControl: room.timeControl,
         status: 'playing',
         lastActivityAt: new Date(),
       }}).catch(() => {});
-      if (room.white) io.to(room.white).emit('rematch-start', { roomToken: room.tokens.w, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
-      if (room.black) io.to(room.black).emit('rematch-start', { roomToken: room.tokens.b, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
+      if (room.white) io.to(room.white).emit('rematch-start', { roomToken: room.tokens.w, clockW: room.clockW, clockB: room.clockB, timeControl: room.timeControl });
+      if (room.black) io.to(room.black).emit('rematch-start', { roomToken: room.tokens.b, clockW: room.clockW, clockB: room.clockB, timeControl: room.timeControl });
       startClock(code);
       console.log(`[R] Revancha en sala ${code}`);
     }
@@ -2173,6 +2198,13 @@ if (room.white && room.black && !room.clockInterval) {
       const p1Info = await getPlayerInfoById(match.player1, match.player1Name);
       const p2Info = await getPlayerInfoById(match.player2, match.player2Name);
 
+      // El ritmo del partido es el mismo que eligio quien armo el
+      // torneo (Event.timeControl, ej. "3+0" para el Blitz Diario) --
+      // antes de esta fase esto era solo texto decorativo en la
+      // tarjeta, ahora fija de verdad el reloj de la sala.
+      const tournamentTimeControl = isValidTimeControl(event.timeControl) ? event.timeControl : DEFAULT_TIME_CONTROL_KEY;
+      const tournamentInitialMs = initialMsFor(tournamentTimeControl);
+
       room = {
         white: myColor === 'w' ? socket.id : null,
         black: myColor === 'b' ? socket.id : null,
@@ -2180,7 +2212,8 @@ if (room.white && room.black && !room.clockInterval) {
         timer: null, status: 'waiting', playerInfo: { w: p1Info, b: p2Info }, matchId: null,
         tokens: { w: createRoomToken(), b: createRoomToken() },
         game: createGameState(), moves: [],
-        clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS, clockInterval: null,
+        timeControl: tournamentTimeControl, incrementMs: incrementMsFor(tournamentTimeControl),
+        clockW: tournamentInitialMs, clockB: tournamentInitialMs, clockInterval: null,
         tournamentMeta: { eventId: String(event._id), round, matchIndex },
       };
       rooms.set(code, room);
@@ -2202,7 +2235,7 @@ if (room.white && room.black && !room.clockInterval) {
           fen: 'startpos', turn: 'w', gameState: createGameSnapshot(room.game),
           'tokens.w': room.tokens.w, 'tokens.b': room.tokens.b,
           'tournamentMeta.eventId': event._id, 'tournamentMeta.round': round, 'tournamentMeta.matchIndex': matchIndex,
-          clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS, status: 'waiting', lastActivityAt: new Date(),
+          clockW: tournamentInitialMs, clockB: tournamentInitialMs, timeControl: tournamentTimeControl, status: 'waiting', lastActivityAt: new Date(),
         }},
         { upsert: true, new: true }
       ).catch((err) => console.warn('[DB] No se pudo guardar sala de torneo:', err.message));
@@ -2239,12 +2272,17 @@ if (room.white && room.black && !room.clockInterval) {
 
       const wSocket = io.sockets.sockets.get(room.white);
       const bSocket = io.sockets.sockets.get(room.black);
-      wSocket?.emit('game-start', { code: match.roomCode, color: 'w', roomToken: room.tokens.w, playerInfo: { w: room.playerInfo.w, b: room.playerInfo.b }, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
-      bSocket?.emit('game-start', { code: match.roomCode, color: 'b', roomToken: room.tokens.b, playerInfo: { w: room.playerInfo.w, b: room.playerInfo.b }, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
+      wSocket?.emit('game-start', { code: match.roomCode, color: 'w', roomToken: room.tokens.w, playerInfo: { w: room.playerInfo.w, b: room.playerInfo.b }, clockW: room.clockW, clockB: room.clockB, timeControl: room.timeControl });
+      bSocket?.emit('game-start', { code: match.roomCode, color: 'b', roomToken: room.tokens.b, playerInfo: { w: room.playerInfo.w, b: room.playerInfo.b }, clockW: room.clockW, clockB: room.clockB, timeControl: room.timeControl });
       startClock(match.roomCode);
       console.log(`[Tournament] Sala ${match.roomCode} arranco — ${room.playerInfo.w.name} vs ${room.playerInfo.b.name}`);
     } else {
-      socket.emit('game-start', { code: match.roomCode, color: myColor, roomToken: room.tokens[myColor], playerInfo: { w: room.playerInfo.w, b: room.playerInfo.b }, clockW: DEFAULT_TIME_MS, clockB: DEFAULT_TIME_MS });
+      // Reconexion a un partido de torneo que ya estaba en curso -- el
+      // reloj tiene que reflejar el tiempo REAL que le queda a cada
+      // uno, nunca el tiempo inicial (antes de esta fase esto
+      // mostraba 10 minutos de arranque sin importar cuanto ya se
+      // habia gastado, un bug real independiente de que ritmo se use).
+      socket.emit('game-start', { code: match.roomCode, color: myColor, roomToken: room.tokens[myColor], playerInfo: { w: room.playerInfo.w, b: room.playerInfo.b }, clockW: room.clockW, clockB: room.clockB, timeControl: room.timeControl });
     }
   });
 

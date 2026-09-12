@@ -34,6 +34,11 @@ const RoomSchema = new mongoose.Schema(
     gameState: { type: mongoose.Schema.Types.Mixed, default: null },
     clockW: { type: Number, default: 600000 },
     clockB: { type: Number, default: 600000 },
+    // Ritmo de tiempo elegido para esta sala (Fase 2, Blitz -- ver
+    // services/timeControls.js). "10+0" es el mismo ritmo fijo que
+    // usaba toda partida antes de esta fase, asi que salas viejas sin
+    // este campo siguen leyendose igual (default explicito, no null).
+    timeControl: { type: String, default: '10+0' },
     status: {
       type: String,
       enum: ['waiting', 'playing', 'finished', 'closed'],
