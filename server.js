@@ -234,7 +234,7 @@ const damasStepSchema = z.object({
   capturedR: z.number().int().min(-1).max(7), capturedC: z.number().int().min(-1).max(7),
 }).strict();
 const damasSchemas = {
-  createRoom: z.object({ playerName: z.string().max(30).optional(), country: z.string().max(2).optional() }).strict().default({}),
+  createRoom: z.object({ playerName: z.string().max(30).optional(), country: z.string().max(2).optional(), timeControl: z.enum(TIME_CONTROL_KEYS).optional() }).strict().default({}),
   joinRoom: z.object({ code: roomCodeSchema, playerName: z.string().max(30).optional(), country: z.string().max(2).optional() }).strict(),
   move: z.object({
     room: roomCodeSchema,
@@ -257,6 +257,7 @@ function damasStartCloseTimer(code) {
   const room = damasRooms.get(code);
   if (!room) return;
   damasCancelCloseTimer(room);
+  damasStopClock(room); // igual que Ajedrez: el reloj se pausa mientras el rival tiene su grace period para reconectar
   room.closeTimer = setTimeout(async () => {
     if (room.status === 'playing') {
       const survivorColor = room.white ? 'w' : room.black ? 'b' : null;
@@ -268,6 +269,37 @@ function damasStartCloseTimer(code) {
     }
     damasRooms.delete(code);
   }, 30_000);
+}
+
+// ── Reloj de Damas (Fase 2, Blitz) ────────────────────────────────
+// Mismo patron exacto que el reloj de Ajedrez (startClock/stopClock
+// mas arriba): el servidor es la unica autoridad, nunca el contador
+// visual del cliente. Antes de esta fase Damas no tenia reloj en
+// absoluto -- todas las partidas eran sin limite de tiempo.
+function damasStopClock(room) {
+  if (room && room.clockInterval) { clearInterval(room.clockInterval); room.clockInterval = null; }
+}
+
+function damasStartClock(code) {
+  const room = damasRooms.get(code);
+  if (!room) return;
+  damasStopClock(room);
+  room.clockInterval = setInterval(async () => {
+    const turn = room.turn;
+    if (!turn) return;
+    if (turn === 'w') room.clockW = Math.max(0, room.clockW - 1000);
+    else              room.clockB = Math.max(0, room.clockB - 1000);
+    io.to(code).emit('damas:clock-tick', { w: room.clockW, b: room.clockB });
+    const ranOut = turn === 'w' ? room.clockW === 0 : room.clockB === 0;
+    if (ranOut) {
+      damasStopClock(room);
+      damasCancelCloseTimer(room);
+      room.status = 'finished';
+      const winner = turn === 'w' ? 'b' : 'w';
+      io.to(code).emit('damas:game-over', { winner, reason: 'timeout' });
+      await finishDamasGame(room, code, { winner, reason: 'timeout' });
+    }
+  }, 1000);
 }
 
 // Guarda el resultado final de una partida de Damas (historial + ELO
@@ -2296,7 +2328,7 @@ if (room.white && room.black && !room.clockInterval) {
     // A proposito sin requireSocketAuth(): Damas permite jugar como
     // invitado en la web. getPlayerInfo() ya sabe devolver un perfil de
     // invitado (userId: null) cuando socket.data.user no existe.
-    const { playerName = 'Jugador 1', country = 'DO' } = data;
+    const { playerName = 'Jugador 1', country = 'DO', timeControl = DEFAULT_TIME_CONTROL_KEY } = data;
 
     let code;
     do { code = generateCode(); } while (rooms.has(code) || damasRooms.has(code));
@@ -2306,6 +2338,7 @@ if (room.white && room.black && !room.clockInterval) {
     // ajedrez; Damas tiene su propio ranking.
     if (socket.data.user) pInfo.elo = Number(socket.data.user.damasElo ?? 1200);
 
+    const initialMs = initialMsFor(timeControl);
     damasRooms.set(code, {
       white: socket.id, black: null,
       board: OzamaCheckers.createInitialBoard(),
@@ -2315,13 +2348,15 @@ if (room.white && room.black && !room.clockInterval) {
       tokens: { w: createRoomToken(), b: null },
       closeTimer: null,
       createdAt: Date.now(),
+      timeControl, incrementMs: incrementMsFor(timeControl),
+      clockW: initialMs, clockB: initialMs, clockInterval: null,
     });
 
     socket.join(code);
     socket.data.damasRoomCode = code;
     socket.data.damasColor = 'w';
 
-    socket.emit('damas:room-created', { code, color: 'w', playerInfo: pInfo, roomToken: damasRooms.get(code).tokens.w });
+    socket.emit('damas:room-created', { code, color: 'w', playerInfo: pInfo, roomToken: damasRooms.get(code).tokens.w, timeControl });
     console.log(`[DAMAS] Sala ${code} creada por "${pInfo.name}"`);
   });
 
@@ -2349,9 +2384,10 @@ if (room.white && room.black && !room.clockInterval) {
     socket.data.damasColor = 'b';
 
     const whiteSocket = io.sockets.sockets.get(room.white);
-    const startPayload = { code, board: room.board, turn: room.turn, playerInfo: room.playerInfo };
+    const startPayload = { code, board: room.board, turn: room.turn, playerInfo: room.playerInfo, clockW: room.clockW, clockB: room.clockB, timeControl: room.timeControl };
     whiteSocket?.emit('damas:game-start', { ...startPayload, color: 'w', roomToken: room.tokens.w });
     socket.emit('damas:game-start', { ...startPayload, color: 'b', roomToken: room.tokens.b });
+    damasStartClock(code);
     console.log(`[DAMAS] "${pInfo.name}" se unio a la sala ${code}`);
   });
 
@@ -2465,6 +2501,10 @@ if (room.white && room.black && !room.clockInterval) {
     const wInfo = flip ? cInfo : pInfo;
     const bInfo = flip ? pInfo : cInfo;
 
+    // Los desafios todavia no tienen selector de ritmo propio (igual
+    // que challenge-accept de Ajedrez) -- 10+0 por defecto hasta una
+    // pasada futura.
+    const initialMs = initialMsFor(DEFAULT_TIME_CONTROL_KEY);
     damasRooms.set(code, {
       white: wSock.id, black: bSock.id,
       board: OzamaCheckers.createInitialBoard(),
@@ -2475,6 +2515,8 @@ if (room.white && room.black && !room.clockInterval) {
       closeTimer: null,
       createdAt: Date.now(),
       startedAt: new Date(),
+      timeControl: DEFAULT_TIME_CONTROL_KEY, incrementMs: incrementMsFor(DEFAULT_TIME_CONTROL_KEY),
+      clockW: initialMs, clockB: initialMs, clockInterval: null,
     });
 
     wSock.join(code); bSock.join(code);
@@ -2482,9 +2524,10 @@ if (room.white && room.black && !room.clockInterval) {
     bSock.data.damasRoomCode = code; bSock.data.damasColor = 'b';
 
     const newRoom = damasRooms.get(code);
-    const startPayload = { code, board: newRoom.board, turn: newRoom.turn, playerInfo: newRoom.playerInfo };
+    const startPayload = { code, board: newRoom.board, turn: newRoom.turn, playerInfo: newRoom.playerInfo, clockW: newRoom.clockW, clockB: newRoom.clockB, timeControl: newRoom.timeControl };
     wSock.emit('damas:game-start', { ...startPayload, color: 'w', roomToken: newRoom.tokens.w });
     bSock.emit('damas:game-start', { ...startPayload, color: 'b', roomToken: newRoom.tokens.b });
+    damasStartClock(code);
     console.log(`[DAMAS] Desafío aceptado, sala ${code}`);
   });
 
@@ -2534,12 +2577,18 @@ if (room.white && room.black && !room.clockInterval) {
     const result = OzamaCheckers.applyMove(room.board, fromR, fromC, matched);
     room.board = result.board;
     room.turn = OzamaCheckers.otherColor(room.turn);
+    // Incremento (Fase 2, Blitz): se acredita a quien ACABA de mover.
+    // Sin incremento configurado (ritmos "X+0") room.incrementMs es 0.
+    if (room.incrementMs) {
+      if (myColor === 'w') room.clockW = (room.clockW || 0) + room.incrementMs;
+      else room.clockB = (room.clockB || 0) + room.incrementMs;
+    }
     // Guardado para el logro "Primera Coronacion" -- se lee al cerrar
     // la partida (finishDamasGame), no hace falta nada mas alla de
     // este flag por color.
     if (result.promoted) { room.hadPromotion = room.hadPromotion || {}; room.hadPromotion[myColor] = true; }
     const status = OzamaCheckers.checkGameOver(room.board, room.turn);
-    if (status.over) room.status = 'finished';
+    if (status.over) { room.status = 'finished'; damasStopClock(room); }
 
     io.to(code).emit('damas:board-update', {
       board: room.board,
@@ -2547,6 +2596,8 @@ if (room.white && room.black && !room.clockInterval) {
       lastMove: { fromR, fromC, toR: result.to.r, toC: result.to.c },
       capturedCount: result.captured.length,
       promoted: result.promoted,
+      clockW: room.clockW,
+      clockB: room.clockB,
       gameOver: status.over ? status : null,
     });
 
@@ -2562,6 +2613,7 @@ if (room.white && room.black && !room.clockInterval) {
     const myColor = socket.data.damasColor;
     if (!myColor || room.status !== 'playing') return;
     damasCancelCloseTimer(room);
+    damasStopClock(room);
     room.status = 'finished';
     const winner = OzamaCheckers.otherColor(myColor);
     io.to(code).emit('damas:game-over', { winner, reason: 'resign' });
@@ -2615,8 +2667,14 @@ if (room.white && room.black && !room.clockInterval) {
       room.hadPromotion = null;
       room.startedAt = new Date();
       room.tokens = { w: createRoomToken(), b: createRoomToken() };
-      if (room.white) io.to(room.white).emit('damas:rematch-start', { roomToken: room.tokens.w, board: room.board, turn: room.turn });
-      if (room.black) io.to(room.black).emit('damas:rematch-start', { roomToken: room.tokens.b, board: room.board, turn: room.turn });
+      // La revancha mantiene el MISMO ritmo de tiempo de la partida
+      // original (room.timeControl/incrementMs no se tocan aca).
+      const rematchInitialMs = initialMsFor(room.timeControl);
+      room.clockW = rematchInitialMs;
+      room.clockB = rematchInitialMs;
+      if (room.white) io.to(room.white).emit('damas:rematch-start', { roomToken: room.tokens.w, board: room.board, turn: room.turn, clockW: room.clockW, clockB: room.clockB, timeControl: room.timeControl });
+      if (room.black) io.to(room.black).emit('damas:rematch-start', { roomToken: room.tokens.b, board: room.board, turn: room.turn, clockW: room.clockW, clockB: room.clockB, timeControl: room.timeControl });
+      damasStartClock(code);
       console.log(`[DAMAS] Revancha en sala ${code}`);
     }
   });
@@ -2662,6 +2720,7 @@ if (room.white && room.black && !room.clockInterval) {
     if (!isAuthorizedDamasSocket(room, socket, code)) return;
     if (room.drawOfferBy === socket.id) return;
     damasCancelCloseTimer(room);
+    damasStopClock(room);
     room.status = 'finished';
     room.drawOfferBy = null;
     io.to(code).emit('damas:draw-accepted', { playerName: socket.data.playerName });
@@ -2688,8 +2747,12 @@ if (room.white && room.black && !room.clockInterval) {
     socket.data.damasColor = color;
     if (color === 'w') room.white = socket.id; else room.black = socket.id;
 
-    socket.emit('damas:game-start', { code, color, board: room.board, turn: room.turn, playerInfo: room.playerInfo, roomToken: token });
+    socket.emit('damas:game-start', { code, color, board: room.board, turn: room.turn, playerInfo: room.playerInfo, roomToken: token, clockW: room.clockW, clockB: room.clockB, timeControl: room.timeControl });
     socket.to(code).emit('damas:opponent-reconnected');
+    // El reloj se habia pausado en damasStartCloseTimer() cuando este
+    // jugador se desconecto -- si el rival tambien esta presente,
+    // retoma la cuenta regresiva desde donde quedo (nunca se reinicia).
+    if (room.white && room.black) damasStartClock(code);
     console.log(`[DAMAS] Reconexion en sala ${code} (${color})`);
   });
 
@@ -2744,6 +2807,12 @@ if (room.white && room.black && !room.clockInterval) {
       const p1Info = await damasPlayerInfoById(match.player1, match.player1Name);
       const p2Info = await damasPlayerInfoById(match.player2, match.player2Name);
 
+      // Mismo ritmo que eligio quien armo el torneo (Event.timeControl,
+      // ej. "3+0" para Damas del Dia) -- antes de esta fase esto era
+      // solo texto decorativo, ahora fija de verdad el reloj de la sala.
+      const damasTournamentTimeControl = isValidTimeControl(event.timeControl) ? event.timeControl : DEFAULT_TIME_CONTROL_KEY;
+      const damasTournamentInitialMs = initialMsFor(damasTournamentTimeControl);
+
       const candidateRoom = {
         white: null, black: null,
         board: OzamaCheckers.createInitialBoard(),
@@ -2752,6 +2821,8 @@ if (room.white && room.black && !room.clockInterval) {
         playerInfo: { w: p1Info, b: p2Info },
         tokens: { w: createRoomToken(), b: createRoomToken() },
         closeTimer: null, createdAt: Date.now(), startedAt: new Date(),
+        timeControl: damasTournamentTimeControl, incrementMs: incrementMsFor(damasTournamentTimeControl),
+        clockW: damasTournamentInitialMs, clockB: damasTournamentInitialMs, clockInterval: null,
         tournamentMeta: { eventId: String(event._id), round, matchIndex },
       };
 
