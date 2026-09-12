@@ -226,6 +226,12 @@ const socketLimiters = {
   damasCreateRoom: new RateLimiterMemory({ points: 5, duration: 60 }),
   damasJoinRoom: new RateLimiterMemory({ points: 12, duration: 60 }),
   damasMove: new RateLimiterMemory({ points: 80, duration: 60 }),
+  // Espectador (Fase 4): mismo tope generoso para los dos juegos, IP-
+  // autenticado via consumeDamasLimit (que a pesar del nombre es
+  // generico -- ver espectator handlers mas abajo) para no exigir
+  // cuenta solo por mirar.
+  spectate: new RateLimiterMemory({ points: 20, duration: 60 }),
+  damasSpectate: new RateLimiterMemory({ points: 20, duration: 60 }),
 };
 
 const damasSquareSchema = z.number().int().min(0).max(7);
@@ -1809,6 +1815,51 @@ if (room.white && room.black && !room.clockInterval) {
     console.log(`[R] ${assignedColor.toUpperCase()} reconectado a sala ${cleanRoomCode}`);
   });
 
+  // ── Espectador (Fase 4, "OZAMA PRO") ─────────────────────────────
+  // A proposito NUNCA fija socket.data.color/roomCode -- todos los
+  // guards de autorizacion que ya existen (canUseRoomColor,
+  // isAuthorizedRoomSocket, el chequeo inline de player-move) rechazan
+  // de entrada cualquier socket sin esos campos, asi que un
+  // espectador queda incapaz de mover/rendirse/pedir revancha sin
+  // necesidad de un guard nuevo en cada handler -- se apoya en los que
+  // ya protegen a los jugadores. Solo se une a la sala de Socket.IO
+  // (socket.join) para recibir los mismos broadcasts que ya reciben
+  // los jugadores (opponent-move, clock-tick, game-over...), sin
+  // reclamar un asiento. No requiere sesion -- ver ninguno de estos
+  // datos afecta el resultado de la partida.
+  socket.on('spectate-room', async (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.roomOnly, payload, 'spectate-error');
+    if (!data) return;
+    if (!(await consumeDamasLimit('spectate', 'spectate-error'))) return;
+    const { room: code } = data;
+    const room = await getOrRestoreRoom(code);
+    if (!room || room.status !== 'playing') {
+      socket.emit('spectate-error', 'Esta partida no esta disponible para ver en vivo.');
+      return;
+    }
+    socket.join(code);
+    socket.emit('spectate-start', {
+      code,
+      game: createGameSnapshot(room.game),
+      moves: room.moves || [],
+      playerInfo: room.playerInfo,
+      clockW: room.clockW || DEFAULT_TIME_MS,
+      clockB: room.clockB || DEFAULT_TIME_MS,
+      timeControl: room.timeControl,
+    });
+    console.log(`[Spectator] ${socket.id} entro a ver la sala ${code}`);
+  });
+
+  // El cliente la manda al salir del modo espectador (cambiar de modo,
+  // cerrar la vista) para no quedar suscrito a los broadcasts de una
+  // sala que ya no esta mirando -- sin esto, la membresia sobrevive
+  // hasta que el socket se desconecta del todo.
+  socket.on('spectate-leave', (payload = {}) => {
+    const data = parseSocketPayload(socketSchemas.roomOnly, payload, 'spectate-error');
+    if (!data) return;
+    socket.leave(data.room);
+  });
+
   // ── Movida ────────────────────────────────────────────────────
   socket.on('player-move', async (payload = {}) => {
     const data = parseSocketPayload(socketSchemas.playerMove, payload, 'move-rejected');
@@ -2795,6 +2846,41 @@ if (room.white && room.black && !room.clockInterval) {
     // retoma la cuenta regresiva desde donde quedo (nunca se reinicia).
     if (room.white && room.black) damasStartClock(code);
     console.log(`[DAMAS] Reconexion en sala ${code} (${color})`);
+  });
+
+  // ── Espectador de Damas (Fase 4, "OZAMA PRO") ────────────────────
+  // Mismo principio que el espectador de Ajedrez: nunca fija
+  // socket.data.damasColor/damasRoomCode, asi que isAuthorizedDamasSocket
+  // y el chequeo inline de damas:move rechazan de entrada cualquier
+  // intento de jugar sin necesitar un guard nuevo. Sin sesion --
+  // Damas ya es guest-friendly, mirar tampoco deberia exigir cuenta.
+  socket.on('damas:spectate-room', async (payload = {}) => {
+    const data = parseSocketPayload(damasSchemas.roomOnly, payload, 'damas:spectate-error');
+    if (!data) return;
+    if (!(await consumeDamasLimit('damasSpectate', 'damas:spectate-error'))) return;
+    const { room: code } = data;
+    const room = damasRooms.get(code);
+    if (!room || room.status !== 'playing') {
+      socket.emit('damas:spectate-error', 'Esta partida no esta disponible para ver en vivo.');
+      return;
+    }
+    socket.join(code);
+    socket.emit('damas:spectate-start', {
+      code,
+      board: room.board,
+      turn: room.turn,
+      playerInfo: room.playerInfo,
+      clockW: room.clockW,
+      clockB: room.clockB,
+      timeControl: room.timeControl,
+    });
+    console.log(`[Spectator] ${socket.id} entro a ver la sala de Damas ${code}`);
+  });
+
+  socket.on('damas:spectate-leave', (payload = {}) => {
+    const data = parseSocketPayload(damasSchemas.roomOnly, payload, 'damas:spectate-error');
+    if (!data) return;
+    socket.leave(data.room);
   });
 
   // ── TORNEOS DE DAMAS: entrar a tu partido del bracket ───────────

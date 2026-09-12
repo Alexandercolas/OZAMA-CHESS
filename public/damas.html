@@ -167,6 +167,22 @@
     .turn-dot.w { background: radial-gradient(circle at 35% 30%, #F2E4C4, #C8983C 70%); }
     .turn-dot.b { background: radial-gradient(circle at 35% 30%, #4a4038, #16130E 70%); }
 
+    .spectate-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 18px;
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(200,152,60,0.35);
+      background: rgba(200,152,60,0.12);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--dama);
+    }
+
     .capture-tally {
       display: flex;
       gap: 14px;
@@ -693,6 +709,7 @@
 
     <div class="game-shell">
       <aside class="game-side">
+        <div class="spectate-badge hidden" id="spectate-badge">👁 Viendo en vivo</div>
         <div class="turn-badge" id="turn-badge">
           <span class="turn-dot w" id="turn-dot"></span>
           <span id="turn-text">Turno: Blancas</span>
@@ -1097,7 +1114,8 @@
     // aplicar una jugada real (el codigo de mas alto trafico de esta
     // pagina) solo para guardar un dato que ya se puede derivar.
     let reviewIndex = null;
-    let mode = 'local'; // 'local' | 'bot' | 'online'
+    let mode = 'local'; // 'local' | 'bot' | 'online' | 'spectate'
+    let spectateCode = null; // codigo de sala que se esta mirando (mode === 'spectate')
     let botThinking = false;
 
     // Estado de la sala online (namespace damas:* del servidor, ver server.js).
@@ -1524,7 +1542,10 @@
       const again = document.getElementById('gameover-again-btn');
       const rematch = document.getElementById('gameover-rematch-btn');
       const isOnlineFinish = mode === 'online' && gameOver.reason !== 'opponent-left' && gameOver.reason !== 'admin-closed';
-      if (again) again.classList.toggle('hidden', isOnlineFinish);
+      if (again) {
+        again.classList.toggle('hidden', isOnlineFinish);
+        again.textContent = mode === 'spectate' ? 'Cerrar' : 'Jugar de nuevo';
+      }
       if (rematch) rematch.classList.toggle('hidden', !isOnlineFinish);
       document.getElementById('gameover-overlay').classList.remove('hidden');
     }
@@ -1536,6 +1557,7 @@
     function playAgain() {
       hideGameOverOverlay();
       hideDamasDisconnectOverlay();
+      if (mode === 'spectate') return; // solo cerrar el overlay, no hay partida propia que reiniciar
       if (mode === 'online') {
         onlineStatus = 'idle';
         onlineRoomCode = null;
@@ -1562,6 +1584,7 @@
       // de interpretarse como un intento de jugada -- igual que en
       // Ajedrez. Va ANTES del guard de gameOver: revisar despues de
       // que la partida termino es justamente el caso de uso principal.
+      if (mode === 'spectate') return; // solo mirar -- el servidor tampoco aceptaria una jugada sin color asignado
       if (reviewIndex !== null) { goToMoveIndex(null); return; }
       if (gameOver || botThinking) return;
       if (mode === 'bot' && turn === BOT_COLOR) return;
@@ -1879,9 +1902,34 @@
         setMode('local');
       });
 
+      // ── Espectador (Fase 4, "OZAMA PRO") ──────────────────────────
+      // Un espectador no reclama color/asiento -- board-update,
+      // clock-tick y game-over ya llegan igual porque el servidor los
+      // manda a toda la sala de Socket.IO, no solo a los jugadores.
+      socket.on('damas:spectate-start', (data) => {
+        spectateCode = data.code;
+        board = data.board;
+        turn = data.turn;
+        selected = null; legalHere = []; lastMove = null; gameOver = null;
+        moveLog = [];
+        reviewIndex = null;
+        hideAnalysisPanel();
+        document.getElementById('status-line').textContent = '';
+        if (Number.isFinite(data.clockW) && Number.isFinite(data.clockB)) DAMAS_CLOCK.set(data.clockW, data.clockB);
+        DAMAS_CLOCK.switchTo(turn);
+        render();
+      });
+
+      socket.on('damas:spectate-error', (data) => {
+        document.getElementById('status-line').textContent = errorMessage(data);
+      });
+
       socket.on('damas:game-over', (data) => {
         hideDamasDisconnectOverlay();
-        clearOnlineSession();
+        // Un espectador no tiene sesion online propia en esta sala --
+        // limpiarla aca borraria, sin querer, la sesion real de una
+        // partida distinta que el mismo navegador tuviera guardada.
+        if (mode === 'online') clearOnlineSession();
         DAMAS_CLOCK.stop();
         gameOver = { over: true, winner: data.winner, reason: data.reason || 'resign' };
         render();
@@ -2127,7 +2175,37 @@
       if (mode === 'online' && onlineRoomCode) socket.emit('damas:draw-decline', { room: onlineRoomCode });
     }
 
+    // ── Espectador (Fase 4, "OZAMA PRO") ────────────────────────────
+    // Entra por un enlace ?watch=CODIGO (ver tournaments.html) --
+    // ningun boton de "Modo" lleva aca a proposito, ya que no es algo
+    // que el jugador elija desde cero sino un enlace que ya trae el
+    // codigo de una partida en curso.
+    function enterSpectateMode(code) {
+      mode = 'spectate';
+      ['local', 'bot', 'online'].forEach((m) => {
+        document.getElementById(`mode-${m}`).classList.remove('active');
+      });
+      document.getElementById('bot-panel').classList.add('hidden');
+      document.getElementById('online-panel').classList.add('hidden');
+      document.getElementById('board-wrap').classList.remove('hidden');
+      document.getElementById('resign-btn').classList.add('hidden');
+      document.getElementById('draw-offer-btn').classList.add('hidden');
+      document.getElementById('newgame-btn').classList.add('hidden');
+      document.getElementById('spectate-badge').classList.remove('hidden');
+      document.getElementById('status-line').textContent = 'Conectando para ver la partida...';
+      ensureSocket();
+      socket.emit('damas:spectate-room', { room: code });
+    }
+
+    function leaveSpectateMode() {
+      if (mode !== 'spectate') return;
+      if (spectateCode && socket) socket.emit('damas:spectate-leave', { room: spectateCode });
+      spectateCode = null;
+      document.getElementById('spectate-badge').classList.add('hidden');
+    }
+
     function setMode(newMode) {
+      leaveSpectateMode();
       mode = newMode;
       ['local', 'bot', 'online'].forEach((m) => {
         document.getElementById(`mode-${m}`).classList.toggle('active', m === newMode);
@@ -2239,7 +2317,9 @@
 
     document.getElementById('diff-medium').classList.add('active');
     renderStats();
-    attemptAutoRejoin();
+    const watchCode = new URLSearchParams(window.location.search).get('watch');
+    if (watchCode) enterSpectateMode(watchCode.trim().toUpperCase());
+    else attemptAutoRejoin();
   </script>
 </body>
 </html>
