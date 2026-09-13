@@ -678,7 +678,10 @@
     let historyInitialized = false;
     let currentGame = 'chess';
     let currentResultFilter = 'all';
-    let currentOpponentFilter = '';
+    // Precargado desde ?opponent=NOMBRE (Fase 6, "Sistema Social" --
+    // enlace "Historial" en player.html), ademas del filtro manual que
+    // ya existia via el input de busqueda.
+    let currentOpponentFilter = new URLSearchParams(window.location.search).get('opponent') || '';
     let opponentDebounceTimer = null;
 
     const RESULT_FILTERS = [

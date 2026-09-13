@@ -71,8 +71,8 @@
     .stat-chip .l { font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
     .rank-badge { text-align: center; font-family: var(--fm); font-size: 12px; color: var(--gold); margin-bottom: 20px; letter-spacing: 0.5px; }
 
-    .actions { display: flex; gap: 10px; margin-top: 10px; }
-    .btn { flex: 1; padding: 11px; border-radius: 8px; border: 1px solid rgba(200,152,60,0.3); background: rgba(200,152,60,0.08); color: var(--gold); font-weight: 700; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; text-align: center; }
+    .actions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+    .btn { flex: 1; min-width: 100px; padding: 11px; border-radius: 8px; border: 1px solid rgba(200,152,60,0.3); background: rgba(200,152,60,0.08); color: var(--gold); font-weight: 700; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; text-align: center; }
     .btn:hover { border-color: var(--gold); }
     .btn.danger { border-color: rgba(200,60,60,0.35); color: #E39494; background: rgba(200,60,60,0.08); }
     .btn.danger:hover { border-color: #E39494; }
@@ -99,9 +99,17 @@
     let profile = null;
     let meta = null;
     // Nombre del que esta MIRANDO este perfil (no el que se muestra) --
-    // solo para armar el link "Comparar" precargado (/compare.html usa
+    // usado para armar el link "Comparar" precargado (/compare.html usa
     // el mismo endpoint publico que ya usa esta pagina, no expone nada
-    // nuevo).
+    // nuevo) Y como señal de "hay sesion" para toggleFriend/toggleBlock/
+    // submitReport de mas abajo. NO se puede usar _token para eso: una
+    // vez que la sesion web migra a cookie (ver mobile-runtime.js,
+    // migrateLegacyWebSession), _token queda vacio a proposito -- las
+    // escrituras se autentican por cookie, sin bearer -- asi que
+    // `if (!_token)` bloqueaba estos tres botones para cualquier sesion
+    // web ya migrada, aunque el fetch de verdad iba a funcionar via
+    // cookie. _viewerUsername (localStorage, sobrevive la migracion)
+    // es la señal correcta de "esta persona esta logueada aca".
     let _viewerUsername = '';
     try { _viewerUsername = JSON.parse(localStorage.getItem('ozama-user') || 'null')?.username || ''; } catch (_) {}
     let activeGame = 'chess';
@@ -140,7 +148,7 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'No se pudo cargar el perfil.');
         profile = data.user;
-        meta = { isSelf: data.isSelf, isBlocked: data.isBlocked };
+        meta = { isSelf: data.isSelf, isBlocked: data.isBlocked, isFriend: data.isFriend };
         render();
       } catch (err) {
         content.innerHTML = `<div class="error-msg">${escapeHtml(err.message || 'No se pudo cargar el perfil.')}</div>`;
@@ -203,6 +211,8 @@
         ${meta.isSelf ? '' : `
           <div class="actions">
             <a class="btn" href="/lobby.html?challenge=${encodeURIComponent(profile.username || '')}">Desafiar</a>
+            <div class="btn" id="friend-btn" onclick="toggleFriend()">${meta.isFriend ? 'Quitar amigo' : 'Agregar amigo'}</div>
+            <a class="btn" href="/history.html?opponent=${encodeURIComponent(profile.username || '')}">Historial</a>
             <a class="btn" href="/compare.html?a=${encodeURIComponent(_viewerUsername || '')}&b=${encodeURIComponent(profile.username || '')}">Comparar</a>
             <div class="btn" onclick="togglePanel('report')">Reportar</div>
             <div class="btn danger" id="block-btn" onclick="toggleBlock()">${meta.isBlocked ? 'Desbloquear' : 'Bloquear'}</div>
@@ -231,7 +241,7 @@
     }
 
     async function submitReport() {
-      if (!_token) { showMsg('report-msg', 'Inicia sesión para reportar jugadores.', 'err'); return; }
+      if (!_viewerUsername) { showMsg('report-msg', 'Inicia sesión para reportar jugadores.', 'err'); return; }
       const reason = document.querySelector('input[name="reason"]:checked')?.value || 'otro';
       const note = document.getElementById('report-note').value.trim();
       try {
@@ -248,8 +258,24 @@
       }
     }
 
+    async function toggleFriend() {
+      if (!_viewerUsername) { notify('Inicia sesión para agregar amigos.', 'info'); return; }
+      try {
+        const method = meta.isFriend ? 'DELETE' : 'POST';
+        const res = await fetch(`/api/user/friends/${encodeURIComponent(profile.username)}`, {
+          method, headers: { Authorization: `Bearer ${_token}` },
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo actualizar la amistad.');
+        meta.isFriend = !meta.isFriend;
+        render();
+      } catch (err) {
+        notify(err.message || 'Error al agregar amigo.');
+      }
+    }
+
     async function toggleBlock() {
-      if (!_token) { notify('Inicia sesión para bloquear jugadores.', 'info'); return; }
+      if (!_viewerUsername) { notify('Inicia sesión para bloquear jugadores.', 'info'); return; }
       try {
         const method = meta.isBlocked ? 'DELETE' : 'POST';
         const res = await fetch(`/api/user/${encodeURIComponent(profile.username)}/block`, {
@@ -275,6 +301,7 @@
     window.togglePanel = togglePanel;
     window.submitReport = submitReport;
     window.toggleBlock = toggleBlock;
+    window.toggleFriend = toggleFriend;
     load();
   </script>
 </body>

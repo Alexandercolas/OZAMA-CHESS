@@ -1268,6 +1268,37 @@ router.delete('/me', requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/user/search?q=<texto> - "busqueda de jugadores" (Fase 6,
+// "Sistema Social"). Prefijo de username, insensible a mayus/minus,
+// mismo filtro que el leaderboard publico (publicLeaderboardFilter --
+// nunca expone cuentas de prueba/inactivas). Sin auth: encontrar a
+// alguien no deberia exigir cuenta, igual que el perfil publico de
+// abajo. DEBE registrarse antes de "/:username" -- si no, Express lo
+// tomaria como un username literal llamado "search".
+router.get('/search', optionalAuth, async (req, res) => {
+  try {
+    const q = String(req.query.q || '').trim();
+    if (q.length < 2) return res.json({ users: [] });
+    // $and, no spread -- publicLeaderboardFilter() TAMBIEN trae su
+    // propia clave "username" (para excluir cuentas de prueba), y un
+    // spread de objeto simplemente pisa la primera con la segunda en
+    // vez de combinarlas -- el filtro de prefijo quedaba silenciosamente
+    // ignorado, devolviendo TODOS los usuarios sin importar "q".
+    const users = await User.find({
+      $and: [
+        { username: { $regex: `^${escapeRegex(q)}`, $options: 'i' } },
+        publicLeaderboardFilter(),
+      ],
+    })
+      .select('username country avatar avatarImage elo damasElo')
+      .limit(8)
+      .lean();
+    res.json({ users });
+  } catch (err) {
+    serverError(res, 'Player search', err);
+  }
+});
+
 // GET /api/user/:username - perfil publico (Fase 10 lo extendio con
 // ELO/estadisticas de Damas, nivel y logros -- el shape original con
 // solo ajedrez ya existia y quedo sin uso desde el cliente, asi que
@@ -1307,11 +1338,13 @@ router.get('/:username', optionalAuth, async (req, res) => {
     delete json.achievements;
 
     const isBlocked = req.user ? (req.user.blockedUsers || []).some((id) => String(id) === String(user._id)) : false;
+    const isFriend = req.user ? (req.user.friends || []).some((id) => String(id) === String(user._id)) : false;
 
     res.json({
       user: json,
       isSelf: req.user ? String(req.user._id) === String(user._id) : false,
       isBlocked,
+      isFriend,
     });
   } catch (err) {
     serverError(res, 'Public profile', err);
