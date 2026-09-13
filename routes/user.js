@@ -122,11 +122,13 @@ const BOARD_THEMES = {
 // Mismo criterio que BOARD_THEMES, para los sets de piezas de Ajedrez
 // (Fase 2 de personalizacion). 'dorado' reusa un set 3D que ya vivia
 // en assets/pieces/blender/gold/ sin usarse en ningun lado -- ver
-// public/preferences.js para el detalle de por que.
+// public/preferences.js para el detalle de por que. 'marfil' (Fase 6)
+// es un set SVG nuevo, tambien Premium.
 const PIECE_SETS = {
   clasico:     { free: true },
   ornamentado: { free: true },
   dorado:      { free: false },
+  marfil:      { free: false },
 };
 
 // Fichas de Damas -- catalogo propio, ver public/preferences.js.

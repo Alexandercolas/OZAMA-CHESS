@@ -449,7 +449,17 @@
       return `<span class="p${isWinner ? ' is-winner' : ''}">${label}</span>`;
     }
 
-    function renderBracket(bracket) {
+    // Enlace de "Ver en vivo" (Fase 4, espectador) -- solo tiene sentido
+    // para un partido REALMENTE en curso (status:'playing') con un
+    // roomCode de verdad; damas.html/game.html leen ?watch=CODIGO al
+    // cargar y entran de oyente via spectate-room/damas:spectate-room,
+    // sin reclamar asiento (ver server.js).
+    function watchLink(gameType, roomCode) {
+      const page = gameType === 'checkers' ? '/damas.html' : '/game.html';
+      return `<a class="btn-mode" style="font-size:9.5px;padding:4px 10px;text-decoration:none;" href="${page}?watch=${encodeURIComponent(roomCode)}">👁 Ver en vivo</a>`;
+    }
+
+    function renderBracket(bracket, gameType) {
       if (!bracket?.rounds?.length) return '';
       return bracket.rounds.map((round, ri) => `
         <div class="round-block">
@@ -462,6 +472,7 @@
                 ${m.status === 'bye' ? '<span class="p" style="color:var(--dim);">(bye)</span>' : matchPlayerLabel(m.player2Name, m.winner, m.player2)}
               </div>
               <div class="match-status">${m.status === 'finished' ? 'Terminado' : m.status === 'bye' ? 'Avance directo' : m.status === 'playing' ? 'Jugando' : 'Listo'}</div>
+              ${m.status === 'playing' && m.roomCode ? watchLink(gameType, m.roomCode) : ''}
             </div>
           `).join('')}
         </div>
@@ -523,7 +534,7 @@
           </div>
           ${championHtml}
           ${yourMatchHtml}
-          ${renderBracket(event.bracket)}
+          ${renderBracket(event.bracket, event.gameType)}
           ${!event.bracket?.rounds?.length ? '<div class="empty-msg">El bracket todavia no se genero -- esperando a que el torneo empiece.</div>' : ''}
         `;
 

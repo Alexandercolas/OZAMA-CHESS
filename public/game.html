@@ -151,6 +151,18 @@
 
     .hd-turns { display: flex; }
 
+    /* Indicador de espectador (Fase 4, "OZAMA PRO"): mismo idioma
+       visual que .hd-pro-btn (pildora, mismo alfabeto tipografico) pero
+       en dorado neutro -- no es un beneficio Premium, es solo estado. */
+    .watch-badge {
+      display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
+      padding: 4px 11px; border-radius: 20px;
+      background: rgba(200,152,60,0.14); border: 1px solid rgba(200,152,60,0.45);
+      color: var(--gold);
+      font-family: var(--fb); font-size: 9px; font-weight: 800;
+      letter-spacing: 2px; text-transform: uppercase;
+    }
+
     .hd-pro-btn {
       flex-shrink: 0;
       display: inline-flex; align-items: center;
@@ -1079,7 +1091,7 @@
       .app { grid-template-rows: auto 1fr; }
       .hd { padding: 10px 12px; gap: 10px; min-height: 52px; }
       .hd-logo { font-size: 15px; letter-spacing: 4px; }
-      .hd-sub, .hd-banner, .hd-turns { display: none; }
+      .hd-sub, .hd-banner, .hd-turns, .watch-badge { display: none; }
       .body { grid-template-columns: 1fr; }
       .sb { display: none; }
       .main {
@@ -1155,6 +1167,7 @@
       <span class="hd-sub">Dominican Heritage Edition</span>
     </div>
     <div class="hd-banner" id="game-banner">OZAMA CHESS · PARTIDA EN CURSO</div>
+    <span class="watch-badge hidden" id="watch-badge">👁 En vivo</span>
     <div class="hd-turns">
       <div id="white-turn" class="hd-turn on">Blancas</div>
       <div id="black-turn" class="hd-turn">Negras</div>
@@ -1265,7 +1278,7 @@
           <button class="bc-btn" id="visible-draw-btn" onclick="document.getElementById('draw-offer-btn').click()">
             Ofrecer tablas
           </button>
-          <button class="bc-btn danger" onclick="document.getElementById('resign-btn').click()">
+          <button class="bc-btn danger" id="visible-resign-btn" onclick="document.getElementById('resign-btn').click()">
             Rendirse
           </button>
           <button class="bc-btn sound-btn" id="sound-toggle-btn" onclick="toggleSound()">
@@ -1583,10 +1596,13 @@
         ? sorted.map(p=>{
             const key=`${p.color}${p.type}`;
             const colorClass=p.color==='w'?'is-white':'is-black';
+            // Mismo set que el tablero (pieceAssetInner en script.js) --
+            // antes esta lista siempre mostraba el set Blender sin
+            // importar el pieceSet elegido, asi que nunca coincidia con
+            // el tablero si el jugador tenia 'ornamentado' u otro set.
             let inner;
-            if (typeof CONFIG!=='undefined' && CONFIG.USE_BLENDER_PIECES && typeof BLENDER_PIECE_NAMES!=='undefined' && BLENDER_PIECE_NAMES[p.type]) {
-              const style = p.color==='w' ? 'white-matte' : 'black';
-              inner = `<img src="./assets/pieces/blender/${style}/${BLENDER_PIECE_NAMES[p.type]}.png" alt="" draggable="false">`;
+            if (typeof pieceAssetInner === 'function') {
+              inner = pieceAssetInner(p.type, p.color).inner || (PS[key]||'?');
             } else {
               inner = (typeof PIECE_SVGS!=='undefined'&&PIECE_SVGS[key]) ? PIECE_SVGS[key] : (PS[key]||'?');
             }

@@ -165,6 +165,34 @@ const PIECE_SVGS = {
   bk:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><defs><radialGradient id="bkg" cx="32%" cy="26%" r="70%"><stop offset="0%" stop-color="#3A3028"/><stop offset="40%" stop-color="#1C1610"/><stop offset="75%" stop-color="#100D08"/><stop offset="100%" stop-color="#060504"/></radialGradient><radialGradient id="bkh" cx="28%" cy="22%" r="55%"><stop offset="0%" stop-color="rgba(200,152,60,0.25)"/><stop offset="100%" stop-color="rgba(200,152,60,0)"/></radialGradient></defs><rect x="9" y="35.5" width="27" height="4.5" rx="1" fill="url(#bkg)" stroke="#C8983C" stroke-width="1.6"/><rect x="9" y="35.5" width="27" height="1.2" rx="0.5" fill="rgba(200,152,60,0.22)"/><path d="M11.5 35.5Q10 25 13.5 20Q17.5 16 22.5 16Q27.5 16 31.5 20Q35 25 33.5 35.5Z" fill="url(#bkg)" stroke="#C8983C" stroke-width="1.6"/><path d="M11.5 35.5Q10 25 13.5 20Q17.5 16 22.5 16Q27.5 16 31.5 20Q35 25 33.5 35.5Z" fill="url(#bkh)"/><line x1="13" y1="24" x2="32" y2="24" stroke="rgba(200,152,60,0.28)" stroke-width="0.9"/><line x1="12" y1="29" x2="33" y2="29" stroke="rgba(200,152,60,0.2)" stroke-width="0.9"/><rect x="14" y="14.5" width="17" height="3.5" rx="1" fill="#6B5018" stroke="#C8983C" stroke-width="0.9"/><rect x="20.5" y="2" width="4.5" height="15" rx="1.8" fill="url(#bkg)" stroke="#C8983C" stroke-width="1.6"/><rect x="20.5" y="2" width="4.5" height="15" rx="1.8" fill="url(#bkh)"/><rect x="14.5" y="5.5" width="16" height="5" rx="1.8" fill="url(#bkg)" stroke="#C8983C" stroke-width="1.6"/><rect x="14.5" y="5.5" width="16" height="5" rx="1.8" fill="url(#bkh)"/><rect x="21.5" y="3" width="2" height="5" rx="1" fill="rgba(200,152,60,0.3)"/></svg>`,
 };
 
+// Set 'marfil' (Fase 6/personalizacion, pedido explicito del usuario:
+// marfil/ebano con detalles dorados, "tal cual" una referencia que
+// paso). Reusa la MISMA geometria de PIECE_SVGS de arriba (esas
+// siluetas Staunton ya estan bien resueltas, redibujarlas desde cero
+// no aportaria nada) -- solo se recolorea: blancas pasan de un
+// dorado/crema saturado a un marfil mas neutro, negras quedan casi
+// igual (el 'ornamentado' original ya las pintaba en ebano con borde
+// dorado, que es exactamente el material pedido). El borde dorado
+// (#C8983C, el --gold de la app) queda IGUAL en ambos colores para
+// que se lea como un solo set con "detalles dorados" coherentes, no
+// dos paletas distintas. IDs de gradiente con prefijo iv/eb (no w/b)
+// para no chocar con PIECE_SVGS si algun dia se previsualizan los dos
+// sets a la vez en la misma pagina.
+const PIECE_SVGS_MARFIL = {
+  wp:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><defs><radialGradient id="ivpg" cx="36%" cy="28%" r="70%"><stop offset="0%" stop-color="#FFFCF3"/><stop offset="35%" stop-color="#F0E4C8"/><stop offset="70%" stop-color="#D9C9A0"/><stop offset="100%" stop-color="#B8A06A"/></radialGradient><radialGradient id="ivph" cx="28%" cy="22%" r="45%"><stop offset="0%" stop-color="rgba(255,253,244,0.72)"/><stop offset="100%" stop-color="rgba(255,253,244,0)"/></radialGradient></defs><rect x="9.5" y="35.5" width="26" height="4.5" rx="1" fill="url(#ivpg)" stroke="#C8983C" stroke-width="1.3"/><rect x="9.5" y="35.5" width="26" height="1.2" rx="0.5" fill="rgba(255,250,235,0.35)"/><path d="M18.5 35Q17 26.5 22.5 23Q28 26.5 26.5 35Z" fill="url(#ivpg)" stroke="#C8983C" stroke-width="1.3"/><ellipse cx="22.5" cy="24" rx="4.5" ry="1.2" fill="#C8983C" stroke="#A8792A" stroke-width="0.8"/><circle cx="22.5" cy="10.5" r="8" fill="url(#ivpg)" stroke="#C8983C" stroke-width="1.4"/><circle cx="22.5" cy="10.5" r="8" fill="url(#ivph)"/><ellipse cx="19.5" cy="7.5" rx="3" ry="2" fill="rgba(255,253,244,0.55)"/></svg>`,
+  wn:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><defs><radialGradient id="ivng" cx="34%" cy="22%" r="76%"><stop offset="0%" stop-color="#FFFCF3"/><stop offset="30%" stop-color="#F0E4C8"/><stop offset="64%" stop-color="#D2BE8E"/><stop offset="100%" stop-color="#8C7A50"/></radialGradient><linearGradient id="ivns" x1="18%" y1="6%" x2="88%" y2="100%"><stop offset="0%" stop-color="rgba(255,255,245,0.58)"/><stop offset="48%" stop-color="rgba(240,228,200,0.1)"/><stop offset="100%" stop-color="rgba(70,58,32,0.4)"/></linearGradient><radialGradient id="ivne" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-color="#1B0F05"/><stop offset="100%" stop-color="#050301"/></radialGradient></defs><path d="M8.2 39.6h29.2v-4.1H8.2z" fill="url(#ivng)" stroke="#C8983C" stroke-width="1.25"/><path d="M11.2 35.7h23.2l-1.8-4.8H13.1z" fill="url(#ivng)" stroke="#C8983C" stroke-width="1.12"/><path d="M17.7 30.9c.6-3.7 2.2-6.4 4.8-8.4 1.4-1.1 2.6-2 3.4-3.1-2.3.2-4.7-.2-7.1-1.2 1.8-3.2 4.1-5.6 7-7.3l-.7-5.4 4.6 2.9 3.2-2.7 1.1 5.9c2.4 1.7 3.8 4.2 4 7.2-1.3 1.7-3.1 2.8-5.6 3.3l-2.4 2.3c-.3 2.6-1.4 4.8-3.2 6.5z" fill="url(#ivng)" stroke="#C8983C" stroke-width="1.38" stroke-linejoin="round"/><path d="M25.7 11.1c-3.5 2.2-5.7 4.7-6.9 7.1 2.5 1.1 5 1.5 7.6 1.1-1.2 1.8-2.7 3.3-4.5 4.4-1.9 1.2-3.2 3.6-3.9 7.1" fill="none" stroke="rgba(255,250,235,0.3)" stroke-width="1.05" stroke-linecap="round"/><path d="M29.6 8.8l2.1-1.7.8 4.1" fill="none" stroke="rgba(255,248,225,0.5)" stroke-width="1.05" stroke-linecap="round"/><path d="M29.1 12.5c2.8.9 4.5 2.9 5.1 5.8" fill="none" stroke="rgba(120,102,58,0.45)" stroke-width="1.05" stroke-linecap="round"/><ellipse cx="30.2" cy="15.2" rx="1.45" ry="1.65" fill="url(#ivne)" transform="rotate(-16 30.2 15.2)"/><circle cx="30.6" cy="14.7" r=".42" fill="#F0E4C8"/><path d="M33.2 18.8c1.2.1 2.4-.1 3.4-.7-.8 1.2-2 1.9-3.5 2.2" fill="none" stroke="#C8983C" stroke-width="1" stroke-linecap="round"/><path d="M31.1 12.2c-.4 4.2-.7 8.2-1.2 12.1M33.4 13.7c-.5 3.1-.9 5.8-1.4 8.1M27.7 11.4c-.3 2.7-.7 5.2-1.1 7.6" fill="none" stroke="rgba(120,102,58,0.35)" stroke-width=".9" stroke-linecap="round"/><path d="M8.2 39.6h29.2v-4.1H8.2zM11.2 35.7h23.2l-1.8-4.8H13.1zM17.7 30.9c.6-3.7 2.2-6.4 4.8-8.4 1.4-1.1 2.6-2 3.4-3.1-2.3.2-4.7-.2-7.1-1.2 1.8-3.2 4.1-5.6 7-7.3l-.7-5.4 4.6 2.9 3.2-2.7 1.1 5.9c2.4 1.7 3.8 4.2 4 7.2-1.3 1.7-3.1 2.8-5.6 3.3l-2.4 2.3c-.3 2.6-1.4 4.8-3.2 6.5z" fill="url(#ivns)"/></svg>`,
+  wb:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><defs><radialGradient id="ivbg" cx="36%" cy="28%" r="70%"><stop offset="0%" stop-color="#FFFCF3"/><stop offset="35%" stop-color="#F0E4C8"/><stop offset="70%" stop-color="#D9C9A0"/><stop offset="100%" stop-color="#B8A06A"/></radialGradient><radialGradient id="ivbh" cx="30%" cy="22%" r="50%"><stop offset="0%" stop-color="rgba(255,253,244,0.68)"/><stop offset="100%" stop-color="rgba(255,253,244,0)"/></radialGradient></defs><rect x="8.5" y="36" width="28" height="4" rx="1" fill="url(#ivbg)" stroke="#C8983C" stroke-width="1.3"/><path d="M14.5 36Q12.5 34 12.5 33L32.5 33Q32.5 34 30.5 36Z" fill="url(#ivbg)" stroke="#C8983C" stroke-width="1"/><path d="M22.5 12.5Q29 17 30 23Q31 30.5 27.5 33L17.5 33Q14 30.5 15 23Q16 17 22.5 12.5Z" fill="url(#ivbg)" stroke="#C8983C" stroke-width="1.3"/><path d="M22.5 12.5Q29 17 30 23Q31 30.5 27.5 33L17.5 33Q14 30.5 15 23Q16 17 22.5 12.5Z" fill="url(#ivbh)"/><line x1="17.5" y1="24" x2="27.5" y2="24" stroke="rgba(168,121,42,0.35)" stroke-width="1"/><ellipse cx="22.5" cy="14" rx="3.5" ry="1.2" fill="#C8983C" stroke="#A8792A" stroke-width="0.8"/><circle cx="22.5" cy="8.5" r="4.5" fill="url(#ivbg)" stroke="#C8983C" stroke-width="1.3"/><circle cx="22.5" cy="8.5" r="4.5" fill="url(#ivbh)"/><circle cx="22.5" cy="6" r="1.5" fill="#C8983C" stroke="#A8792A" stroke-width="0.7"/><ellipse cx="20" cy="7" rx="2" ry="1.3" fill="rgba(255,253,244,0.55)"/></svg>`,
+  wr:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><defs><radialGradient id="ivrg" cx="36%" cy="28%" r="70%"><stop offset="0%" stop-color="#FFFCF3"/><stop offset="35%" stop-color="#F0E4C8"/><stop offset="70%" stop-color="#D9C9A0"/><stop offset="100%" stop-color="#B8A06A"/></radialGradient><linearGradient id="ivrh" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="rgba(255,253,244,0.3)"/><stop offset="100%" stop-color="rgba(255,253,244,0)"/></linearGradient></defs><rect x="8" y="35" width="29" height="5" rx="1" fill="url(#ivrg)" stroke="#C8983C" stroke-width="1.3"/><path d="M10 34L13.5 34L13.5 17L31.5 17L31.5 34L35 34L35 15L10 15Z" fill="url(#ivrg)" stroke="#C8983C" stroke-width="1.3"/><path d="M10 34L13.5 34L13.5 17L31.5 17L31.5 34L35 34L35 15L10 15Z" fill="url(#ivrh)"/><line x1="20.5" y1="19" x2="20.5" y2="33" stroke="rgba(168,121,42,0.3)" stroke-width="0.9"/><line x1="24.5" y1="19" x2="24.5" y2="33" stroke="rgba(168,121,42,0.3)" stroke-width="0.9"/><rect x="9" y="7.5" width="7" height="9" rx="0.8" fill="url(#ivrg)" stroke="#C8983C" stroke-width="1.3"/><rect x="19.5" y="7.5" width="6" height="9" rx="0.8" fill="url(#ivrg)" stroke="#C8983C" stroke-width="1.3"/><rect x="29.5" y="7.5" width="7" height="9" rx="0.8" fill="url(#ivrg)" stroke="#C8983C" stroke-width="1.3"/><rect x="10" y="8.5" width="5" height="1.5" rx="0.3" fill="rgba(255,251,238,0.4)"/></svg>`,
+  wq:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><defs><radialGradient id="ivqg" cx="36%" cy="28%" r="70%"><stop offset="0%" stop-color="#FFFCF3"/><stop offset="35%" stop-color="#F0E4C8"/><stop offset="70%" stop-color="#D9C9A0"/><stop offset="100%" stop-color="#B8A06A"/></radialGradient><radialGradient id="ivqh" cx="30%" cy="25%" r="50%"><stop offset="0%" stop-color="rgba(255,253,244,0.58)"/><stop offset="100%" stop-color="rgba(255,253,244,0)"/></radialGradient></defs><rect x="7.5" y="35.5" width="30" height="4.5" rx="1" fill="url(#ivqg)" stroke="#C8983C" stroke-width="1.3"/><path d="M10.5 35.5Q15.5 34 22.5 34.5Q29.5 34 34.5 35.5L34.5 33.5Q29.5 31.5 22.5 32Q15.5 31.5 10.5 33.5Z" fill="url(#ivqg)" stroke="#C8983C" stroke-width="1"/><path d="M8 14.5L10.5 32Q16 28.5 22.5 30Q29 28.5 34.5 32L37 14.5L31 22L22.5 12L14 22Z" fill="url(#ivqg)" stroke="#C8983C" stroke-width="1.4"/><path d="M8 14.5L10.5 32Q16 28.5 22.5 30Q29 28.5 34.5 32L37 14.5L31 22L22.5 12L14 22Z" fill="url(#ivqh)"/><circle cx="7.5" cy="12.5" r="4" fill="url(#ivqg)" stroke="#C8983C" stroke-width="1.3"/><circle cx="7.5" cy="12.5" r="4" fill="url(#ivqh)"/><circle cx="15" cy="9.5" r="3.2" fill="url(#ivqg)" stroke="#C8983C" stroke-width="1.2"/><circle cx="22.5" cy="7.5" r="4" fill="url(#ivqg)" stroke="#C8983C" stroke-width="1.3"/><circle cx="22.5" cy="7.5" r="4" fill="url(#ivqh)"/><circle cx="30" cy="9.5" r="3.2" fill="url(#ivqg)" stroke="#C8983C" stroke-width="1.2"/><circle cx="37.5" cy="12.5" r="4" fill="url(#ivqg)" stroke="#C8983C" stroke-width="1.3"/><circle cx="37.5" cy="12.5" r="4" fill="url(#ivqh)"/><circle cx="20.5" cy="5.5" r="1.6" fill="rgba(255,253,244,0.6)"/></svg>`,
+  wk:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><defs><radialGradient id="ivkg" cx="36%" cy="28%" r="70%"><stop offset="0%" stop-color="#FFFCF3"/><stop offset="35%" stop-color="#F0E4C8"/><stop offset="70%" stop-color="#D9C9A0"/><stop offset="100%" stop-color="#B8A06A"/></radialGradient><radialGradient id="ivkh" cx="30%" cy="25%" r="55%"><stop offset="0%" stop-color="rgba(255,253,244,0.58)"/><stop offset="100%" stop-color="rgba(255,253,244,0)"/></radialGradient></defs><rect x="9" y="35.5" width="27" height="4.5" rx="1" fill="url(#ivkg)" stroke="#C8983C" stroke-width="1.3"/><path d="M11.5 35.5Q10 25 13.5 20Q17.5 16 22.5 16Q27.5 16 31.5 20Q35 25 33.5 35.5Z" fill="url(#ivkg)" stroke="#C8983C" stroke-width="1.4"/><path d="M11.5 35.5Q10 25 13.5 20Q17.5 16 22.5 16Q27.5 16 31.5 20Q35 25 33.5 35.5Z" fill="url(#ivkh)"/><line x1="13" y1="24" x2="32" y2="24" stroke="rgba(168,121,42,0.3)" stroke-width="0.9"/><rect x="14" y="14.5" width="17" height="3.5" rx="1" fill="#C8983C" stroke="#A8792A" stroke-width="0.9"/><rect x="20.5" y="2" width="4.5" height="15" rx="1.8" fill="url(#ivkg)" stroke="#C8983C" stroke-width="1.4"/><rect x="20.5" y="2" width="4.5" height="15" rx="1.8" fill="url(#ivkh)"/><rect x="14.5" y="5.5" width="16" height="5" rx="1.8" fill="url(#ivkg)" stroke="#C8983C" stroke-width="1.4"/><rect x="14.5" y="5.5" width="16" height="5" rx="1.8" fill="url(#ivkh)"/><rect x="21.5" y="3" width="2" height="5" rx="1" fill="rgba(255,253,244,0.6)"/></svg>`,
+  bp:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><defs><radialGradient id="ebpg" cx="32%" cy="26%" r="70%"><stop offset="0%" stop-color="#3A3028"/><stop offset="40%" stop-color="#1C1610"/><stop offset="75%" stop-color="#100D08"/><stop offset="100%" stop-color="#060504"/></radialGradient><radialGradient id="ebph" cx="28%" cy="22%" r="45%"><stop offset="0%" stop-color="rgba(200,152,60,0.32)"/><stop offset="100%" stop-color="rgba(200,152,60,0)"/></radialGradient></defs><rect x="9.5" y="35.5" width="26" height="4.5" rx="1" fill="url(#ebpg)" stroke="#C8983C" stroke-width="1.6"/><rect x="9.5" y="35.5" width="26" height="1.2" rx="0.5" fill="rgba(200,152,60,0.25)"/><path d="M18.5 35Q17 26.5 22.5 23Q28 26.5 26.5 35Z" fill="url(#ebpg)" stroke="#C8983C" stroke-width="1.5"/><ellipse cx="22.5" cy="24" rx="4.5" ry="1.2" fill="#6B5018" stroke="#C8983C" stroke-width="0.9"/><circle cx="22.5" cy="10.5" r="8" fill="url(#ebpg)" stroke="#C8983C" stroke-width="1.6"/><circle cx="22.5" cy="10.5" r="8" fill="url(#ebph)"/><ellipse cx="19" cy="7.5" rx="3" ry="2" fill="rgba(200,152,60,0.22)"/></svg>`,
+  bn:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><defs><radialGradient id="ebng" cx="34%" cy="22%" r="76%"><stop offset="0%" stop-color="#4A3828"/><stop offset="34%" stop-color="#21170E"/><stop offset="74%" stop-color="#0D0905"/><stop offset="100%" stop-color="#030201"/></radialGradient><linearGradient id="ebns" x1="18%" y1="6%" x2="88%" y2="100%"><stop offset="0%" stop-color="rgba(218,166,67,0.38)"/><stop offset="52%" stop-color="rgba(200,152,60,0.08)"/><stop offset="100%" stop-color="rgba(0,0,0,0.48)"/></linearGradient><radialGradient id="ebne" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-color="#D3A54D"/><stop offset="100%" stop-color="#51330D"/></radialGradient></defs><path d="M8.2 39.6h29.2v-4.1H8.2z" fill="url(#ebng)" stroke="#C8983C" stroke-width="1.55"/><path d="M11.2 35.7h23.2l-1.8-4.8H13.1z" fill="url(#ebng)" stroke="#C8983C" stroke-width="1.32"/><path d="M17.7 30.9c.6-3.7 2.2-6.4 4.8-8.4 1.4-1.1 2.6-2 3.4-3.1-2.3.2-4.7-.2-7.1-1.2 1.8-3.2 4.1-5.6 7-7.3l-.7-5.4 4.6 2.9 3.2-2.7 1.1 5.9c2.4 1.7 3.8 4.2 4 7.2-1.3 1.7-3.1 2.8-5.6 3.3l-2.4 2.3c-.3 2.6-1.4 4.8-3.2 6.5z" fill="url(#ebng)" stroke="#C8983C" stroke-width="1.62" stroke-linejoin="round"/><path d="M25.7 11.1c-3.5 2.2-5.7 4.7-6.9 7.1 2.5 1.1 5 1.5 7.6 1.1-1.2 1.8-2.7 3.3-4.5 4.4-1.9 1.2-3.2 3.6-3.9 7.1" fill="none" stroke="rgba(218,166,67,0.25)" stroke-width="1.05" stroke-linecap="round"/><path d="M29.6 8.8l2.1-1.7.8 4.1" fill="none" stroke="rgba(226,185,96,0.5)" stroke-width="1.05" stroke-linecap="round"/><path d="M29.1 12.5c2.8.9 4.5 2.9 5.1 5.8" fill="none" stroke="rgba(200,152,60,0.45)" stroke-width="1.05" stroke-linecap="round"/><ellipse cx="30.2" cy="15.2" rx="1.45" ry="1.65" fill="url(#ebne)" transform="rotate(-16 30.2 15.2)"/><circle cx="30.6" cy="14.7" r=".42" fill="#090603"/><path d="M33.2 18.8c1.2.1 2.4-.1 3.4-.7-.8 1.2-2 1.9-3.5 2.2" fill="none" stroke="#C8983C" stroke-width="1" stroke-linecap="round"/><path d="M31.1 12.2c-.4 4.2-.7 8.2-1.2 12.1M33.4 13.7c-.5 3.1-.9 5.8-1.4 8.1M27.7 11.4c-.3 2.7-.7 5.2-1.1 7.6" fill="none" stroke="rgba(200,152,60,0.36)" stroke-width=".9" stroke-linecap="round"/><path d="M8.2 39.6h29.2v-4.1H8.2zM11.2 35.7h23.2l-1.8-4.8H13.1zM17.7 30.9c.6-3.7 2.2-6.4 4.8-8.4 1.4-1.1 2.6-2 3.4-3.1-2.3.2-4.7-.2-7.1-1.2 1.8-3.2 4.1-5.6 7-7.3l-.7-5.4 4.6 2.9 3.2-2.7 1.1 5.9c2.4 1.7 3.8 4.2 4 7.2-1.3 1.7-3.1 2.8-5.6 3.3l-2.4 2.3c-.3 2.6-1.4 4.8-3.2 6.5z" fill="url(#ebns)"/></svg>`,
+  bb:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><defs><radialGradient id="ebbg" cx="32%" cy="26%" r="70%"><stop offset="0%" stop-color="#3A3028"/><stop offset="40%" stop-color="#1C1610"/><stop offset="75%" stop-color="#100D08"/><stop offset="100%" stop-color="#060504"/></radialGradient><radialGradient id="ebbh" cx="28%" cy="22%" r="50%"><stop offset="0%" stop-color="rgba(200,152,60,0.28)"/><stop offset="100%" stop-color="rgba(200,152,60,0)"/></radialGradient></defs><rect x="8.5" y="36" width="28" height="4" rx="1" fill="url(#ebbg)" stroke="#C8983C" stroke-width="1.6"/><path d="M14.5 36Q12.5 34 12.5 33L32.5 33Q32.5 34 30.5 36Z" fill="url(#ebbg)" stroke="#C8983C" stroke-width="1.1"/><path d="M22.5 12.5Q29 17 30 23Q31 30.5 27.5 33L17.5 33Q14 30.5 15 23Q16 17 22.5 12.5Z" fill="url(#ebbg)" stroke="#C8983C" stroke-width="1.5"/><path d="M22.5 12.5Q29 17 30 23Q31 30.5 27.5 33L17.5 33Q14 30.5 15 23Q16 17 22.5 12.5Z" fill="url(#ebbh)"/><line x1="17.5" y1="24" x2="27.5" y2="24" stroke="rgba(200,152,60,0.4)" stroke-width="1.2"/><ellipse cx="22.5" cy="14" rx="3.5" ry="1.2" fill="#6B5018" stroke="#C8983C" stroke-width="0.9"/><circle cx="22.5" cy="8.5" r="4.5" fill="url(#ebbg)" stroke="#C8983C" stroke-width="1.5"/><circle cx="22.5" cy="8.5" r="4.5" fill="url(#ebbh)"/><circle cx="22.5" cy="6" r="1.5" fill="#C8983C"/><ellipse cx="20" cy="7" rx="2" ry="1.3" fill="rgba(200,152,60,0.22)"/></svg>`,
+  br:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><defs><radialGradient id="ebrg" cx="32%" cy="26%" r="70%"><stop offset="0%" stop-color="#3A3028"/><stop offset="40%" stop-color="#1C1610"/><stop offset="75%" stop-color="#100D08"/><stop offset="100%" stop-color="#060504"/></radialGradient><linearGradient id="ebrh" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="rgba(200,152,60,0.25)"/><stop offset="100%" stop-color="rgba(200,152,60,0)"/></linearGradient></defs><rect x="8" y="35" width="29" height="5" rx="1" fill="url(#ebrg)" stroke="#C8983C" stroke-width="1.6"/><rect x="8" y="35" width="29" height="1.5" rx="0.5" fill="rgba(200,152,60,0.22)"/><path d="M10 34L13.5 34L13.5 17L31.5 17L31.5 34L35 34L35 15L10 15Z" fill="url(#ebrg)" stroke="#C8983C" stroke-width="1.5"/><path d="M10 34L13.5 34L13.5 17L31.5 17L31.5 34L35 34L35 15L10 15Z" fill="url(#ebrh)"/><line x1="20.5" y1="19" x2="20.5" y2="33" stroke="rgba(200,152,60,0.25)" stroke-width="0.9"/><line x1="24.5" y1="19" x2="24.5" y2="33" stroke="rgba(200,152,60,0.25)" stroke-width="0.9"/><line x1="13.5" y1="25" x2="31.5" y2="25" stroke="rgba(200,152,60,0.2)" stroke-width="0.9"/><rect x="9" y="7.5" width="7" height="9" rx="0.8" fill="url(#ebrg)" stroke="#C8983C" stroke-width="1.6"/><rect x="19.5" y="7.5" width="6" height="9" rx="0.8" fill="url(#ebrg)" stroke="#C8983C" stroke-width="1.6"/><rect x="29.5" y="7.5" width="7" height="9" rx="0.8" fill="url(#ebrg)" stroke="#C8983C" stroke-width="1.6"/><rect x="10" y="8.5" width="5" height="1.5" rx="0.3" fill="rgba(200,152,60,0.22)"/></svg>`,
+  bq:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><defs><radialGradient id="ebqg" cx="32%" cy="26%" r="70%"><stop offset="0%" stop-color="#3A3028"/><stop offset="40%" stop-color="#1C1610"/><stop offset="75%" stop-color="#100D08"/><stop offset="100%" stop-color="#060504"/></radialGradient><radialGradient id="ebqh" cx="28%" cy="22%" r="50%"><stop offset="0%" stop-color="rgba(200,152,60,0.25)"/><stop offset="100%" stop-color="rgba(200,152,60,0)"/></radialGradient></defs><rect x="7.5" y="35.5" width="30" height="4.5" rx="1" fill="url(#ebqg)" stroke="#C8983C" stroke-width="1.6"/><rect x="7.5" y="35.5" width="30" height="1.2" rx="0.5" fill="rgba(200,152,60,0.22)"/><path d="M10.5 35.5Q15.5 34 22.5 34.5Q29.5 34 34.5 35.5L34.5 33.5Q29.5 31.5 22.5 32Q15.5 31.5 10.5 33.5Z" fill="url(#ebqg)" stroke="#C8983C" stroke-width="1.1"/><path d="M8 14.5L10.5 32Q16 28.5 22.5 30Q29 28.5 34.5 32L37 14.5L31 22L22.5 12L14 22Z" fill="url(#ebqg)" stroke="#C8983C" stroke-width="1.6"/><path d="M8 14.5L10.5 32Q16 28.5 22.5 30Q29 28.5 34.5 32L37 14.5L31 22L22.5 12L14 22Z" fill="url(#ebqh)"/><circle cx="7.5" cy="12.5" r="4" fill="url(#ebqg)" stroke="#C8983C" stroke-width="1.6"/><circle cx="7.5" cy="12.5" r="4" fill="url(#ebqh)"/><circle cx="15" cy="9.5" r="3.2" fill="url(#ebqg)" stroke="#C8983C" stroke-width="1.4"/><circle cx="22.5" cy="7.5" r="4" fill="url(#ebqg)" stroke="#C8983C" stroke-width="1.6"/><circle cx="22.5" cy="7.5" r="4" fill="url(#ebqh)"/><circle cx="30" cy="9.5" r="3.2" fill="url(#ebqg)" stroke="#C8983C" stroke-width="1.4"/><circle cx="37.5" cy="12.5" r="4" fill="url(#ebqg)" stroke="#C8983C" stroke-width="1.6"/><circle cx="37.5" cy="12.5" r="4" fill="url(#ebqh)"/><circle cx="20.5" cy="5.8" r="1.5" fill="rgba(200,152,60,0.38)"/></svg>`,
+  bk:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 45 45"><defs><radialGradient id="ebkg" cx="32%" cy="26%" r="70%"><stop offset="0%" stop-color="#3A3028"/><stop offset="40%" stop-color="#1C1610"/><stop offset="75%" stop-color="#100D08"/><stop offset="100%" stop-color="#060504"/></radialGradient><radialGradient id="ebkh" cx="30%" cy="25%" r="55%"><stop offset="0%" stop-color="rgba(200,152,60,0.25)"/><stop offset="100%" stop-color="rgba(200,152,60,0)"/></radialGradient></defs><rect x="9" y="35.5" width="27" height="4.5" rx="1" fill="url(#ebkg)" stroke="#C8983C" stroke-width="1.6"/><rect x="9" y="35.5" width="27" height="1.2" rx="0.5" fill="rgba(200,152,60,0.22)"/><path d="M11.5 35.5Q10 25 13.5 20Q17.5 16 22.5 16Q27.5 16 31.5 20Q35 25 33.5 35.5Z" fill="url(#ebkg)" stroke="#C8983C" stroke-width="1.6"/><path d="M11.5 35.5Q10 25 13.5 20Q17.5 16 22.5 16Q27.5 16 31.5 20Q35 25 33.5 35.5Z" fill="url(#ebkh)"/><line x1="13" y1="24" x2="32" y2="24" stroke="rgba(200,152,60,0.28)" stroke-width="0.9"/><line x1="12" y1="29" x2="33" y2="29" stroke="rgba(200,152,60,0.2)" stroke-width="0.9"/><rect x="14" y="14.5" width="17" height="3.5" rx="1" fill="#6B5018" stroke="#C8983C" stroke-width="0.9"/><rect x="20.5" y="2" width="4.5" height="15" rx="1.8" fill="url(#ebkg)" stroke="#C8983C" stroke-width="1.6"/><rect x="20.5" y="2" width="4.5" height="15" rx="1.8" fill="url(#ebkh)"/><rect x="14.5" y="5.5" width="16" height="5" rx="1.8" fill="url(#ebkg)" stroke="#C8983C" stroke-width="1.6"/><rect x="14.5" y="5.5" width="16" height="5" rx="1.8" fill="url(#ebkh)"/><rect x="21.5" y="3" width="2" height="5" rx="1" fill="rgba(200,152,60,0.3)"/></svg>`,
+};
+
 // Set de piezas elegido (Fase 2 de personalizacion, ver preferences.js):
 // 'clasico' (3D, el default de siempre) / 'dorado' (3D, lado blanco en
 // dorado -- Premium) / 'ornamentado' (el set SVG de abajo, que antes
@@ -176,28 +204,42 @@ function currentPieceSet() {
   return OZAMA_PREFS.current().pieceSet || 'clasico';
 }
 
-// Arma el HTML de una pieza para el tablero o el dialogo de coronacion
-// -- unico lugar que decide entre el set 3D (Blender) y el set SVG
-// ornamentado, para no repetir esta rama en cada sitio que dibuja una
-// pieza (antes estaba duplicada en renderBoard() y showPromotionDialog()).
-function pieceInnerHtml(type, color, extraClasses = '') {
+// Decide entre el set 3D (Blender) y el set SVG ornamentado para UNA
+// pieza -- extraido de pieceInnerHtml (tablero/coronacion) para que
+// game.html (piezas capturadas en el sidebar) lo pueda reusar tambien
+// en vez de tener su propia rama aparte. Esa rama aparte fue justo el
+// bug real: renderCapturedPieces() en game.html ignoraba el pieceSet
+// elegido y SIEMPRE mostraba el set Blender, sin importar que el
+// tablero mismo estuviera mostrando 'ornamentado' -- las piezas
+// capturadas nunca coincidian con las del tablero si el jugador tenia
+// elegido cualquier set que no fuera el default.
+function pieceAssetInner(type, color) {
   const key = `${color}${type}`;
-  const colorClass = color === COLOR.WHITE ? 'white' : 'black';
   const pieceSet = currentPieceSet();
-  const classes = `piece piece-${colorClass} piece-${type}${extraClasses ? ' ' + extraClasses : ''}`;
-
+  if (pieceSet === 'marfil' && CONFIG.USE_INLINE_SVG && PIECE_SVGS_MARFIL[key]) {
+    return { inner: PIECE_SVGS_MARFIL[key], is3d: false };
+  }
   if (pieceSet === 'ornamentado' && CONFIG.USE_INLINE_SVG && PIECE_SVGS[key]) {
-    return `<span class="${classes}">${PIECE_SVGS[key]}</span>`;
+    return { inner: PIECE_SVGS[key], is3d: false };
   }
   if (CONFIG.USE_BLENDER_PIECES && BLENDER_PIECE_NAMES[type]) {
     const style = color === COLOR.WHITE ? (pieceSet === 'dorado' ? 'gold' : 'white-matte') : 'black';
     const pieceName = BLENDER_PIECE_NAMES[type];
-    return `<span class="${classes} piece-3d"><img src="./assets/pieces/blender/${style}/${pieceName}.png" alt="" draggable="false"></span>`;
+    return { inner: `<img src="./assets/pieces/blender/${style}/${pieceName}.png" alt="" draggable="false">`, is3d: true };
   }
   if (CONFIG.USE_INLINE_SVG && PIECE_SVGS[key]) {
-    return `<span class="${classes}">${PIECE_SVGS[key]}</span>`;
+    return { inner: PIECE_SVGS[key], is3d: false };
   }
-  return '';
+  return { inner: '', is3d: false };
+}
+
+// Arma el HTML de una pieza para el tablero o el dialogo de coronacion.
+function pieceInnerHtml(type, color, extraClasses = '') {
+  const colorClass = color === COLOR.WHITE ? 'white' : 'black';
+  const classes = `piece piece-${colorClass} piece-${type}${extraClasses ? ' ' + extraClasses : ''}`;
+  const { inner, is3d } = pieceAssetInner(type, color);
+  if (!inner) return '';
+  return `<span class="${classes}${is3d ? ' piece-3d' : ''}">${inner}</span>`;
 }
 
 // ================================================================
@@ -210,10 +252,16 @@ const BOT_SESSION_REQUESTED = sessionStorage.getItem('ozama-bot-mode') === 'true
 // servidor -- reusa el mismo tablero/reglas que ya existen, nomas sin
 // Socket.IO ni IA. Solo entra en este modo si tampoco pidieron bot.
 const IS_LOCAL_MODE = !BOT_SESSION_REQUESTED && sessionStorage.getItem('ozama-local-game') === 'true';
+// Espectador (Fase 4, "OZAMA PRO"): entra por ?watch=CODIGO (ver
+// tournaments.html), nunca por sessionStorage -- tiene prioridad sobre
+// cualquier sesion online que hubiera quedado guardada en esta misma
+// pestaña, igual que en damas.html.
+const SPECTATE_CODE = (new URLSearchParams(window.location.search).get('watch') || '').trim().toUpperCase();
+const IS_SPECTATE = !!SPECTATE_CODE;
 let PLAYER_COLOR = RAW_PLAYER_COLOR === 'white' ? COLOR.WHITE
   : RAW_PLAYER_COLOR === 'black' ? COLOR.BLACK
   : RAW_PLAYER_COLOR;
-let IS_ONLINE = !BOT_SESSION_REQUESTED && !IS_LOCAL_MODE && !!(ROOM_CODE && (PLAYER_COLOR === COLOR.WHITE || PLAYER_COLOR === COLOR.BLACK));
+let IS_ONLINE = !IS_SPECTATE && !BOT_SESSION_REQUESTED && !IS_LOCAL_MODE && !!(ROOM_CODE && (PLAYER_COLOR === COLOR.WHITE || PLAYER_COLOR === COLOR.BLACK));
 const IS_BOT_MODE = BOT_SESSION_REQUESTED;
 function readStoredUser() {
   try { return JSON.parse(localStorage.getItem('ozama-user') || 'null'); }
@@ -242,7 +290,7 @@ async function validateStoredSession() {
     return false;
   }
 }
-if (!IS_ONLINE && !IS_BOT_MODE && !IS_LOCAL_MODE) {
+if (!IS_ONLINE && !IS_BOT_MODE && !IS_LOCAL_MODE && !IS_SPECTATE) {
   window.location.replace('/lobby.html');
   throw new Error('GAME_SESSION_REQUIRED');
 }
@@ -399,7 +447,7 @@ function startNewGame() {
   renderBoard(); updateStatusDisplay();
   if (typeof renderMoveList === 'function') renderMoveList();
   CLOCK.set(600000, 600000);
-  if (!IS_ONLINE) CLOCK.start(COLOR.WHITE);
+  if (!IS_ONLINE && !IS_SPECTATE) CLOCK.start(COLOR.WHITE);
   saveLocalGameSnapshot();
   setTimeout(()=>maybeScheduleBotMove(),120);
 }
@@ -977,6 +1025,10 @@ function renderBoard() {
 }
 
 function handleSquareClick(r, c) {
+  // Un espectador no reclama color/asiento -- el servidor ya rechaza
+  // cualquier player-move suyo (sin socket.data.color), esto es solo
+  // defensa en profundidad para no ni intentarlo.
+  if (IS_SPECTATE) return;
   // Tocar el tablero mientras se revisa una jugada pasada vuelve a la
   // posicion en vivo (igual que chess.com) en vez de interpretarse
   // como un intento de jugada contra un tablero que ya no es el real.
@@ -1584,7 +1636,8 @@ function showGameEnd(title, subtitle, { online = false, canPlayAgain = true } = 
   if (subEl) subEl.textContent = subtitle;
   if (playAgain) playAgain.classList.toggle('hidden', !canPlayAgain);
   if (onlineButtons) onlineButtons.classList.remove('hidden');
-  if (rematchBtn) rematchBtn.classList.toggle('hidden', !online);
+  // Un espectador nunca puede pedir revancha (no es parte de la partida).
+  if (rematchBtn) rematchBtn.classList.toggle('hidden', !online || IS_SPECTATE);
   overlay?.classList.remove('hidden');
 }
 
@@ -1639,6 +1692,7 @@ function completeResignation() {
 }
 
 function resignGame() {
+  if (IS_SPECTATE) return;
   if (state.status === STATUS.CHECKMATE || state.status === STATUS.STALEMATE || state.status === STATUS.DRAW) return;
   if (state.promotionPending) return;
   showConfirm(
@@ -1654,6 +1708,7 @@ function resignGame() {
 }
 
 function offerDraw() {
+  if (IS_SPECTATE) return;
   if (!IS_ONLINE || !socket) return;
   if (state.status === STATUS.CHECKMATE || state.status === STATUS.STALEMATE || state.status === STATUS.DRAW) return;
   showConfirm(
@@ -1667,15 +1722,16 @@ function offerDraw() {
 function setupControls() {
   document.getElementById('resign-btn')?.addEventListener('click', resignGame);
   document.getElementById('draw-offer-btn')?.addEventListener('click', offerDraw);
-  document.getElementById('visible-new-game-btn')?.classList.toggle('hidden', IS_ONLINE);
+  document.getElementById('visible-new-game-btn')?.classList.toggle('hidden', IS_ONLINE || IS_SPECTATE);
   document.getElementById('visible-draw-btn')?.classList.toggle('hidden', !IS_ONLINE);
+  document.getElementById('visible-resign-btn')?.classList.toggle('hidden', IS_SPECTATE);
   document.getElementById('new-game-btn')?.addEventListener('click', () => {
-    if (IS_ONLINE) return;
+    if (IS_ONLINE || IS_SPECTATE) return;
     hideGameEnd();
     startNewGame();
   });
   document.getElementById('play-again-btn')?.addEventListener('click', () => {
-    if (IS_ONLINE) return;
+    if (IS_ONLINE || IS_SPECTATE) return;
     hideGameEnd();
     startNewGame();
   });
@@ -1705,13 +1761,26 @@ function setupControls() {
 }
 
 function setupOnlineSocket() {
-  if (!IS_ONLINE || typeof io !== 'function') return;
+  if (!IS_ONLINE && !IS_SPECTATE) return;
+  if (typeof io !== 'function') return;
+
+  if (IS_SPECTATE) document.getElementById('watch-badge')?.classList.remove('hidden');
+
   socket = io(window.OZAMA_RUNTIME?.socketOrigin, {
     auth: { token: STORED_TOKEN || '' },
     withCredentials: true,
   });
 
   function rejoin() {
+    // Un espectador no tiene asiento (ni color, ni room-token) -- entra
+    // por spectate-room en vez de rejoin. El servidor nunca le fija
+    // socket.data.color, asi que las guardas de player-move ya
+    // existentes lo rechazan solas (ver socket.on('spectate-room') en
+    // server.js).
+    if (IS_SPECTATE) {
+      socket.emit('spectate-room', { room: SPECTATE_CODE });
+      return;
+    }
     // El servidor valida este payload con zod en modo .strict() (solo
     // acepta roomCode/color/token) y ademas ya toma el nombre de la
     // sesion autenticada, no de aqui -- mandar 'playerName' de mas
@@ -1741,9 +1810,11 @@ function setupOnlineSocket() {
     CLOCK.stop();
     playSound('gameover');
     state.status = STATUS.CHECKMATE;
-    state.winner = PLAYER_COLOR;
+    // Un espectador no tiene "rival" propio -- no hay un color ganador
+    // desde su punto de vista, asi que no se toca state.winner.
+    if (!IS_SPECTATE) state.winner = PLAYER_COLOR;
     updateStatusDisplay();
-    showGameEnd('VICTORIA', `${playerName || 'Tu rival'} se rindio.`, { online: true, canPlayAgain: false });
+    showGameEnd(IS_SPECTATE ? 'PARTIDA TERMINADA' : 'VICTORIA', `${playerName || 'Tu rival'} se rindio.`, { online: true, canPlayAgain: false });
   });
 
   socket.on('opponent-move', ({ from, to, promotion } = {}) => {
@@ -1811,9 +1882,12 @@ function setupOnlineSocket() {
       showGameEnd('TABLAS', drawMessage, { online: true, canPlayAgain: false });
       return;
     }
-    const youWon = state.winner === PLAYER_COLOR;
+    // Un espectador nunca "gana" ni "pierde" -- PLAYER_COLOR esta
+    // vacio para el, asi que sin este chequeo caeria siempre en la
+    // rama de "DERROTA" (confuso, viendo una partida ajena).
+    const youWon = !IS_SPECTATE && state.winner === PLAYER_COLOR;
     showGameEnd(
-      youWon ? 'JAQUE MATE' : 'DERROTA',
+      IS_SPECTATE ? 'JAQUE MATE' : (youWon ? 'JAQUE MATE' : 'DERROTA'),
       `Ganan las ${state.winner === COLOR.WHITE ? 'Blancas' : 'Negras'}.`,
       { online: true, canPlayAgain: false }
     );
@@ -1828,7 +1902,10 @@ function setupOnlineSocket() {
     state.legalMoves = [];
     updateStatusDisplay();
     renderBoard();
-    clearOnlineSession();
+    // clearOnlineSession() borraria la sesion online real de esta
+    // misma pestaña si la hubiera -- un espectador no tiene una que
+    // limpiar, y no hay que arriesgarse a pisar la de otro.
+    if (!IS_SPECTATE) clearOnlineSession();
     showGameEnd('PARTIDA CERRADA', reason || 'La sala fue cerrada por administracion.', { online: true, canPlayAgain: false });
   });
 
@@ -1896,6 +1973,37 @@ function setupOnlineSocket() {
       state.reviewIndex = null;
       if (typeof renderMoveList === 'function') renderMoveList();
     }
+  });
+
+  // ── Espectador (Fase 4, "OZAMA PRO") ──────────────────────────────
+  // Un espectador no reclama color/asiento -- opponent-move, clock-tick
+  // y game-finished ya le llegan igual porque el servidor los manda a
+  // toda la sala de Socket.IO, no solo a los jugadores (ver
+  // socket.on('spectate-room') en server.js).
+  socket.on('spectate-start', (data = {}) => {
+    const restored = restoreGameSnapshot(data.game, { clockW: data.clockW, clockB: data.clockB });
+    if (!restored) return;
+    if (Array.isArray(data.moves) && data.moves.length && typeof buildMoveHistoryFromMoves === 'function') {
+      state.moveHistory = buildMoveHistoryFromMoves(data.moves);
+      state.reviewIndex = null;
+      if (typeof renderMoveList === 'function') renderMoveList();
+    }
+    if (data.playerInfo && typeof updatePlayerBars === 'function') {
+      updatePlayerBars(data.playerInfo, null);
+      // Ningun panel es "yo" para un espectador -- updatePlayerBars
+      // siempre marca uno de los dos con la clase 'me'.
+      document.getElementById('pp-local')?.classList.remove('me');
+      document.getElementById('pp-rival')?.classList.remove('me');
+    }
+    const banner = document.getElementById('game-banner');
+    if (banner) banner.textContent = `SALA: ${data.code || SPECTATE_CODE} · VIENDO EN VIVO`;
+  });
+
+  socket.on('spectate-error', (payload) => {
+    const message = typeof payload === 'string' ? payload : (payload?.message || 'No se pudo conectar a la partida.');
+    if (typeof window.ozToast === 'function') window.ozToast(message, 'error');
+    const banner = document.getElementById('bc-banner');
+    if (banner) banner.textContent = message;
   });
 
   socket.on('rejoin-failed', (message) => {

@@ -33,12 +33,16 @@ const OZAMA_PREFS = (() => {
   // 'ornamentado' el set SVG que solo se usaba como fallback. 'dorado'
   // reusa un set de piezas 3D que ya estaba en
   // assets/pieces/blender/gold/ sin usarse en ningun lado del juego.
+  // 'marfil' (Fase 6): pedido puntual del usuario, un set SVG nuevo
+  // (PIECE_SVGS_MARFIL en script.js) en marfil/ebano con detalles
+  // dorados -- Premium, igual que 'dorado'.
   const PIECE_SETS = {
     clasico:     { free: true,  label: 'Clásico' },
     ornamentado: { free: true,  label: 'Ornamentado' },
     dorado:      { free: false, label: 'Dorado' },
+    marfil:      { free: false, label: 'Marfil' },
   };
-  const PIECE_SET_ORDER = ['clasico', 'ornamentado', 'dorado'];
+  const PIECE_SET_ORDER = ['clasico', 'ornamentado', 'dorado', 'marfil'];
   const DEFAULT_PIECE_SET = 'clasico';
   const PIECE_SET_CACHE_KEY = 'ozama-piece-set';
 
@@ -216,6 +220,7 @@ const OZAMA_PREFS = (() => {
   // dentro de script.js, que no tiene sentido cargar aca solo para esto).
   function pieceSetPreviewHtml(key) {
     if (key === 'ornamentado') return '♛';
+    if (key === 'marfil') return '<span style="color:#D9C9A0;text-shadow:0 0 3px rgba(200,152,60,0.55);">♛</span>';
     const style = key === 'dorado' ? 'gold' : 'white-matte';
     return `<img src="/assets/pieces/blender/${style}/queen.png" alt="">`;
   }
