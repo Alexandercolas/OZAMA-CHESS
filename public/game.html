@@ -925,6 +925,21 @@
       background: rgba(13,11,7,0.96);
     }
 
+    /* Mensajes rapidos (Fase 7) -- frases fijas de un click, menos
+       friccion que escribir y menos superficie para toxicidad/spam
+       que texto libre. */
+    .chat-quick-row {
+      display: flex; gap: 5px; padding: 6px 8px 0; flex-wrap: wrap;
+      flex-shrink: 0; background: rgba(13,11,7,0.96);
+    }
+    .chat-quick-btn {
+      padding: 3px 9px; border-radius: 11px;
+      background: rgba(200,152,60,0.08); border: 1px solid rgba(200,152,60,0.2);
+      color: var(--gold-2, var(--gold)); font-family: var(--fb); font-size: 9.5px;
+      cursor: pointer; white-space: nowrap;
+    }
+    .chat-quick-btn:hover { background: rgba(200,152,60,0.16); border-color: rgba(200,152,60,0.4); }
+
     .chat-input {
       flex: 1; padding: 8px 9px;
       background: rgba(13,11,8,0.8); border: 1px solid rgba(200,152,60,0.13);
@@ -1319,6 +1334,7 @@
         <div class="chat-messages" id="chat-messages">
           <div class="chat-system">Partida iniciada. ¡Buena suerte!</div>
         </div>
+        <div class="chat-quick-row" id="chat-quick-row"></div>
         <div class="chat-input-row">
           <input class="chat-input" id="chat-input" type="text" maxlength="200" placeholder="Mensaje…" autocomplete="off"/>
           <button class="chat-send" onclick="sendChatMessage()" aria-label="Enviar mensaje">
@@ -1619,9 +1635,10 @@
   let _chatOpen=true;
   function toggleChat(){
     _chatOpen=!_chatOpen;
-    const m=document.getElementById('chat-messages'),i=document.querySelector('.chat-input-row'),b=document.getElementById('chat-toggle-btn');
+    const m=document.getElementById('chat-messages'),i=document.querySelector('.chat-input-row'),q=document.getElementById('chat-quick-row'),b=document.getElementById('chat-toggle-btn');
     if(m)m.style.display=_chatOpen?'flex':'none';
     if(i)i.style.display=_chatOpen?'flex':'none';
+    if(q)q.style.display=_chatOpen?'flex':'none';
     if(b)b.textContent=_chatOpen?'−':'+';
   }
 
@@ -1633,7 +1650,30 @@
     i.value=''; i.focus();
   }
 
-  function appendChatMessage({from,color,message}){
+  // Mensajes rapidos (Fase 7) -- mismo evento chat-message de siempre,
+  // solo saltandose el input de texto libre.
+  const QUICK_CHAT_MESSAGES=['Buena suerte','Buena jugada','Gracias','GG','¡Vaya!','Lo siento'];
+  function sendQuickChat(text){
+    if(typeof socket==='undefined'||!socket) return;
+    socket.emit('chat-message',{room:typeof ROOM_CODE!=='undefined'?ROOM_CODE:'',message:text});
+  }
+  function renderQuickChatRow(){
+    const row=document.getElementById('chat-quick-row'); if(!row) return;
+    row.innerHTML=QUICK_CHAT_MESSAGES.map(t=>`<button class="chat-quick-btn" type="button" onclick="sendQuickChat('${t.replace(/'/g,"\\'")}')">${t}</button>`).join('');
+  }
+
+  // Bloqueo en el chat (Fase 7): si YA bloqueaste a quien mando el
+  // mensaje (STORED_USER.blockedUsers viene de /api/user/me, se
+  // refresca en cada validateStoredSession), el mensaje ni se
+  // dibuja -- silencioso, igual que bloquear en cualquier otra parte
+  // de la app nunca le avisa al bloqueado.
+  function isChatSenderBlocked(senderId){
+    if(!senderId||typeof STORED_USER==='undefined'||!STORED_USER?.blockedUsers) return false;
+    return STORED_USER.blockedUsers.some(id=>String(id)===String(senderId));
+  }
+
+  function appendChatMessage({from,color,message,senderId}){
+    if(isChatSenderBlocked(senderId)) return;
     const c=document.getElementById('chat-messages'); if(!c) return;
     const isMe=(typeof PLAYER_COLOR!=='undefined')&&color===PLAYER_COLOR;
     const w=document.createElement('div'); w.className='chat-msg '+(isMe?'chat-msg-me':'chat-msg-them');
@@ -1651,6 +1691,16 @@
 
   // Init
   document.addEventListener('DOMContentLoaded',()=>{
+    renderQuickChatRow();
+    // Un espectador nunca tiene color asignado -- el servidor ya
+    // rechaza su chat-message igual que cualquier otro intento de
+    // jugar sin asiento, pero ademas de eso no tiene sentido ni
+    // mostrarle los controles para escribir.
+    if(typeof IS_SPECTATE!=='undefined'&&IS_SPECTATE){
+      document.querySelector('.chat-input-row')?.classList.add('hidden');
+      document.getElementById('chat-quick-row')?.classList.add('hidden');
+    }
+
     // Patch renderBoard for captured pieces
     const pi=setInterval(()=>{
       if(typeof renderBoard!=='undefined'){

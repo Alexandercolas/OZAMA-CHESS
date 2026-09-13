@@ -232,6 +232,10 @@ const socketLimiters = {
   // cuenta solo por mirar.
   spectate: new RateLimiterMemory({ points: 20, duration: 60 }),
   damasSpectate: new RateLimiterMemory({ points: 20, duration: 60 }),
+  // Chat (Fase 7, "proteccion contra spam" -- antes el chat de Ajedrez
+  // no tenia NINGUN limite, y Damas no tenia chat en absoluto).
+  chat: new RateLimiterMemory({ points: 15, duration: 60 }),
+  damasChat: new RateLimiterMemory({ points: 15, duration: 60 }),
 };
 
 const damasSquareSchema = z.number().int().min(0).max(7);
@@ -249,6 +253,7 @@ const damasSchemas = {
   }).strict(),
   roomOnly: z.object({ room: roomCodeSchema }).strict(),
   rejoin: z.object({ room: roomCodeSchema, color: z.enum(['w', 'b']), token: z.string().length(48) }).strict(),
+  chat: z.object({ room: roomCodeSchema, message: z.string().trim().min(1).max(200) }).strict(),
 };
 
 // Grace period antes de dar por perdida una sala de Damas cuando un
@@ -1938,9 +1943,10 @@ if (room.white && room.black && !room.clockInterval) {
   });
 
   // ── Chat ──────────────────────────────────────────────────────
-  socket.on('chat-message', (payload = {}) => {
+  socket.on('chat-message', async (payload = {}) => {
     const data = parseSocketPayload(socketSchemas.chat, payload);
     if (!data) return;
+    if (!(await consumeSocketLimit('chat', 'room-error'))) return;
     const { room: code, message } = data;
     const room = rooms.get(code);
     if (!isAuthorizedRoomSocket(room, socket, code)) return;
@@ -1948,6 +1954,11 @@ if (room.white && room.black && !room.clockInterval) {
     if (!clean) return;
     io.to(code).emit('chat-message', {
       from: socket.data.playerName || 'Anónimo',
+      // senderId (Fase 7): para que el cliente pueda ocultar mensajes
+      // de alguien que YA bloqueo, sin depender del nombre (se puede
+      // repetir/cambiar). null para un remitente sin cuenta -- nadie
+      // sin cuenta puede ser bloqueado de todos modos.
+      senderId: socket.data.userId || null,
       color: socket.data.color,
       message: clean,
       timestamp: Date.now(),
@@ -2730,6 +2741,30 @@ if (room.white && room.black && !room.clockInterval) {
     const assignedSocket = myColor === 'w' ? room.white : room.black;
     return assignedSocket === socket.id;
   }
+
+  // ── Chat de Damas (Fase 7) -- Damas no tenia chat en absoluto,
+  // Ajedrez si (ver socket.on('chat-message') mas arriba, mismo
+  // contrato de mensaje). Damas es guest-friendly, asi que el nombre
+  // sale de room.playerInfo (lo unico estable, ya que un invitado no
+  // tiene socket.data.playerName) en vez de la sesion.
+  socket.on('damas:chat-message', async (payload = {}) => {
+    const data = parseSocketPayload(damasSchemas.chat, payload, 'damas:room-error');
+    if (!data) return;
+    if (!(await consumeDamasLimit('damasChat', 'damas:room-error'))) return;
+    const { room: code, message } = data;
+    const room = damasRooms.get(code);
+    if (!isAuthorizedDamasSocket(room, socket, code)) return;
+    const clean = String(message).trim().slice(0, 200);
+    if (!clean) return;
+    const myColor = socket.data.damasColor;
+    io.to(code).emit('damas:chat-message', {
+      from: room.playerInfo?.[myColor]?.name || 'Anónimo',
+      senderId: socket.data.userId || null,
+      color: myColor,
+      message: clean,
+      timestamp: Date.now(),
+    });
+  });
 
   socket.on('damas:rematch-request', (payload = {}) => {
     const data = parseSocketPayload(damasSchemas.roomOnly, payload);

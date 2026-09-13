@@ -298,6 +298,44 @@
       font-family: var(--fb); font-size: 10px; letter-spacing: 1.5px;
       color: var(--ghost, var(--dim)); text-transform: uppercase;
     }
+    /* Chat de Damas (Fase 7) -- mismo lenguaje visual que .move-panel
+       de arriba, ids/clases propios para no chocar con los de game.html
+       (Ajedrez) si ambas paginas llegaran a compartir un script. */
+    .damas-chat-panel {
+      width: calc(var(--sq) * 8); max-width: 100%; margin-top: 10px;
+      background: var(--s1); border: 1px solid rgba(200,152,60,0.12);
+      display: flex; flex-direction: column;
+    }
+    .damas-chat-hd {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 10px; border-bottom: 1px solid rgba(200,152,60,0.1);
+      font-family: var(--fb); font-size: 10px; font-weight: 700;
+      letter-spacing: 1.5px; text-transform: uppercase; color: var(--dim);
+    }
+    .damas-chat-toggle { background: none; border: none; color: var(--dim); cursor: pointer; font-size: 14px; }
+    .damas-chat-messages { max-height: 110px; overflow-y: auto; padding: 6px 10px; display: flex; flex-direction: column; gap: 4px; }
+    .damas-chat-msg { font-family: var(--fb); font-size: 11.5px; line-height: 1.4; }
+    .damas-chat-msg .cn { color: var(--dama, var(--gold)); font-weight: 700; margin-right: 5px; }
+    .damas-chat-msg .ct { color: var(--text); }
+    .damas-chat-system { font-family: var(--fb); font-size: 10px; color: var(--ghost, var(--dim)); font-style: italic; text-align: center; padding: 3px 0; }
+    .damas-chat-quick-row { display: flex; gap: 5px; padding: 6px 10px 0; flex-wrap: wrap; }
+    .damas-chat-quick-btn {
+      padding: 3px 9px; border-radius: 11px;
+      background: rgba(200,152,60,0.08); border: 1px solid rgba(200,152,60,0.2);
+      color: var(--gold-2, var(--gold)); font-family: var(--fb); font-size: 9.5px; cursor: pointer;
+    }
+    .damas-chat-quick-btn:hover { background: rgba(200,152,60,0.16); border-color: rgba(200,152,60,0.4); }
+    .damas-chat-input-row { display: flex; gap: 5px; padding: 8px; border-top: 1px solid rgba(200,152,60,0.1); }
+    .damas-chat-input {
+      flex: 1; padding: 7px 9px; background: rgba(13,11,8,0.8);
+      border: 1px solid rgba(200,152,60,0.13); color: var(--text);
+      font-family: var(--fb); font-size: 11px; outline: none;
+    }
+    .damas-chat-send {
+      padding: 6px 12px; background: rgba(200,152,60,0.1); border: 1px solid rgba(200,152,60,0.3);
+      color: var(--gold); cursor: pointer; font-size: 12px;
+    }
+
     .move-row { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
     .move-no {
       width: 22px; flex-shrink: 0;
@@ -826,6 +864,24 @@
           </div>
         </div>
 
+        <!-- CHAT (Fase 7) -- solo tiene sentido en online, se
+             muestra/oculta junto con el tablero (mismo patron que
+             board-wrap/damas-move-panel de arriba). -->
+        <div class="damas-chat-panel hidden" id="damas-chat-panel">
+          <div class="damas-chat-hd">
+            <span>Chat</span>
+            <button class="damas-chat-toggle" type="button" id="damas-chat-toggle-btn" onclick="toggleDamasChat()">−</button>
+          </div>
+          <div class="damas-chat-messages" id="damas-chat-messages">
+            <div class="damas-chat-system">Partida iniciada. ¡Buena suerte!</div>
+          </div>
+          <div class="damas-chat-quick-row" id="damas-chat-quick-row"></div>
+          <div class="damas-chat-input-row">
+            <input class="damas-chat-input" id="damas-chat-input" type="text" maxlength="200" placeholder="Mensaje…" autocomplete="off" onkeydown="if(event.key==='Enter')sendDamasChatMessage()"/>
+            <button class="damas-chat-send" type="button" onclick="sendDamasChatMessage()" aria-label="Enviar mensaje">➤</button>
+          </div>
+        </div>
+
         <div class="status-line" id="status-line"></div>
         <div class="thinking-line" id="thinking-line"></div>
       </main>
@@ -1157,6 +1213,7 @@
     }
 
     function render() {
+      updateDamasChatVisibility();
       const boardEl = document.getElementById('board');
       boardEl.innerHTML = '';
       boardEl.classList.toggle('thinking', botThinking);
@@ -1805,6 +1862,8 @@
 
       socket.on('connect', announceDamasPlayerOnline);
 
+      socket.on('damas:chat-message', appendDamasChatMessage);
+
       socket.on('damas:room-created', (data) => {
         onlineRoomCode = data.code;
         onlineColor = data.color;
@@ -2204,6 +2263,78 @@
       document.getElementById('spectate-badge').classList.add('hidden');
     }
 
+    // ── Chat (Fase 7, "OZAMA PRO") ───────────────────────────────────
+    // Solo tiene sentido en una partida online real -- ni en modo
+    // espectador (sin asiento, el servidor lo rechazaria igual que
+    // cualquier otro intento de actuar como jugador) ni en local/bot
+    // (no hay nadie del otro lado con quien chatear).
+    function updateDamasChatVisibility() {
+      const panel = document.getElementById('damas-chat-panel');
+      if (!panel) return;
+      panel.classList.toggle('hidden', !(mode === 'online' && onlineStatus === 'playing'));
+    }
+
+    let _damasChatOpen = true;
+    function toggleDamasChat() {
+      _damasChatOpen = !_damasChatOpen;
+      const m = document.getElementById('damas-chat-messages');
+      const q = document.getElementById('damas-chat-quick-row');
+      const i = document.querySelector('.damas-chat-input-row');
+      const b = document.getElementById('damas-chat-toggle-btn');
+      if (m) m.style.display = _damasChatOpen ? 'flex' : 'none';
+      if (q) q.style.display = _damasChatOpen ? 'flex' : 'none';
+      if (i) i.style.display = _damasChatOpen ? 'flex' : 'none';
+      if (b) b.textContent = _damasChatOpen ? '−' : '+';
+    }
+
+    function sendDamasChatMessage() {
+      if (!socket || mode !== 'online' || onlineStatus !== 'playing' || !onlineRoomCode) return;
+      const input = document.getElementById('damas-chat-input');
+      const text = (input?.value || '').trim();
+      if (!text) return;
+      socket.emit('damas:chat-message', { room: onlineRoomCode, message: text });
+      input.value = '';
+      input.focus();
+    }
+
+    // Mensajes rapidos (Fase 7) -- mismo evento damas:chat-message de
+    // siempre, solo saltandose el input de texto libre.
+    const DAMAS_QUICK_CHAT_MESSAGES = ['Buena suerte', 'Buena jugada', 'Gracias', 'GG', '¡Vaya!', 'Lo siento'];
+    function sendDamasQuickChat(text) {
+      if (!socket || mode !== 'online' || onlineStatus !== 'playing' || !onlineRoomCode) return;
+      socket.emit('damas:chat-message', { room: onlineRoomCode, message: text });
+    }
+    function renderDamasQuickChatRow() {
+      const row = document.getElementById('damas-chat-quick-row');
+      if (!row) return;
+      row.innerHTML = DAMAS_QUICK_CHAT_MESSAGES.map((t) => `<button class="damas-chat-quick-btn" type="button" onclick="sendDamasQuickChat('${t.replace(/'/g, "\\'")}')">${t}</button>`).join('');
+    }
+
+    // Bloqueo en el chat: igual que en Ajedrez (game.html), silencioso
+    // -- el usuario bloqueado nunca se entera de que su mensaje no se
+    // mostro.
+    function isDamasChatSenderBlocked(senderId) {
+      if (!senderId) return false;
+      const user = readStoredUser();
+      if (!user?.blockedUsers) return false;
+      return user.blockedUsers.some((id) => String(id) === String(senderId));
+    }
+
+    function appendDamasChatMessage({ from, senderId, message } = {}) {
+      if (isDamasChatSenderBlocked(senderId)) return;
+      const c = document.getElementById('damas-chat-messages');
+      if (!c) return;
+      const w = document.createElement('div');
+      w.className = 'damas-chat-msg';
+      const n = document.createElement('span'); n.className = 'cn'; n.textContent = from;
+      const t = document.createElement('span'); t.className = 'ct'; t.textContent = message;
+      w.appendChild(n); w.appendChild(t); c.appendChild(w); c.scrollTop = c.scrollHeight;
+      if (!_damasChatOpen) {
+        const b = document.getElementById('damas-chat-toggle-btn');
+        if (b) b.textContent = '●+';
+      }
+    }
+
     function setMode(newMode) {
       leaveSpectateMode();
       mode = newMode;
@@ -2317,6 +2448,7 @@
 
     document.getElementById('diff-medium').classList.add('active');
     renderStats();
+    renderDamasQuickChatRow();
     const watchCode = new URLSearchParams(window.location.search).get('watch');
     if (watchCode) enterSpectateMode(watchCode.trim().toUpperCase());
     else attemptAutoRejoin();
