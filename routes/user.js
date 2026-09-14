@@ -9,7 +9,7 @@ const Event                = require('../models/Event');
 const Report                = require('../models/Report');
 const { requireAuth, optionalAuth, userIsAdmin } = require('../middleware/auth');
 const { ACHIEVEMENTS, ACHIEVEMENT_MAP, levelFromXp, xpIntoLevel, achievementProgressFor } = require('../services/achievements');
-const { titleForLevel } = require('../services/titles');
+const { resolveGlobalTitle, isValidSpecialTitle, specialTitlesFor } = require('../services/titles');
 const { detectOpening } = require('../services/openings');
 const { FRAMES, framesFor, isValidFrame, isUnlocked } = require('../services/cosmetics');
 const { getActiveSeason, seasonProgressFor, seasonHistoryFor } = require('../services/seasons');
@@ -98,7 +98,7 @@ router.get('/me', requireAuth, async (req, res) => {
     user: {
       ...req.user.toJSON(),
       isAdmin: userIsAdmin(req.user),
-      globalTitle: titleForLevel(levelFromXp(req.user.xp)),
+      globalTitle: resolveGlobalTitle(req.user, levelFromXp),
       season: await getActiveSeason('chess'),
       activeEvent: activeThematicEvent(),
     },
@@ -615,7 +615,7 @@ router.get('/profile-stats', requireAuth, async (req, res) => {
       xp: req.user.xp || 0,
       level: levelFromXp(req.user.xp),
       xpIntoLevel: xpIntoLevel(req.user.xp),
-      globalTitle: titleForLevel(levelFromXp(req.user.xp)),
+      globalTitle: resolveGlobalTitle(req.user, levelFromXp),
       achievementsUnlocked: (req.user.achievements || []).length,
       achievementsTotal: ACHIEVEMENTS.length,
       style: {
@@ -725,6 +725,36 @@ router.patch('/frames/:key', requireAuth, async (req, res) => {
     res.json({ equippedFrame: key });
   } catch (err) {
     serverError(res, 'Equip frame', err);
+  }
+});
+
+// GET /api/user/titles - titulos especiales (Fase 9, "Titulos y
+// Rangos"). Mismo patron que /frames -- "desbloqueado" se calcula
+// siempre a partir de nivel/logros, nunca se guarda una lista aparte.
+router.get('/titles', requireAuth, async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ titles: specialTitlesFor(req.user, levelFromXp) });
+});
+
+// PATCH /api/user/titles/:key - equipar un titulo especial ya
+// desbloqueado. key === 'ninguno' vuelve al titulo automatico por
+// nivel (siempre disponible, no necesita desbloquearse).
+router.patch('/titles/:key', requireAuth, async (req, res) => {
+  try {
+    const key = String(req.params.key || '').trim();
+    if (key === 'ninguno') {
+      await User.updateOne({ _id: req.user._id }, { $set: { equippedTitle: null } });
+      return res.json({ equippedTitle: null });
+    }
+    if (!isValidSpecialTitle(key)) return res.status(400).json({ error: 'Titulo invalido.' });
+
+    const title = specialTitlesFor(req.user, levelFromXp).find((t) => t.key === key);
+    if (!title?.unlocked) return res.status(403).json({ error: 'Todavia no desbloqueaste ese titulo.' });
+
+    await User.updateOne({ _id: req.user._id }, { $set: { equippedTitle: key } });
+    res.json({ equippedTitle: key });
+  } catch (err) {
+    serverError(res, 'Equip title', err);
   }
 });
 
@@ -1370,7 +1400,7 @@ router.get('/:username', optionalAuth, async (req, res) => {
     if (!validUsername(username)) return res.status(400).json({ error: 'Usuario invalido.' });
 
     const user = await User.findOne({ username })
-      .select('username country avatar avatarImage elo damasElo stats damasStats xp achievements plan premiumUntil createdAt isActive equippedFrame');
+      .select('username country avatar avatarImage elo damasElo stats damasStats xp achievements plan premiumUntil createdAt isActive equippedFrame equippedTitle');
 
     if (!user || !user.isActive) return res.status(404).json({ error: 'Usuario no encontrado.' });
 
@@ -1379,7 +1409,7 @@ router.get('/:username', optionalAuth, async (req, res) => {
     json.rank = rankTier(user.elo);
     json.damasRank = rankTier(user.damasElo);
     json.level = levelFromXp(user.xp);
-    json.globalTitle = titleForLevel(json.level);
+    json.globalTitle = resolveGlobalTitle(user, levelFromXp);
     json.achievementsUnlocked = (user.achievements || []).length;
     // Insignias para la tarjeta de jugador (Fase C del roadmap PRO
     // 2.0) -- los logros en si no son informacion privada (son para

@@ -109,6 +109,13 @@ const UserSchema = new mongoose.Schema(
     // DESBLOQUEADO se calcula siempre a partir de xp/achievements de
     // arriba (services/cosmetics.js) -- aca solo se guarda la eleccion.
     equippedFrame: { type: String, default: 'ninguno' },
+    // Titulo ESPECIAL equipado (Fase 9: "Titulos y Rangos"). null =
+    // usa el titulo automatico por nivel (titleForLevel en
+    // services/titles.js, sin cambios). Se desbloquean jugando
+    // (torneos/temporadas/logros/rendimiento, ver SPECIAL_TITLES en
+    // services/titles.js) -- mismo patron que equippedFrame, nunca se
+    // guarda "cual esta desbloqueado", solo la eleccion.
+    equippedTitle: { type: String, default: null },
 
     // Entrenamiento tactico (Fase 8 del roadmap PRO). solvedKeys evita
     // repetir un puzzle ya resuelto en el modo practica; lastDailyDate
