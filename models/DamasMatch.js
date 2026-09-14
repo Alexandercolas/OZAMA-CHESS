@@ -56,5 +56,8 @@ const DamasMatchSchema = new mongoose.Schema(
 
 DamasMatchSchema.index({ 'whitePlayer.userId': 1, createdAt: -1 });
 DamasMatchSchema.index({ 'blackPlayer.userId': 1, createdAt: -1 });
+// Paridad con Match: mismo filtro/orden en leaderboard/climbers e historial.
+DamasMatchSchema.index({ result: 1 });
+DamasMatchSchema.index({ endedAt: -1 });
 
 module.exports = mongoose.model('DamasMatch', DamasMatchSchema);

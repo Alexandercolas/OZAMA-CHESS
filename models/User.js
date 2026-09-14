@@ -167,6 +167,12 @@ const UserSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// El leaderboard ordena por estos dos campos (routes/user.js) -- sin
+// indice era collection scan + sort en memoria en toda la base de
+// usuarios. Agregar un indice no es destructivo, Mongo lo construye solo.
+UserSchema.index({ elo: -1 });
+UserSchema.index({ damasElo: -1 });
+
 UserSchema.pre('save', async function () {
   if (!this.isModified('password')) return;
   if (/^\$2[aby]\$\d{2}\$/.test(this.password)) return;

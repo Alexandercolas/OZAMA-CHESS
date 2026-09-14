@@ -84,5 +84,7 @@ const MatchSchema = new mongoose.Schema(
 MatchSchema.index({ 'whitePlayer.userId': 1, createdAt: -1 });
 MatchSchema.index({ 'blackPlayer.userId': 1, createdAt: -1 });
 MatchSchema.index({ result: 1 });
+// /leaderboard/climbers y el historial filtran/ordenan por endedAt.
+MatchSchema.index({ endedAt: -1 });
 
 module.exports = mongoose.model('Match', MatchSchema);
