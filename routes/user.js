@@ -15,6 +15,8 @@ const { FRAMES, framesFor, isValidFrame, isUnlocked } = require('../services/cos
 const { getActiveSeason, seasonProgressFor, seasonHistoryFor } = require('../services/seasons');
 const { activeThematicEvent } = require('../services/thematicEvents');
 const { weeklyProgressFor } = require('../services/weeklyChallenges');
+const Notification = require('../models/Notification');
+const { notify } = require('../services/notifications');
 
 const router = express.Router();
 
@@ -1085,6 +1087,15 @@ router.post('/friends/:username', requireAuth, async (req, res) => {
       User.updateOne({ _id: friend._id }, { $addToSet: { friends: req.user._id } }),
     ]);
 
+    // Antes de esta fase, agregar amigo no avisaba nada al otro lado
+    // -- se enteraba recien la proxima vez que cargara su lista de
+    // amigos. Notificamos solo al que NO inicio la accion.
+    notify(req.app.get('io'), friend._id, {
+      type: 'amigo', icon: '🤝',
+      title: `${req.user.username} te agrego como amigo`,
+      link: `/player.html?u=${encodeURIComponent(req.user.username)}`,
+    });
+
     res.json({ friend });
   } catch (err) {
     serverError(res, 'Add friend', err);
@@ -1265,6 +1276,54 @@ router.delete('/me', requireAuth, async (req, res) => {
     return res.json({ ok: true, message: 'Cuenta eliminada correctamente.' });
   } catch (err) {
     return serverError(res, 'Delete account', err);
+  }
+});
+
+// ── Centro de notificaciones (Fase 8) ─────────────────────────────
+// Auditoria previa: no existia NADA de esto -- ni modelo, ni
+// endpoint, ni "visto/no visto". Los eventos en vivo que ya existian
+// (desafio, revancha...) solo llegaban a quien estuviera esa pagina
+// en ese momento; esto agrega la copia persistente + el estado de
+// leido que faltaba, ver models/Notification.js y
+// services/notifications.js.
+router.get('/notifications', requireAuth, async (req, res) => {
+  try {
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+    const [notifications, unreadCount, total] = await Promise.all([
+      Notification.find({ userId: req.user._id })
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Notification.countDocuments({ userId: req.user._id, read: false }),
+      Notification.countDocuments({ userId: req.user._id }),
+    ]);
+    res.json({ notifications, unreadCount, hasMore: page * limit < total });
+  } catch (err) {
+    serverError(res, 'List notifications', err);
+  }
+});
+
+router.post('/notifications/read-all', requireAuth, async (req, res) => {
+  try {
+    await Notification.updateMany({ userId: req.user._id, read: false }, { $set: { read: true } });
+    res.json({ ok: true });
+  } catch (err) {
+    serverError(res, 'Mark all notifications read', err);
+  }
+});
+
+router.post('/notifications/:id/read', requireAuth, async (req, res) => {
+  try {
+    const result = await Notification.updateOne(
+      { _id: req.params.id, userId: req.user._id },
+      { $set: { read: true } }
+    );
+    if (!result.matchedCount) return res.status(404).json({ error: 'Notificacion no encontrada.' });
+    res.json({ ok: true });
+  } catch (err) {
+    serverError(res, 'Mark notification read', err);
   }
 });
 

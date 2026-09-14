@@ -34,11 +34,11 @@ let _lastAutostartCheck = 0;
 // tendrian que esperar 60s reales entre cada escenario para que el
 // throttle no les esconda el auto-inicio del siguiente torneo.
 const AUTOSTART_CHECK_INTERVAL_MS = Number(process.env.OZAMA_AUTOSTART_THROTTLE_MS) || 60 * 1000;
-async function maybeStartDueTournaments() {
+async function maybeStartDueTournaments(io) {
   const now = Date.now();
   if (now - _lastAutostartCheck < AUTOSTART_CHECK_INTERVAL_MS) return;
   _lastAutostartCheck = now;
-  await startDueTournaments().catch((err) => console.warn('[Events] startDueTournaments:', err.message));
+  await startDueTournaments(new Date(), io).catch((err) => console.warn('[Events] startDueTournaments:', err.message));
 }
 
 // ?status=finished pide el historial en vez de la lista activa por
@@ -50,7 +50,7 @@ async function maybeStartDueTournaments() {
 router.get('/', async (req, res) => {
   try {
     await maybeEnsureRecurringEditions();
-    await maybeStartDueTournaments();
+    await maybeStartDueTournaments(req.app.get('io'));
     const wantsHistory = req.query.status === 'finished';
     const filter = wantsHistory ? { status: 'finished' } : { status: { $in: ['published', 'active'] } };
     const events = await Event.find(filter)
@@ -96,7 +96,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
     // Quien esta mirando un torneo especifico (con la cuenta regresiva
     // en pantalla) es justo a quien mas le importa que arranque a
     // horario -- se asegura aca tambien, no solo en el listado.
-    await maybeStartDueTournaments();
+    await maybeStartDueTournaments(req.app.get('io'));
     const event = await Event.findById(req.params.id)
       .populate('participants', 'username country elo avatarImage avatar')
       .lean();

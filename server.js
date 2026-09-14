@@ -24,9 +24,10 @@ const Room            = require('./models/Room');
 const User            = require('./models/User');
 const Event           = require('./models/Event');
 const { generateNextRound, swissRoundsNeeded, generateSwissRound, swissStandings } = require('./services/tournament');
-const { xpForResult, buildContext, checkNewAchievements } = require('./services/achievements');
+const { xpForResult, buildContext, checkNewAchievements, ACHIEVEMENT_MAP } = require('./services/achievements');
 const { activeThematicEvent } = require('./services/thematicEvents');
 const { grantAchievementReward } = require('./services/rewards');
+const { notify } = require('./services/notifications');
 const {
   DEFAULT_TIME_CONTROL_KEY, TIME_CONTROL_KEYS,
   initialMsFor, incrementMsFor, isValidTimeControl,
@@ -499,7 +500,26 @@ const TOURNAMENT_FINALIST_XP = 60;
 const TOURNAMENT_FIRST_MATCH_XP = 15;
 
 function grantTournamentChampionReward(userId) {
-  return grantAchievementReward(userId, 'campeon_torneo', TOURNAMENT_CHAMPION_XP);
+  return grantAchievementReward(userId, 'campeon_torneo', TOURNAMENT_CHAMPION_XP, io);
+}
+
+// "torneo" (Fase 8, centro de notificaciones): avisa a los dos
+// jugadores de cada partido de una ronda RECIEN generada que ya
+// pueden entrar a jugarlo -- antes de esta fase, unirse a un partido
+// de torneo era 100% reactivo (tournament:join-match), asi que nadie
+// se enteraba de que le tocaba jugar salvo que estuviera mirando la
+// pagina de torneos en ese momento. Se salta los bye (player2 null).
+function notifyMatchReady(tournamentTitle, eventId, roundMatches) {
+  for (const m of roundMatches || []) {
+    if (!m.player1 || !m.player2) continue;
+    for (const userId of [m.player1, m.player2]) {
+      notify(io, userId, {
+        type: 'torneo', icon: '♟️',
+        title: `Tu partido de "${tournamentTitle}" ya esta listo`,
+        link: `/tournaments.html?id=${eventId}`,
+      });
+    }
+  }
 }
 
 async function handleTournamentMatchFinished(tournamentMeta, winner, room) {
@@ -526,8 +546,8 @@ async function handleTournamentMatchFinished(tournamentMeta, winner, room) {
     // jugar una partida de torneo ya es un logro -- para los dos
     // jugadores de ESTE partido, ganen o pierdan. Recompensa FREE, no
     // depende de como termine el torneo entero.
-    await grantAchievementReward(winnerUserId, 'primer_torneo', TOURNAMENT_FIRST_MATCH_XP);
-    await grantAchievementReward(loserUserId, 'primer_torneo', TOURNAMENT_FIRST_MATCH_XP);
+    await grantAchievementReward(winnerUserId, 'primer_torneo', TOURNAMENT_FIRST_MATCH_XP, io);
+    await grantAchievementReward(loserUserId, 'primer_torneo', TOURNAMENT_FIRST_MATCH_XP, io);
 
     // Releer el estado real (puede ya incluir el resultado de otro
     // partido de la misma ronda que termino casi en simultaneo).
@@ -563,7 +583,7 @@ async function handleTournamentMatchFinished(tournamentMeta, winner, room) {
           // perdedor de este partido" (en suizo el ultimo partido no
           // necesariamente involucra al campeon ni al subcampeon).
           const runnerUp = standings[1];
-          if (runnerUp?.userId) await grantAchievementReward(runnerUp.userId, 'finalista_torneo', TOURNAMENT_FINALIST_XP);
+          if (runnerUp?.userId) await grantAchievementReward(runnerUp.userId, 'finalista_torneo', TOURNAMENT_FINALIST_XP, io);
         }
       } else {
         const nextRound = generateSwissRound(allParticipants, event.bracket.rounds);
@@ -572,7 +592,10 @@ async function handleTournamentMatchFinished(tournamentMeta, winner, room) {
           { $push: { 'bracket.rounds': nextRound } },
           { new: true }
         ).select('title bracket.rounds');
-        if (updated) console.log(`[Tournament] ${updated.title} (suizo) — ronda ${expectedRoundCount + 1} de ${roundsNeeded} generada.`);
+        if (updated) {
+          console.log(`[Tournament] ${updated.title} (suizo) — ronda ${expectedRoundCount + 1} de ${roundsNeeded} generada.`);
+          notifyMatchReady(updated.title, eventId, nextRound.matches);
+        }
       }
       return;
     }
@@ -606,7 +629,7 @@ async function handleTournamentMatchFinished(tournamentMeta, winner, room) {
         // subcampeon, porque este partido es el que acaba de dejar al
         // torneo con 1 solo ganador (la guarda de arriba ya aseguro
         // que esta llamada es la que realmente cerro el torneo).
-        if (loserUserId) await grantAchievementReward(loserUserId, 'finalista_torneo', TOURNAMENT_FINALIST_XP);
+        if (loserUserId) await grantAchievementReward(loserUserId, 'finalista_torneo', TOURNAMENT_FINALIST_XP, io);
       }
     } else {
       const nextRound = generateNextRound(winners);
@@ -615,7 +638,10 @@ async function handleTournamentMatchFinished(tournamentMeta, winner, room) {
         { $push: { 'bracket.rounds': nextRound } },
         { new: true }
       ).select('title bracket.rounds');
-      if (updated) console.log(`[Tournament] ${updated.title} — ronda ${expectedRoundCount + 1} generada.`);
+      if (updated) {
+        console.log(`[Tournament] ${updated.title} — ronda ${expectedRoundCount + 1} generada.`);
+        notifyMatchReady(updated.title, eventId, nextRound.matches);
+      }
     }
   } catch (err) {
     console.warn('[Tournament] No se pudo avanzar el bracket:', err.message);
@@ -691,6 +717,10 @@ function applyProgressionForMatch({ wUser, bUser, wOutcome, bOutcome, wEloBefore
     const newKeys = checkNewAchievements(user, ctx);
     if (newKeys.length) {
       user.achievements = [...(user.achievements || []), ...newKeys.map((key) => ({ key, unlockedAt: new Date() }))];
+      for (const key of newKeys) {
+        const def = ACHIEVEMENT_MAP.get(key);
+        if (def) notify(io, user._id, { type: 'logro', icon: def.icon || '🏅', title: `Logro desbloqueado: ${def.name}`, link: '/profile.html' });
+      }
     }
   }
 }
@@ -1427,6 +1457,13 @@ io.use(async (socket, next) => {
 // ================================================================
 io.on('connection', (socket) => {
   console.log(`[+] Conectado: ${socket.id} ${socket.data.userId ? '(auth)' : '(anon)'}`);
+  // Room personal para el centro de notificaciones (Fase 8): todo
+  // socket autenticado se une solo, sin depender de que este mirando
+  // ninguna pagina/sala en particular -- notify() en
+  // services/notifications.js solo hace io.to('user:'+id), llega a
+  // TODAS las pestañas/dispositivos que este usuario tenga abiertas
+  // ahora mismo, sin necesidad de trackear sockets a mano.
+  if (socket.data.userId) socket.join(`user:${socket.data.userId}`);
   let eventWindowStartedAt = Date.now();
   let eventCount = 0;
 
@@ -2018,6 +2055,14 @@ if (room.white && room.black && !room.clockInterval) {
     if (!isAuthorizedRoomSocket(room, socket, code) || room.status !== 'finished') return;
     room.rematchReady.add(socket.id);
     socket.to(code).emit('rematch-requested', { playerName: socket.data.playerName });
+    const opponentSocket = io.sockets.sockets.get(socket.data.color === COLOR.WHITE ? room.black : room.white);
+    if (opponentSocket?.data.userId) {
+      notify(io, opponentSocket.data.userId, {
+        type: 'revancha', icon: '🔁',
+        title: `${socket.data.playerName || 'Tu rival'} quiere la revancha`,
+        link: '/lobby.html',
+      });
+    }
   });
 
   socket.on('rematch-accept', async (payload = {}) => {
@@ -2231,6 +2276,13 @@ if (room.white && room.black && !room.clockInterval) {
       from: { username: challenger.username, country: challenger.country, avatar: challenger.avatar, avatarImage: challenger.avatarImage, elo: challenger.elo },
       socketId: socket.id,
     });
+    if (targetSocket.data.userId) {
+      notify(io, targetSocket.data.userId, {
+        type: 'invitacion', icon: '⚔️',
+        title: `${challenger.username} te desafio a Ajedrez`,
+        link: '/lobby.html',
+      });
+    }
 
     socket.emit('challenge-sent', { to: targetUsername });
     console.log(`[C] ${challenger.username} desafió a ${targetUsername}`);
@@ -2562,6 +2614,13 @@ if (room.white && room.black && !room.clockInterval) {
       from: { username: challenger.username, country: challenger.country, avatar: challenger.avatar, avatarImage: challenger.avatarImage, elo: challenger.damasElo },
       socketId: socket.id,
     });
+    if (targetSocket.data.userId) {
+      notify(io, targetSocket.data.userId, {
+        type: 'invitacion', icon: '⚔️',
+        title: `${challenger.username} te desafio a Damas`,
+        link: '/damas.html',
+      });
+    }
     socket.emit('damas:challenge-sent', { to: targetUsername });
     console.log(`[DAMAS] ${challenger.username} desafió a ${targetUsername}`);
   });
@@ -2775,6 +2834,14 @@ if (room.white && room.black && !room.clockInterval) {
     room.rematchReady = room.rematchReady || new Set();
     room.rematchReady.add(socket.id);
     socket.to(code).emit('damas:rematch-requested', { playerName: socket.data.playerName });
+    const opponentSocket = io.sockets.sockets.get(socket.data.damasColor === 'w' ? room.black : room.white);
+    if (opponentSocket?.data.userId) {
+      notify(io, opponentSocket.data.userId, {
+        type: 'revancha', icon: '🔁',
+        title: `${socket.data.playerName || 'Tu rival'} quiere la revancha`,
+        link: '/damas.html',
+      });
+    }
   });
 
   socket.on('damas:rematch-accept', (payload = {}) => {

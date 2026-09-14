@@ -173,8 +173,9 @@ async function ensureCurrentEditions(now = new Date()) {
 // status:'active' en UNA sola escritura atomica por torneo, para que
 // dos requests casi simultaneas nunca lo arranquen dos veces.
 const { generateFirstRound } = require('./tournament');
+const { notify } = require('./notifications');
 
-async function startDueTournaments(now = new Date()) {
+async function startDueTournaments(now = new Date(), io = null) {
   const due = await Event.find({
     type: 'tournament',
     status: 'published',
@@ -205,6 +206,16 @@ async function startDueTournaments(now = new Date()) {
     started.push(String(event._id));
     if (participants.length >= 2) {
       console.log(`[Tournament] Auto-inicio: "${claimed.title}" arranco con ${participants.length} jugadores (${event.format || 'elimination'}).`);
+      // "inicio de torneo" (Fase 8, centro de notificaciones) -- antes
+      // de esta fase, nadie se enteraba de que su torneo arranco salvo
+      // que estuviera mirando la pagina de torneos en ese momento.
+      for (const p of participants) {
+        notify(io, p.userId, {
+          type: 'inicio_torneo', icon: '🏁',
+          title: `"${claimed.title}" acaba de arrancar`,
+          link: `/tournaments.html?id=${event._id}`,
+        });
+      }
     } else {
       console.log(`[Tournament] "${claimed.title}" cancelado automaticamente: no llego a 2 inscritos.`);
     }
