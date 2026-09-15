@@ -942,7 +942,7 @@
             <div class="season-meta">Temporadas completadas: ${g.seasonsCompleted}</div>
             ${gamesLine}
           </div>
-          ${g.seasonsCompleted > 0 ? `<button class="btn-save secondary" type="button" onclick="toggleSeasonHistory('${game}')">Ver historial de temporadas</button>` : ''}
+          ${g.seasonsCompleted > 0 ? `<button class="btn-save btn-danger secondary" type="button" onclick="toggleSeasonHistory('${game}')">Ver historial de temporadas</button>` : ''}
           <div id="season-history-list" class="season-history-list hidden"></div>
         `;
       } catch (_) {
