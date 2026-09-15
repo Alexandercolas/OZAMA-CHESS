@@ -1498,9 +1498,9 @@
       for (let i = 0; i < moveLog.length; i++) {
         const entry = moveLog[i];
         const result = OzamaCheckersAI.analyzePosition(entry.boardBefore, entry.color, entry.fromR, entry.fromC, entry.toR, entry.toC);
-        entry.analysis = result ? { delta: result.delta, level: classifyDamasDelta(result.delta) } : null;
+        entry.analysis = result ? { delta: result.delta, level: classifyDamasDelta(result.delta), bestMove: result.bestMove } : null;
         if (entry.analysis?.level) {
-          flagged.push({ index: i, color: entry.color, level: entry.analysis.level });
+          flagged.push({ index: i, color: entry.color, level: entry.analysis.level, bestMove: entry.analysis.bestMove });
         }
         if (btn) btn.textContent = `Analizando ${i + 1}/${moveLog.length}...`;
         if ((i + 1) % CHUNK === 0) await new Promise((resolve) => setTimeout(resolve, 0));
@@ -1520,7 +1520,11 @@
         const moveNo = Math.floor(f.index / 2) + 1;
         const colorLabel = f.color === E.COLOR.WHITE ? 'blancas' : 'negras';
         const levelLabel = f.level === 'blunder' ? 'Error grave' : 'Imprecisión';
-        return `<div class="analysis-flag ${f.level}">Jugada ${moveNo} (${colorLabel}): ${levelLabel}</div>`;
+        // Fase 20, "Analisis": antes solo decia QUE la jugada fue mala
+        // -- ahora tambien dice CUAL hubiera sido mejor (el motor ya
+        // la calculaba para el puntaje, solo faltaba mostrarla).
+        const bestText = f.bestMove ? ` · mejor jugada: ${squareLabel(f.bestMove.r, f.bestMove.c)}${squareLabel(f.bestMove.seq[f.bestMove.seq.length - 1].toR, f.bestMove.seq[f.bestMove.seq.length - 1].toC)}` : '';
+        return `<div class="analysis-flag ${f.level}">Jugada ${moveNo} (${colorLabel}): ${levelLabel}${bestText}</div>`;
       }).join('');
 
       persistDamasAnalysisSummary(blunders, inaccuracies);

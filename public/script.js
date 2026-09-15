@@ -589,6 +589,17 @@ function findKing(board,color){
 
 function toAlgebraic(r,c){return'abcdefgh'[c]+String(8-r);}
 
+// Fase 20, "Analisis": texto del tooltip "mejor jugada" para una
+// entrada analizada -- solo si esta marcada como error/imprecision Y
+// el motor encontro una alternativa real (bestMove nunca es la misma
+// jugada jugada: por construccion, solo se marca error cuando su
+// puntaje es estrictamente menor al de bestMove).
+function bestMoveTitle(analysis) {
+  if (!analysis?.level || !analysis.bestMove) return '';
+  const { from, to } = analysis.bestMove;
+  return `Mejor jugada: ${toAlgebraic(from.row, from.col)}${toAlgebraic(to.row, to.col)}`;
+}
+
 function getMoveNotation(entry){
   const{from,to,piece,captured,castling,enPassant,promotion,check,checkmate,boardBefore,epTargetBefore}=entry;
   const SYM={p:'',n:'N',b:'B',r:'R',q:'Q',k:'K'};
@@ -1095,10 +1106,17 @@ function renderMoveList() {
       const markB = b?.analysis?.level ? ` mv-${b.analysis.level}` : '';
       const iconW = w.analysis?.level === 'blunder' ? ' ❌' : w.analysis?.level === 'inaccuracy' ? ' ⚠️' : '';
       const iconB = b?.analysis?.level === 'blunder' ? ' ❌' : b?.analysis?.level === 'inaccuracy' ? ' ⚠️' : '';
+      // Fase 20, "Analisis": tooltip con la mejor jugada disponible en
+      // esa posicion, SOLO para las que ya se marcaron como error --
+      // una jugada buena no necesita alternativa. bestMoveTitle() vive
+      // mas abajo, comparte logica con Damas via el mismo patron
+      // toAlgebraic ya usado para la notacion normal.
+      const titleW = bestMoveTitle(w.analysis);
+      const titleB = bestMoveTitle(b?.analysis);
       html += `<div class="move-row">` +
         `<span class="move-no">${moveNo}.</span>` +
-        `<span class="move-entry${activeW}${markW}" data-index="${i}">${escapeMoveText(w.notation)}${iconW}</span>` +
-        (b ? `<span class="move-entry${activeB}${markB}" data-index="${i + 1}">${escapeMoveText(b.notation)}${iconB}</span>` : '') +
+        `<span class="move-entry${activeW}${markW}" data-index="${i}"${titleW ? ` title="${titleW}"` : ''}>${escapeMoveText(w.notation)}${iconW}</span>` +
+        (b ? `<span class="move-entry${activeB}${markB}" data-index="${i + 1}"${titleB ? ` title="${titleB}"` : ''}>${escapeMoveText(b.notation)}${iconB}</span>` : '') +
         `</div>`;
     }
     listEl.innerHTML = html;
@@ -1305,7 +1323,7 @@ async function analyzeGameForBlunders() {
     const entry = history[i];
     gsr.enPassantTarget = entry.epTargetBefore || null;
     const result = BOT.analyzePosition(entry.boardBefore, entry.piece.color, gsr, entry.from, entry.to);
-    entry.analysis = result ? { delta: result.delta, level: classifyDelta(result.delta) } : null;
+    entry.analysis = result ? { delta: result.delta, level: classifyDelta(result.delta), bestMove: result.bestMove } : null;
     if (btn) btn.textContent = `Analizando ${i + 1}/${history.length}...`;
     if ((i + 1) % CHUNK === 0) await new Promise((resolve) => setTimeout(resolve, 0));
   }
@@ -1344,7 +1362,11 @@ function renderAnalysisSummary() {
   const inaccuracies = history.filter((e) => e.analysis?.level === 'inaccuracy').length;
   el.textContent = (!blunders && !inaccuracies)
     ? 'Sin errores graves detectados en esta partida.'
-    : `${blunders} error${blunders === 1 ? '' : 'es'} grave${blunders === 1 ? '' : 's'} · ${inaccuracies} imprecision${inaccuracies === 1 ? '' : 'es'}`;
+    // Fase 20, "Analisis": el resumen ya decia CUANTOS errores hubo --
+    // ahora tambien avisa donde ver CUAL era la mejor alternativa
+    // (tooltip al pasar el mouse sobre cada jugada marcada), en vez de
+    // dejar al jugador adivinando que hacer con ese dato.
+    : `${blunders} error${blunders === 1 ? '' : 'es'} grave${blunders === 1 ? '' : 's'} · ${inaccuracies} imprecision${inaccuracies === 1 ? '' : 'es'} · pasa el mouse sobre una jugada marcada para ver la mejor alternativa`;
   el.style.display = '';
 }
 

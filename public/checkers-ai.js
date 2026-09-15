@@ -181,9 +181,10 @@
     };
 
     let bestScore = -Infinity;
+    let bestMoveFound = null;
     for (const move of moves) {
       const score = scoreOf(move);
-      if (score > bestScore) bestScore = score;
+      if (score > bestScore) { bestScore = score; bestMoveFound = move; }
     }
 
     const playedMove = moves.find((m) => {
@@ -194,7 +195,17 @@
     if (!playedMove) return null;
     const playedScore = scoreOf(playedMove);
 
-    return { bestScore, playedScore, delta: Math.max(0, bestScore - playedScore) };
+    // bestMove (Fase 20, "Analisis"): antes se calculaba bestScore
+    // recorriendo TODAS las jugadas candidatas pero se descartaba CUAL
+    // de ellas lo logro -- el analisis solo podia decir QUE una jugada
+    // fue mala, nunca CUAL hubiera sido mejor. bestMoveFound ya estaba
+    // disponible en el mismo bucle, solo faltaba guardarlo y
+    // devolverlo (mismo dato, sin motor nuevo).
+    const bestMove = bestMoveFound
+      ? { r: bestMoveFound.r, c: bestMoveFound.c, seq: bestMoveFound.seq }
+      : null;
+
+    return { bestScore, playedScore, delta: Math.max(0, bestScore - playedScore), bestMove };
   }
 
   const OzamaCheckersAI = { chooseMove, evaluate, analyzePosition };
