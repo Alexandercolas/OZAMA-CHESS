@@ -14,7 +14,7 @@ const { detectOpening } = require('../services/openings');
 const { FRAMES, framesFor, isValidFrame, isUnlocked } = require('../services/cosmetics');
 const { getActiveSeason, seasonProgressFor, seasonHistoryFor } = require('../services/seasons');
 const { activeThematicEvent } = require('../services/thematicEvents');
-const { weeklyProgressFor } = require('../services/weeklyChallenges');
+const { weeklyProgressFor, claimWeeklyRewards } = require('../services/weeklyChallenges');
 const { timeControlByKey } = require('../services/timeControls');
 const Notification = require('../models/Notification');
 const { notify } = require('../services/notifications');
@@ -674,7 +674,12 @@ router.get('/weekly-challenges', requireAuth, async (req, res) => {
   try {
     res.set('Cache-Control', 'no-store');
     const challenges = await weeklyProgressFor(req.user._id);
-    res.json({ challenges });
+    // Otorga el bono de XP de los retos recien completados (Fase 12,
+    // "Recompensas") -- ver services/weeklyChallenges.js. req.user ya
+    // es el documento cargado por requireAuth, se reusa sin otra query.
+    const claimedKeys = await claimWeeklyRewards(req.user, challenges, req.app.get('io'));
+    const claimedSet = new Set(claimedKeys);
+    res.json({ challenges: challenges.map((c) => ({ ...c, claimed: claimedSet.has(c.key) })) });
   } catch (err) {
     serverError(res, 'Weekly challenges', err);
   }

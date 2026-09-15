@@ -93,7 +93,9 @@
     .w-body { flex: 1; min-width: 0; }
     .w-name { font-size: 11.5px; font-weight: 700; margin-bottom: 4px; }
     .weekly-item.done .w-name { color: #7FD98A; }
-    .w-count { font-family: var(--fm); font-size: 11px; color: var(--gold-2, var(--gold)); flex-shrink: 0; }
+    .w-count { font-family: var(--fm); font-size: 11px; color: var(--gold-2, var(--gold)); flex-shrink: 0; text-align: right; }
+    .w-xp { display: block; font-size: 10px; color: var(--dim); margin-top: 2px; }
+    .weekly-item.done .w-xp { color: #7FD98A; }
 
     /* Partidas recientes / Amigos (Fase 14) -- misma lista compacta. */
     .recent-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
@@ -441,7 +443,7 @@
                   <div class="w-name">${escapeHtml(c.name)}</div>
                   <div class="oz-progress-track"><div class="oz-progress-fill" style="width:${Math.round((c.current / c.target) * 100)}%"></div></div>
                 </div>
-                <span class="w-count">${c.current}/${c.target}</span>
+                <span class="w-count">${c.current}/${c.target}<span class="w-xp">+${c.xp} XP${c.completed ? ' ✓' : ''}</span></span>
               </div>
             `).join('')}
           </div>

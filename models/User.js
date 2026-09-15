@@ -108,6 +108,17 @@ const UserSchema = new mongoose.Schema(
       key: { type: String, required: true },
       unlockedAt: { type: Date, default: Date.now },
     }],
+    // Retos semanales (Fase 12, "Recompensas"): que retos de la semana
+    // ACTUAL ya se reclamaron, para no volver a otorgar el bono de XP
+    // cada vez que se pide GET /weekly-challenges -- el progreso en si
+    // nunca se guarda aparte, se recalcula en vivo desde las partidas
+    // reales (ver services/weeklyChallenges.js). weekIndex ancla a que
+    // semana pertenece claimedKeys; si la semana ya cambio, se
+    // resetea sola sin necesitar ningun cron.
+    weeklyChallenges: {
+      weekIndex: { type: Number, default: null },
+      claimedKeys: { type: [String], default: [] },
+    },
     // Coleccion (Fase 13): marco de perfil equipado. Cual esta
     // DESBLOQUEADO se calcula siempre a partir de xp/achievements de
     // arriba (services/cosmetics.js) -- aca solo se guarda la eleccion.
