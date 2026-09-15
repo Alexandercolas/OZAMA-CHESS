@@ -927,8 +927,8 @@
 
   <div class="overlay hidden" id="damas-disconnect-overlay">
     <div class="overlay-card" style="text-align:center;">
-      <h2>RIVAL DESCONECTADO</h2>
-      <p>Esperando a que regrese...</p>
+      <h2 id="damas-disconnect-title">RIVAL DESCONECTADO</h2>
+      <p id="damas-disconnect-subtitle">Esperando a que regrese...</p>
       <div id="damas-disconnect-timer" style="font-family:'IBM Plex Mono',monospace;font-size:44px;font-weight:700;color:var(--dama);margin:14px 0;">30</div>
     </div>
   </div>
@@ -1867,7 +1867,29 @@
         document.getElementById('status-line').textContent = 'No se pudo conectar al servidor. Intenta de nuevo.';
       });
 
-      socket.on('connect', announceDamasPlayerOnline);
+      // Fase 18, "Experiencia de partida": antes de esto damas:rejoin
+      // SOLO se disparaba desde attemptAutoRejoin() al cargar la
+      // pagina -- un corte de red real a mitad de partida (Wifi,
+      // telefono en segundo plano) reconectaba el socket solo, pero
+      // nunca volvia a entrar a la sala en el servidor, asi que el
+      // jugador perdia por abandono a los 30s sin ningun aviso ni
+      // forma de evitarlo salvo refrescar la pagina por su cuenta.
+      // Este mismo handler de 'connect' (que YA se dispara en
+      // cualquier reconexion, no solo la primera vez) ahora tambien
+      // reintenta el rejoin si habia una partida en curso.
+      socket.on('connect', () => {
+        announceDamasPlayerOnline();
+        if (mode === 'online' && onlineStatus === 'playing' && onlineRoomCode && onlineColor && onlineRoomToken) {
+          socket.emit('damas:rejoin', { room: onlineRoomCode, color: onlineColor, token: onlineRoomToken });
+        }
+      });
+
+      socket.on('disconnect', () => {
+        if (mode === 'online' && onlineStatus === 'playing') {
+          showDamasDisconnectOverlay('CONEXION PERDIDA', 'Reconectando...');
+          DAMAS_CLOCK.stop();
+        }
+      });
 
       socket.on('damas:chat-message', appendDamasChatMessage);
 
@@ -1897,6 +1919,11 @@
       });
 
       socket.on('damas:game-start', (data) => {
+        // Si esto llega como respuesta a damas:rejoin tras un corte de
+        // red PROPIO (Fase 18), el overlay de "Conexion perdida"
+        // seguia visible -- cerrarlo aca es un no-op inofensivo
+        // cuando no estaba mostrandose (arranque normal de partida).
+        hideDamasDisconnectOverlay();
         _damasSearchingQuickMatch = false;
         const quickBtn = document.getElementById('damas-quick-match-btn');
         const quickStatus = document.getElementById('damas-quick-status');
@@ -1977,9 +2004,11 @@
         DAMAS_CLOCK.switchTo(turn);
       });
 
-      // damas:rejoin solo se dispara desde attemptAutoRejoin() al cargar
-      // la pagina, asi que un fallo aqui siempre significa eso: la
-      // partida guardada ya no existe (se cerro, expiro el grace period).
+      // damas:rejoin se dispara desde attemptAutoRejoin() al cargar la
+      // pagina Y desde el handler de 'connect' de arriba (Fase 18,
+      // reconexion en vivo) -- en los dos casos, un fallo aca significa
+      // lo mismo: la partida guardada ya no existe (se cerro, expiro
+      // el grace period de 30s).
       socket.on('damas:rejoin-failed', () => {
         hideDamasDisconnectOverlay();
         clearOnlineSession();
@@ -2237,8 +2266,17 @@
     // el propio damas:game-over (reason 'opponent-left') que manda el
     // servidor termina tapando este overlay con el de fin de partida.
     let damasDisconnectInterval = null;
-    function showDamasDisconnectOverlay() {
+    // title/subtitle opcionales (Fase 18, "Experiencia de partida"): el
+    // mismo overlay + cuenta regresiva de 30s sirve tanto para "el
+    // RIVAL se desconecto" (uso de siempre, sin argumentos) como para
+    // "YO me desconecte" (ver socket.on('disconnect') mas abajo) --
+    // es literalmente el mismo grace period del servidor
+    // (damasStartCloseTimer en server.js) visto desde cualquiera de
+    // los dos lados, nunca dos mecanismos separados.
+    function showDamasDisconnectOverlay(title = 'RIVAL DESCONECTADO', subtitle = 'Esperando a que regrese...') {
       clearInterval(damasDisconnectInterval);
+      document.getElementById('damas-disconnect-title').textContent = title;
+      document.getElementById('damas-disconnect-subtitle').textContent = subtitle;
       let secondsLeft = 30;
       const timerEl = document.getElementById('damas-disconnect-timer');
       timerEl.textContent = String(secondsLeft);

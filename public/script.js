@@ -2020,7 +2020,24 @@ function setupOnlineSocket() {
     window.location.href = '/login.html';
   });
 
-  socket.on('connect', rejoin);
+  // Fase 18, "Experiencia de partida": rejoin() ya se disparaba en
+  // CUALQUIER reconexion (no solo la primera vez), asi que el estado
+  // de la partida ya se recupera solo -- lo que faltaba era avisar al
+  // propio jugador mientras dura el corte, igual que ya se avisa
+  // cuando es el RIVAL el que se desconecta (opponent-disconnected,
+  // mas arriba). isReconnect es false en el primer connect (la carga
+  // normal de la pagina) para no mostrar "reconectado" sin haber
+  // avisado antes de ningun corte.
+  let _hadDisconnected = false;
+  socket.on('connect', () => {
+    if (_hadDisconnected && typeof appendSystemMessage === 'function') appendSystemMessage('Reconectado.');
+    _hadDisconnected = false;
+    rejoin();
+  });
+  socket.on('disconnect', () => {
+    _hadDisconnected = true;
+    if (typeof appendSystemMessage === 'function') appendSystemMessage('Conexión perdida. Reconectando…');
+  });
   if (socket.connected) rejoin();
 }
 
