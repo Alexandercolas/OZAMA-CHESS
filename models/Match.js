@@ -75,6 +75,13 @@ const MatchSchema = new mongoose.Schema(
       black: { type: Number, default: null },
     },
 
+    // Ritmo de tiempo real de ESTA partida (Fase 2, Blitz). Sin
+    // default a proposito: las partidas de antes de esta fase se
+    // guardan sin este campo, y "rendimiento por modalidad" (Fase 10,
+    // Estadisticas Avanzadas) trata "sin dato" como sin clasificar,
+    // nunca lo inventa como "10+0" por asumir el viejo default fijo.
+    timeControl: { type: String, trim: true, maxlength: 10 },
+
     startedAt: { type: Date, default: Date.now },
     endedAt:   { type: Date, default: null },
   },

@@ -48,6 +48,10 @@ const DamasMatchSchema = new mongoose.Schema(
       analyzedAt: { type: Date, default: null },
     },
 
+    // Ver el mismo campo en models/Match.js -- sin default, "sin dato"
+    // en vez de asumir el viejo ritmo por defecto en partidas viejas.
+    timeControl: { type: String, trim: true, maxlength: 10 },
+
     startedAt: { type: Date, default: Date.now },
     endedAt:   { type: Date, default: Date.now },
   },

@@ -15,6 +15,7 @@ const { FRAMES, framesFor, isValidFrame, isUnlocked } = require('../services/cos
 const { getActiveSeason, seasonProgressFor, seasonHistoryFor } = require('../services/seasons');
 const { activeThematicEvent } = require('../services/thematicEvents');
 const { weeklyProgressFor } = require('../services/weeklyChallenges');
+const { timeControlByKey } = require('../services/timeControls');
 const Notification = require('../models/Notification');
 const { notify } = require('../services/notifications');
 
@@ -240,8 +241,8 @@ router.get('/stats/advanced', requireAuth, async (req, res) => {
       result: { $in: ['white_win', 'black_win', 'draw'] },
     };
     const projection = game === 'damas'
-      ? 'whitePlayer.userId blackPlayer.userId result reason startedAt endedAt'
-      : 'whitePlayer.userId blackPlayer.userId result endReason pgn startedAt endedAt';
+      ? 'whitePlayer.userId blackPlayer.userId result reason timeControl startedAt endedAt'
+      : 'whitePlayer.userId blackPlayer.userId result endReason pgn timeControl startedAt endedAt';
 
     const matches = await Model.find(filter).select(projection).lean();
 
@@ -253,6 +254,11 @@ router.get('/stats/advanced', requireAuth, async (req, res) => {
     const winReasonCounts = new Map();
     let winsWithReason = 0;
     let totalWins = 0;
+    // "Rendimiento por modalidad" (Fase 10, Estadisticas Avanzadas) --
+    // timeControl solo existe en partidas jugadas DESDE que ese campo
+    // se empezo a guardar (Fase 10 misma). Las de antes simplemente no
+    // suman a ningun bucket -- nunca se les asigna un ritmo inventado.
+    const byTimeControl = new Map();
 
     // Damas: 'no-pieces'/'no-moves' son las dos formas reales de ganar
     // (le quitaste todas las piezas / se quedo sin jugada legal) --
@@ -296,6 +302,14 @@ router.get('/stats/advanced', requireAuth, async (req, res) => {
         const name = detectOpening(m.pgn);
         if (name) openingCounts.set(name, (openingCounts.get(name) || 0) + 1);
       }
+
+      if (m.timeControl) {
+        if (!byTimeControl.has(m.timeControl)) byTimeControl.set(m.timeControl, { wins: 0, losses: 0, draws: 0 });
+        const tcBucket = byTimeControl.get(m.timeControl);
+        if (m.result === 'draw') tcBucket.draws++;
+        else if (won) tcBucket.wins++;
+        else tcBucket.losses++;
+      }
     }
 
     const rate = (b) => (b.wins + b.losses + b.draws) ? Math.round((b.wins / (b.wins + b.losses + b.draws)) * 100) : 0;
@@ -311,6 +325,14 @@ router.get('/stats/advanced', requireAuth, async (req, res) => {
       ? [...winReasonCounts.entries()].sort((a, b) => b[1] - a[1]).map(([label, count]) => ({ label, count }))
       : null;
 
+    // Ordenado por cantidad de partidas jugadas (la modalidad mas
+    // usada primero) -- category (bullet/blitz/rapida, ver
+    // services/timeControls.js) le sirve al cliente para agrupar en
+    // "Blitz" si quiere, sin recalcular nada aca.
+    const byModality = [...byTimeControl.entries()]
+      .map(([key, b]) => ({ key, category: timeControlByKey(key).category, ...b, winRate: rate(b), games: b.wins + b.losses + b.draws }))
+      .sort((a, b) => b.games - a.games);
+
     res.json({
       game,
       totalGames: matches.length,
@@ -320,6 +342,7 @@ router.get('/stats/advanced', requireAuth, async (req, res) => {
       topOpenings,
       winReasons,
       totalWins,
+      byModality,
     });
   } catch (err) {
     serverError(res, 'Advanced stats', err);

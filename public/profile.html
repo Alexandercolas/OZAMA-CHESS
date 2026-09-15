@@ -1170,6 +1170,24 @@
             `).join('')
           : '';
 
+        // "Rendimiento por modalidad" (Fase 10, Estadisticas Avanzadas)
+        // -- timeControl solo existe en partidas jugadas desde que ese
+        // campo se empezo a guardar; si nadie tiene ninguna partida asi
+        // todavia (cuentas viejas, recien desplegado), se omite la
+        // seccion entera en vez de mostrar una vacia.
+        const modalityHtml = (data.byModality || []).length
+          ? `<div class="adv-openings-title">Rendimiento por modalidad</div>
+             <div class="adv-color-grid" style="grid-template-columns:repeat(auto-fill,minmax(90px,1fr));">
+               ${data.byModality.map((m) => `
+                 <div class="adv-color-card">
+                   <div class="adv-color-label">${escapeHtml(m.key)}</div>
+                   <div class="adv-color-rate">${m.winRate}%</div>
+                   <div class="adv-color-detail">${m.games} partida${m.games === 1 ? '' : 's'}</div>
+                 </div>
+               `).join('')}
+             </div>`
+          : '';
+
         const winReasonsHtml = data.winReasons
           ? data.winReasons.map((r) => {
               const pct = data.totalWins ? Math.round((r.count / data.totalWins) * 100) : 0;
@@ -1196,6 +1214,7 @@
             </div>
           </div>
           ${duration ? `<div class="adv-duration">Duracion promedio de partida: <strong>${duration}</strong></div>` : ''}
+          ${modalityHtml}
           ${openingsHtml ? `<div class="adv-openings-title">Aperturas mas jugadas (con Blancas)</div>${openingsHtml}` : ''}
           <div class="adv-openings-title">Cómo ganas tus partidas</div>
           ${winReasonsHtml}

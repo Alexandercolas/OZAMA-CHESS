@@ -387,6 +387,7 @@ async function finishDamasGame(room, code, { winner, reason }) {
       winner: winner || null,
       reason,
       eloChange,
+      timeControl: room.timeControl || null,
       startedAt: room.startedAt || new Date(),
       endedAt: new Date(),
     });
@@ -1588,6 +1589,7 @@ io.on('connection', (socket) => {
       whitePlayer: playerSnapshot(wInfo),
       blackPlayer: playerSnapshot(bInfo),
       roomCode: code, result: 'in_progress', startedAt: new Date(),
+      timeControl,
     }).catch((err) => { console.warn('[DB] Match create error:', err.message); return null; });
 
     if (match) room.matchId = match._id;
@@ -1770,6 +1772,7 @@ io.on('connection', (socket) => {
       whitePlayer: playerSnapshot(wInfo),
       blackPlayer: playerSnapshot(pInfo),
       roomCode: cleanCode, result: 'in_progress', startedAt: new Date(),
+      timeControl: room.timeControl,
     }).catch((err) => { console.warn('[DB] No se pudo crear match:', err.message); return null; });
 
     if (match) room.matchId = match._id;
@@ -2091,6 +2094,7 @@ if (room.white && room.black && !room.clockInterval) {
         whitePlayer: wInfo ? playerSnapshot(wInfo) : { name: 'White' },
         blackPlayer: bInfo ? playerSnapshot(bInfo) : { name: 'Black' },
         roomCode: code, result: 'in_progress', startedAt: new Date(),
+        timeControl: room.timeControl,
       }).catch(() => null);
       if (match) room.matchId = match._id;
       await Room.updateOne({ roomCode: code }, { $set: {
@@ -2445,6 +2449,7 @@ if (room.white && room.black && !room.clockInterval) {
         whitePlayer: playerSnapshot(room.playerInfo.w),
         blackPlayer: playerSnapshot(room.playerInfo.b),
         roomCode: match.roomCode, result: 'in_progress', startedAt: new Date(),
+        timeControl: room.timeControl,
       }).catch((err) => { console.warn('[DB] Match create error (tournament):', err.message); return null; });
       if (createdMatch) room.matchId = createdMatch._id;
 
