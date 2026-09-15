@@ -411,6 +411,12 @@ async function finishDamasGame(room, code, { winner, reason }) {
 // ── Cola de matchmaking ──────────────────────────────────────────
 // { socketId, playerInfo, joinedAt }
 const matchQueue = [];
+// Version de Damas (Fase 17, "Lobby"): antes de esto Damas solo tenia
+// crear-sala + compartir codigo, sin ninguna forma de jugar contra un
+// rival al azar como "Juego Rapido" en Ajedrez -- cola separada
+// (nunca mezclada con matchQueue) por el mismo motivo que damasRooms
+// esta separado de rooms.
+const damasMatchQueue = [];
 
 function generateCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -2497,6 +2503,103 @@ if (room.white && room.black && !room.clockInterval) {
   // ── DAMAS (checkers) — namespace de eventos y estado totalmente
   //    separado del ajedrez (damasRooms, nunca `rooms`). Ningun
   //    handler de arriba se toca ni se modifica para esto.
+
+  // Crea una sala de Damas entre dos sockets ya emparejados (Fase 17,
+  // "Lobby") -- mismos campos que arma damas:join-room a mano cuando
+  // el segundo jugador entra con un codigo, solo que aca los dos
+  // llegan juntos desde damasMatchQueue en vez de compartir un link.
+  async function createDamasMatchBetween(wSocket, wInfo, bSocket, bInfo, code, timeControl = DEFAULT_TIME_CONTROL_KEY) {
+    const initialMs = initialMsFor(timeControl);
+    damasRooms.set(code, {
+      white: wSocket.id, black: bSocket.id,
+      board: OzamaCheckers.createInitialBoard(),
+      turn: OzamaCheckers.COLOR.WHITE,
+      status: 'playing',
+      playerInfo: { w: wInfo, b: bInfo },
+      tokens: { w: createRoomToken(), b: createRoomToken() },
+      closeTimer: null,
+      createdAt: Date.now(),
+      startedAt: new Date(),
+      timeControl, incrementMs: incrementMsFor(timeControl),
+      clockW: initialMs, clockB: initialMs, clockInterval: null,
+    });
+    const room = damasRooms.get(code);
+
+    wSocket.join(code); wSocket.data.damasRoomCode = code; wSocket.data.damasColor = 'w';
+    bSocket.join(code); bSocket.data.damasRoomCode = code; bSocket.data.damasColor = 'b';
+
+    const startPayload = { code, board: room.board, turn: room.turn, playerInfo: room.playerInfo, clockW: room.clockW, clockB: room.clockB, timeControl: room.timeControl };
+    wSocket.emit('damas:game-start', { ...startPayload, color: 'w', roomToken: room.tokens.w });
+    bSocket.emit('damas:game-start', { ...startPayload, color: 'b', roomToken: room.tokens.b });
+    damasStartClock(code);
+    console.log(`[DAMAS MM] Partida creada: ${wInfo.name} (w) vs ${bInfo.name} (b) — sala ${code}`);
+  }
+
+  // ── DAMAS: matchmaking (Juego Rapido) ────────────────────────────
+  socket.on('damas:quick-match', async (payload = {}) => {
+    const data = parseSocketPayload(damasSchemas.createRoom, payload, 'damas:room-error');
+    if (!data) return;
+    // A proposito SIN requireSocketAuth() -- mismo criterio que
+    // damas:create-room/join-room: Damas permite jugar como invitado.
+    const { playerName = 'Jugador', country = 'DO', timeControl = DEFAULT_TIME_CONTROL_KEY } = data;
+
+    const existingIdx = damasMatchQueue.findIndex((e) => e.socketId === socket.id);
+    if (existingIdx !== -1) damasMatchQueue.splice(existingIdx, 1);
+
+    const pInfo = await getPlayerInfo(playerName, country);
+    if (socket.data.user) pInfo.elo = Number(socket.data.user.damasElo ?? 1200);
+    socket.data.playerName = pInfo.name;
+
+    // Bloqueo (Fase 10, igual que en Ajedrez): solo se computa si hay
+    // sesion -- un invitado no tiene blockedUsers que consultar.
+    const myBlockedDoc = pInfo.userId
+      ? await User.findById(pInfo.userId).select('blockedUsers').lean().catch(() => null)
+      : null;
+    const myBlocked = (myBlockedDoc?.blockedUsers || []).map(String);
+
+    const rivalIdx = damasMatchQueue.findIndex((e) => {
+      if (e.socketId === socket.id) return false;
+      if (e.timeControl !== timeControl) return false;
+      if (pInfo.userId && e.playerInfo.userId?.toString() === pInfo.userId.toString()) return false;
+      if (pInfo.userId && myBlocked.includes(e.playerInfo.userId?.toString())) return false;
+      if (pInfo.userId && (e.blockedUsers || []).includes(pInfo.userId.toString())) return false;
+      const rivalSocket = io.sockets.sockets.get(e.socketId);
+      return rivalSocket?.connected;
+    });
+
+    if (rivalIdx !== -1) {
+      const [rival] = damasMatchQueue.splice(rivalIdx, 1);
+      const rivalSocket = io.sockets.sockets.get(rival.socketId);
+
+      if (!rivalSocket?.connected) {
+        damasMatchQueue.push({ socketId: socket.id, playerInfo: pInfo, joinedAt: Date.now(), blockedUsers: myBlocked, timeControl });
+        socket.emit('damas:matchmaking-searching', { position: damasMatchQueue.length });
+        return;
+      }
+
+      let code;
+      do { code = generateCode(); } while (rooms.has(code) || damasRooms.has(code));
+
+      const flip = Math.random() < 0.5;
+      const wInfo = flip ? pInfo : rival.playerInfo;
+      const bInfo = flip ? rival.playerInfo : pInfo;
+      const wSock = flip ? socket : rivalSocket;
+      const bSock = flip ? rivalSocket : socket;
+
+      await createDamasMatchBetween(wSock, wInfo, bSock, bInfo, code, timeControl);
+    } else {
+      damasMatchQueue.push({ socketId: socket.id, playerInfo: pInfo, joinedAt: Date.now(), blockedUsers: myBlocked, timeControl });
+      socket.emit('damas:matchmaking-searching', { position: damasMatchQueue.length });
+      console.log(`[DAMAS MM] ${pInfo.name} en cola (${timeControl}). Cola: ${damasMatchQueue.length}`);
+    }
+  });
+
+  socket.on('damas:quick-match-cancel', () => {
+    const idx = damasMatchQueue.findIndex((e) => e.socketId === socket.id);
+    if (idx !== -1) damasMatchQueue.splice(idx, 1);
+    socket.emit('damas:matchmaking-cancelled');
+  });
+
   socket.on('damas:create-room', async (payload = {}) => {
     const data = parseSocketPayload(damasSchemas.createRoom, payload, 'damas:room-error');
     if (!data) return;
@@ -3167,6 +3270,9 @@ if (room.white && room.black && !room.clockInterval) {
 
     const qIdx = matchQueue.findIndex(e => e.socketId === socket.id);
     if (qIdx !== -1) matchQueue.splice(qIdx, 1);
+
+    const damasQIdx = damasMatchQueue.findIndex((e) => e.socketId === socket.id);
+    if (damasQIdx !== -1) damasMatchQueue.splice(damasQIdx, 1);
 
     const code = socket.data.roomCode;
     if (!code) { console.log(`[-] Desconectado: ${socket.id} (sin sala)`); return; }

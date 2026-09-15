@@ -796,7 +796,7 @@
       <main class="game-main">
         <div class="online-panel hidden" id="online-panel">
           <div id="online-setup">
-            <div class="online-note">Crea una sala y comparte el codigo, o unete a la de alguien mas.</div>
+            <div class="online-note">Juega contra un rival al instante, o crea una sala para compartir con alguien especifico.</div>
             <div class="online-row" style="margin-top:14px;">
               <input class="online-input" id="guest-name-input" type="text" maxlength="20" placeholder="TU NOMBRE" style="text-transform:none; letter-spacing:0.5px;"/>
             </div>
@@ -810,7 +810,13 @@
               </select>
             </div>
             <div class="controls" style="margin-top:14px;">
-              <button class="btn-primary" type="button" onclick="createOnlineRoom()">Crear sala</button>
+              <button class="btn-primary" type="button" id="damas-quick-match-btn" onclick="toggleQuickMatchDamas()">⚡ Juego Rapido</button>
+            </div>
+            <div class="online-note" id="damas-quick-status" style="margin-top:6px;"></div>
+
+            <div class="online-note" style="margin-top:18px;">O crea una sala con codigo propio:</div>
+            <div class="controls" style="margin-top:10px;">
+              <button class="btn-mode" type="button" onclick="createOnlineRoom()">Crear sala</button>
             </div>
             <div class="online-row" style="margin-top:14px;">
               <input class="online-input" id="join-code-input" type="text" maxlength="6" placeholder="CODIGO"/>
@@ -1877,7 +1883,25 @@
         document.getElementById('room-code-display').textContent = data.code;
       });
 
+      socket.on('damas:matchmaking-searching', () => {
+        const status = document.getElementById('damas-quick-status');
+        if (status) status.textContent = 'Buscando rival…';
+      });
+
+      socket.on('damas:matchmaking-cancelled', () => {
+        _damasSearchingQuickMatch = false;
+        const btn = document.getElementById('damas-quick-match-btn');
+        const status = document.getElementById('damas-quick-status');
+        if (btn) btn.textContent = '⚡ Juego Rapido';
+        if (status) status.textContent = '';
+      });
+
       socket.on('damas:game-start', (data) => {
+        _damasSearchingQuickMatch = false;
+        const quickBtn = document.getElementById('damas-quick-match-btn');
+        const quickStatus = document.getElementById('damas-quick-status');
+        if (quickBtn) quickBtn.textContent = '⚡ Juego Rapido';
+        if (quickStatus) quickStatus.textContent = '';
         onlineRoomCode = data.code;
         onlineColor = data.color;
         onlineRoomToken = data.roomToken;
@@ -2124,6 +2148,32 @@
       document.getElementById('damas-challenge-modal').classList.add('hidden');
       socket.emit('damas:challenge-decline', { challengerSocketId: damasChallengerSocketId });
       damasChallengerSocketId = null;
+    }
+
+    // Juego Rapido (Fase 17, "Lobby"): antes de esto Damas solo tenia
+    // crear-sala/unirse por codigo -- sin forma de jugar contra un
+    // rival al azar como ya existia en Ajedrez (lobby.html). Mismo
+    // patron de boton-que-cambia-de-texto que usa lobby.html
+    // (Buscar Rival <-> Cancelar), pero sin la pantalla de espera con
+    // codigo (aca no hay codigo que compartir).
+    let _damasSearchingQuickMatch = false;
+    function toggleQuickMatchDamas() {
+      ensureSocket();
+      const btn = document.getElementById('damas-quick-match-btn');
+      const status = document.getElementById('damas-quick-status');
+      if (_damasSearchingQuickMatch) {
+        socket.emit('damas:quick-match-cancel');
+        _damasSearchingQuickMatch = false;
+        btn.textContent = '⚡ Juego Rapido';
+        status.textContent = '';
+        return;
+      }
+      const user = readStoredUser();
+      const timeControl = document.getElementById('damas-time-control')?.value || '10+0';
+      socket.emit('damas:quick-match', { playerName: resolvePlayerName(), country: user?.country || 'DO', timeControl });
+      _damasSearchingQuickMatch = true;
+      btn.textContent = 'Cancelar';
+      status.textContent = 'Buscando rival…';
     }
 
     function createOnlineRoom() {
