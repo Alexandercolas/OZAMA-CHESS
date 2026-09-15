@@ -175,6 +175,8 @@
         <div class="grid" id="piece-set-grid"></div>
         <div class="section-title">Fichas de Damas</div>
         <div class="grid" id="damas-piece-set-grid"></div>
+        <div class="section-title">Tema de la Plataforma</div>
+        <div class="grid" id="platform-theme-grid"></div>
         <div class="section-title">Insignias <span style="color:var(--dim);font-weight:400;">— se ganan jugando</span></div>
         <div class="grid">${achievementsHtml()}</div>
       `;
@@ -293,6 +295,20 @@
             ${p.locked
               ? `<a class="fr-btn" href="/settings.html#premium-panel" style="text-decoration:none;display:block;">🔒 Con OZAMA Premium</a>`
               : `<button class="fr-btn" ${p.key === current.damasPieceSet ? 'disabled' : ''} onclick="equipCosmetic('damasPieceSet','${p.key}')">${p.key === current.damasPieceSet ? 'Activo' : 'Usar'}</button>`}
+          </div>
+        `).join('');
+      }
+
+      const platformGrid = document.getElementById('platform-theme-grid');
+      if (platformGrid) {
+        platformGrid.innerHTML = OZAMA_PREFS.availablePlatformThemes(_user).map((t) => `
+          <div class="frame-card cos-card ${t.locked ? 'locked' : ''} ${t.key === current.platformTheme ? 'equipped' : ''}">
+            <div class="swatch-preview"><span style="display:inline-block;width:28px;height:28px;border-radius:50%;background:${t.swatch};box-shadow:0 1px 3px rgba(0,0,0,0.4);"></span></div>
+            <div class="fr-name">${escapeHtml(t.label)}</div>
+            <div class="fr-desc">${t.free ? 'Gratis' : 'Exclusivo de Premium'}</div>
+            ${t.locked
+              ? `<a class="fr-btn" href="/settings.html#premium-panel" style="text-decoration:none;display:block;">🔒 Con OZAMA Premium</a>`
+              : `<button class="fr-btn" ${t.key === current.platformTheme ? 'disabled' : ''} onclick="equipCosmetic('platformTheme','${t.key}')">${t.key === current.platformTheme ? 'Activo' : 'Usar'}</button>`}
           </div>
         `).join('');
       }

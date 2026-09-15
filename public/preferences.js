@@ -16,6 +16,7 @@ const OZAMA_PREFS = (() => {
   const LEGACY_THEME_KEY = 'ozama-board-theme';
   const SOUND_MUTED_KEY = 'ozama-sound-muted';
   const SOUND_VOLUME_KEY = 'ozama-sound-volume';
+  const EFFECTS_ENABLED_KEY = 'ozama-effects-enabled';
 
   const BOARD_THEMES = {
     colonial: { free: true,  label: 'Zona Colonial' },
@@ -123,7 +124,16 @@ const OZAMA_PREFS = (() => {
       ? Math.max(0, Math.min(1, Number(storedVolume)))
       : (Number.isFinite(fromServer.soundVolume) ? fromServer.soundVolume : DEFAULT_VOLUME);
 
-    return { boardTheme, pieceSet, damasPieceSet, platformTheme, soundMuted, soundVolume };
+    // Efectos de animacion (Fase 11): ON por defecto -- solo se apaga
+    // si el usuario lo elige a proposito (distinto de
+    // prefers-reduced-motion, que es del SO y ya se respeta aparte en
+    // theme.css).
+    const storedEffects = localStorage.getItem(EFFECTS_ENABLED_KEY);
+    const effectsEnabled = storedEffects !== null
+      ? storedEffects === 'true'
+      : (fromServer.effectsEnabled !== undefined ? !!fromServer.effectsEnabled : true);
+
+    return { boardTheme, pieceSet, damasPieceSet, platformTheme, soundMuted, soundVolume, effectsEnabled };
   }
 
   function applyToDocument(prefs) {
@@ -133,8 +143,10 @@ const OZAMA_PREFS = (() => {
     // En :root (<html>), no en <body> -- theme.css define el bloque
     // [data-app-theme] como :root[data-app-theme=...] para que el
     // acento este disponible desde el primer paint, antes de que
-    // <body> exista siquiera.
+    // <body> exista siquiera. Mismo criterio para data-fx (gatea las
+    // animaciones sueltas de cada pagina, ver theme.css).
     document.documentElement?.setAttribute('data-app-theme', p.platformTheme);
+    document.documentElement?.setAttribute('data-fx', p.effectsEnabled ? 'on' : 'off');
     if (typeof window.setSoundMuted === 'function') window.setSoundMuted(p.soundMuted);
     if (typeof window.setSoundVolumeGlobal === 'function') window.setSoundVolumeGlobal(p.soundVolume);
   }
@@ -146,6 +158,7 @@ const OZAMA_PREFS = (() => {
     if (partial.platformTheme !== undefined) localStorage.setItem(PLATFORM_THEME_CACHE_KEY, partial.platformTheme);
     if (partial.soundMuted !== undefined) localStorage.setItem(SOUND_MUTED_KEY, String(partial.soundMuted));
     if (partial.soundVolume !== undefined) localStorage.setItem(SOUND_VOLUME_KEY, String(partial.soundVolume));
+    if (partial.effectsEnabled !== undefined) localStorage.setItem(EFFECTS_ENABLED_KEY, String(partial.effectsEnabled));
     applyToDocument(current());
 
     try {

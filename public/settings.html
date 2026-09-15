@@ -855,6 +855,9 @@
                         <option value="AR" ${user.country==='AR' ? 'selected' : ''}>AR - Argentina</option>
                         <option value="OTHER" ${user.country==='OTHER' ? 'selected' : ''}>Otro</option>
                       </select>
+                      <span class="edit-label">Bio</span>
+                      <textarea class="edit-select" id="bio-input" maxlength="140" rows="2" placeholder="Una frase corta sobre ti (opcional)" oninput="updateBioCounter()" style="resize:vertical;font-family:var(--fb);">${escapeHtml(user.bio || '')}</textarea>
+                      <div class="photo-hint" id="bio-counter">${(user.bio || '').length} / 140</div>
                       <button class="btn-save btn-primary" onclick="saveProfile()">Guardar</button>
                       <span class="save-msg" id="save-msg">Guardado</span>
                       <div class="plan-note"><strong>Plan ${planLabel}</strong><br>${planNote}</div>
@@ -877,6 +880,11 @@
                           <span class="volume-icon">🔊</span>
                           <input type="range" id="pref-volume-slider" min="0" max="100" value="82" oninput="onPrefVolumeInput(this.value)">
                         </div>
+                      </div>
+                      <span class="edit-label" style="margin-top:16px;display:block;">Efectos de animación</span>
+                      <div class="sound-pref-row">
+                        <button class="btn-save secondary" id="pref-fx-btn" onclick="togglePrefEffects()">Efectos: ON</button>
+                        <div class="photo-hint">Anima jaques, capturas y coronaciones. Apágalo si prefieres una interfaz más quieta.</div>
                       </div>
                     </div>
 
@@ -1032,10 +1040,17 @@
       }
     }
 
+    function updateBioCounter() {
+      const el = document.getElementById('bio-input');
+      const counter = document.getElementById('bio-counter');
+      if (el && counter) counter.textContent = `${el.value.length} / 140`;
+    }
+
     async function saveProfile() {
       const country = document.getElementById('country-select').value;
       const avatar = Number(document.getElementById('avatar-select').value || 0);
       const avatarImage = document.getElementById('avatar-image-value')?.value || '';
+      const bio = document.getElementById('bio-input')?.value || '';
       try {
         const res = await fetch('/api/user/me', {
           method: 'PATCH',
@@ -1043,7 +1058,7 @@
             'Content-Type': 'application/json',
             Authorization: `Bearer ${_token}`,
           },
-          body: JSON.stringify({ country, avatar, avatarImage }),
+          body: JSON.stringify({ country, avatar, avatarImage, bio }),
         });
         if (!res.ok) throw new Error();
         const data = await res.json();
@@ -1053,6 +1068,7 @@
           country: data.user.country,
           avatar: data.user.avatar,
           avatarImage: data.user.avatarImage,
+          bio: data.user.bio,
           plan: data.user.plan,
           premiumUntil: data.user.premiumUntil,
           subscriptionStatus: data.user.subscriptionStatus,
@@ -1196,6 +1212,8 @@
       if (muteBtn) muteBtn.textContent = current.soundMuted ? 'Sonido: OFF' : 'Sonido: ON';
       const slider = document.getElementById('pref-volume-slider');
       if (slider) slider.value = String(Math.round(current.soundVolume * 100));
+      const fxBtn = document.getElementById('pref-fx-btn');
+      if (fxBtn) fxBtn.textContent = current.effectsEnabled ? 'Efectos: ON' : 'Efectos: OFF';
     }
 
     // Las vistas previas (damas/piezas/tablero) ahora viven en
@@ -1262,6 +1280,12 @@
       OZAMA_PREFS.save({ soundVolume: volume });
     }
 
+    function togglePrefEffects() {
+      const current = OZAMA_PREFS.current();
+      OZAMA_PREFS.save({ effectsEnabled: !current.effectsEnabled });
+      renderPersonalizationPanel();
+    }
+
     init();
     Object.assign(window, {
       logout,
@@ -1277,6 +1301,8 @@
       selectPlatformTheme,
       togglePrefMute,
       onPrefVolumeInput,
+      togglePrefEffects,
+      updateBioCounter,
     });
     })();
   </script>

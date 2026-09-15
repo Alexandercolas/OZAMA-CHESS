@@ -62,6 +62,9 @@ const UserSchema = new mongoose.Schema(
       max: 12,
     },
     avatarImage: { type: String, default: '' },
+    // Bio/estado corto (Fase 11, "Personalizacion PRO" -- PERFIL).
+    // Texto libre, nunca obligatorio, nunca se muestra si esta vacio.
+    bio: { type: String, trim: true, maxlength: 140, default: '' },
     friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     // Bloqueo (Fase 10 del roadmap PRO): unidireccional a proposito --
     // si A bloquea a B, B no puede desafiar a A, sin que B se entere

@@ -75,6 +75,18 @@
   }
 }
 
+/* Efectos de animacion (Fase 11, "Personalizacion PRO"): toggle
+   explicito del usuario en Ajustes, aparte de prefers-reduced-motion
+   de arriba (que es del SO, no de la app). Mismo mecanismo, para
+   cubrir de un solo lugar las animaciones sueltas de cada pagina
+   (jaque, captura, coronacion, dialogo de promocion...) sin tener que
+   tocar cada @keyframes uno por uno. Ver public/preferences.js. */
+:root[data-fx="off"] *, :root[data-fx="off"] *::before, :root[data-fx="off"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 /* Foco visible (Fase 23, accesibilidad) -- varias paginas suprimen el

@@ -210,6 +210,13 @@ router.patch('/preferences', requireAuth, async (req, res) => {
       updates['preferences.soundVolume'] = volume;
     }
 
+    // Efectos de animacion (Fase 11): toggle explicito del usuario,
+    // aparte de prefers-reduced-motion del SO. Ver public/preferences.js.
+    if (body.effectsEnabled !== undefined) {
+      if (typeof body.effectsEnabled !== 'boolean') return res.status(400).json({ error: 'Valor invalido para effectsEnabled.' });
+      updates['preferences.effectsEnabled'] = body.effectsEnabled;
+    }
+
     if (!Object.keys(updates).length) {
       return res.status(400).json({ error: 'Nada para actualizar.' });
     }
@@ -784,7 +791,7 @@ router.patch('/titles/:key', requireAuth, async (req, res) => {
 // PATCH /api/user/me - update profile
 router.patch('/me', requireAuth, async (req, res) => {
   try {
-    const allowed = ['country', 'avatar', 'avatarImage'];
+    const allowed = ['country', 'avatar', 'avatarImage', 'bio'];
     const updates = {};
     for (const key of allowed) {
       if (req.body[key] !== undefined) updates[key] = req.body[key];
@@ -811,6 +818,10 @@ router.patch('/me', requireAuth, async (req, res) => {
         return res.status(400).json({ error: 'Avatar invalido.' });
       }
       updates.avatar = avatar;
+    }
+    if (updates.bio !== undefined) {
+      const bio = String(updates.bio || '').trim().slice(0, 140);
+      updates.bio = bio;
     }
 
     const user = await User.findByIdAndUpdate(req.user._id, updates, {
@@ -1423,7 +1434,7 @@ router.get('/:username', optionalAuth, async (req, res) => {
     if (!validUsername(username)) return res.status(400).json({ error: 'Usuario invalido.' });
 
     const user = await User.findOne({ username })
-      .select('username country avatar avatarImage elo damasElo stats damasStats xp achievements plan premiumUntil createdAt isActive equippedFrame equippedTitle');
+      .select('username country avatar avatarImage bio elo damasElo stats damasStats xp achievements plan premiumUntil createdAt isActive equippedFrame equippedTitle');
 
     if (!user || !user.isActive) return res.status(404).json({ error: 'Usuario no encontrado.' });
 
