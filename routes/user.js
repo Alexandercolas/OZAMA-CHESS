@@ -673,7 +673,7 @@ router.get('/profile-stats', requireAuth, async (req, res) => {
 router.get('/weekly-challenges', requireAuth, async (req, res) => {
   try {
     res.set('Cache-Control', 'no-store');
-    const challenges = await weeklyProgressFor(req.user._id);
+    const challenges = await weeklyProgressFor(req.user._id, undefined, req.user.weeklyPuzzlesSolved);
     // Otorga el bono de XP de los retos recien completados (Fase 12,
     // "Recompensas") -- ver services/weeklyChallenges.js. req.user ya
     // es el documento cargado por requireAuth, se reusa sin otra query.

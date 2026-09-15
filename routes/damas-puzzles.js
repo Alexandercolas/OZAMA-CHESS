@@ -9,6 +9,7 @@ const express = require('express');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
 const { byKey, publicPuzzle, dailyPuzzleForDate, nextPracticePuzzle, solutionMatches } = require('../services/damas-puzzles');
 const { xpForPuzzle, levelFromXp, xpIntoLevel, buildContext, checkNewAchievements } = require('../services/achievements');
+const { bumpWeeklyPuzzleSolved } = require('../services/weeklyChallenges');
 
 const router = express.Router();
 
@@ -69,6 +70,7 @@ router.post('/:key/solve', requireAuth, async (req, res) => {
       const alreadySolvedBefore = user.damasPuzzles.solvedKeys.includes(puzzle.key);
       if (!alreadySolvedBefore) user.damasPuzzles.solvedKeys.push(puzzle.key);
       user.damasPuzzles.totalSolved = Number(user.damasPuzzles.totalSolved || 0) + 1;
+      bumpWeeklyPuzzleSolved(user);
       xpGained = xpForPuzzle(puzzle.difficulty);
       user.xp = Number(user.xp || 0) + xpGained;
 

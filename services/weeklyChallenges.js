@@ -1,11 +1,13 @@
 'use strict';
 
-// Retos Semanales (Fase 13, "OZAMA PRO / Experiencia Final"). A
-// proposito NO incluye una meta de puzzles: el usuario solo tiene
-// guardada la fecha del ULTIMO puzzle resuelto (lastSolvedDate), no
-// un historial completo, asi que "resolvio 3 puzzles esta semana" no
-// se puede calcular con datos reales sin agregar tracking nuevo.
-// Mejor 2-3 metas reales que ninguna fabricada.
+// Retos Semanales (Fase 13, "OZAMA PRO / Experiencia Final"). La meta
+// de puzzles ("Resuelve 3 Acertijos", Fase 13 "Misiones" del roadmap
+// OZAMA PRO) quedo afuera originalmente porque el usuario solo tenia
+// guardada la fecha del ULTIMO puzzle resuelto (lastSolvedDate), no un
+// contador semanal real -- User.weeklyPuzzlesSolved (models/User.js)
+// suma exactamente eso ahora, incrementado desde routes/puzzles.js y
+// routes/damas-puzzles.js en el mismo lugar donde ya suman
+// totalSolved, asi que el reto de aca abajo tampoco fabrica un numero.
 //
 // Misma semana ISO simplificada que services/recurringTournaments.js
 // (mismo lunes de referencia) -- si se cambia uno, hay que cambiar el
@@ -33,13 +35,17 @@ const WEEKLY_CHALLENGES = [
   { key: 'gana_3', name: 'Gana 3 Partidas', description: 'Gana 3 partidas esta semana, en Ajedrez o Damas.', icon: '🏆', target: 3, xp: 30 },
   { key: 'juega_5', name: 'Juega 5 Partidas', description: 'Juega 5 partidas esta semana, en Ajedrez o Damas.', icon: '♟️', target: 5, xp: 20 },
   { key: 'gana_damas', name: 'Prueba las Damas', description: 'Gana 1 partida de Damas esta semana.', icon: '⚫', target: 1, xp: 20 },
+  { key: 'resuelve_puzzles', name: 'Resuelve 3 Acertijos', description: 'Resuelve 3 puzzles tacticos esta semana, de Ajedrez o Damas.', icon: '🧩', target: 3, xp: 25 },
 ];
 
-// Progreso real de los 3 retos para un usuario, en la semana actual.
+// Progreso real de los 4 retos para un usuario, en la semana actual.
 // Una sola pasada por las partidas de la semana (Ajedrez + Damas) en
-// vez de una consulta separada por reto.
-async function weeklyProgressFor(userId, now = new Date()) {
-  const { weekStart, weekEnd } = currentWeekRange(now);
+// vez de una consulta separada por reto. `weeklyPuzzlesSolved` es el
+// campo crudo del usuario (User.weeklyPuzzlesSolved) -- lo pasa el
+// llamador (ya tiene el documento cargado) en vez de que esta funcion
+// haga su propia consulta aparte solo para ese numero.
+async function weeklyProgressFor(userId, now = new Date(), weeklyPuzzlesSolved = null) {
+  const { weekIndex, weekStart, weekEnd } = currentWeekRange(now);
   const filter = {
     $or: [{ 'whitePlayer.userId': userId }, { 'blackPlayer.userId': userId }],
     result: { $in: ['white_win', 'black_win', 'draw'] },
@@ -63,7 +69,10 @@ async function weeklyProgressFor(userId, now = new Date()) {
     if (won) damasWins++;
   }
 
-  const progressByKey = { gana_3: totalWins, juega_5: totalGames, gana_damas: damasWins };
+  const puzzlesSolvedThisWeek = weeklyPuzzlesSolved && weeklyPuzzlesSolved.weekIndex === weekIndex
+    ? Number(weeklyPuzzlesSolved.count || 0)
+    : 0;
+  const progressByKey = { gana_3: totalWins, juega_5: totalGames, gana_damas: damasWins, resuelve_puzzles: puzzlesSolvedThisWeek };
   return WEEKLY_CHALLENGES.map((c) => ({
     key: c.key,
     name: c.name,
@@ -119,4 +128,19 @@ async function claimWeeklyRewards(user, challenges, io = null) {
   return [...claimed];
 }
 
-module.exports = { WEEKLY_CHALLENGES, currentWeekRange, weeklyProgressFor, claimWeeklyRewards };
+// Suma 1 al contador semanal de puzzles resueltos (Fase 13,
+// "Misiones") -- llamado desde routes/puzzles.js y
+// routes/damas-puzzles.js en el mismo lugar donde ya suman
+// totalSolved (misma condicion: no cuenta el desafio del dia repetido
+// el mismo dia). Muta `user` en memoria; el `await user.save()` que
+// YA hace cada una de esas rutas al final persiste esto tambien, sin
+// un save() aparte.
+function bumpWeeklyPuzzleSolved(user, now = new Date()) {
+  const { weekIndex } = currentWeekRange(now);
+  if (!user.weeklyPuzzlesSolved || user.weeklyPuzzlesSolved.weekIndex !== weekIndex) {
+    user.weeklyPuzzlesSolved = { weekIndex, count: 0 };
+  }
+  user.weeklyPuzzlesSolved.count = Number(user.weeklyPuzzlesSolved.count || 0) + 1;
+}
+
+module.exports = { WEEKLY_CHALLENGES, currentWeekRange, weeklyProgressFor, claimWeeklyRewards, bumpWeeklyPuzzleSolved };

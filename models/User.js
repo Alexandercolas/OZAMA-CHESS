@@ -119,6 +119,18 @@ const UserSchema = new mongoose.Schema(
       weekIndex: { type: Number, default: null },
       claimedKeys: { type: [String], default: [] },
     },
+    // Puzzles resueltos en la semana ACTUAL (Fase 13, "Misiones"):
+    // contador COMBINADO de Ajedrez + Damas, exclusivamente para el
+    // reto semanal "Resuelve 3 Acertijos" -- routes/puzzles.js y
+    // routes/damas-puzzles.js lo suman en el mismo lugar donde ya
+    // suman totalSolved. Antes de esto no habia forma de saber cuantos
+    // puzzles se resolvieron ESTA semana (solvedKeys/lastSolvedDate no
+    // alcanzan); se resetea solo al cambiar de semana, mismo patron
+    // que weeklyChallenges de arriba.
+    weeklyPuzzlesSolved: {
+      weekIndex: { type: Number, default: null },
+      count: { type: Number, default: 0 },
+    },
     // Coleccion (Fase 13): marco de perfil equipado. Cual esta
     // DESBLOQUEADO se calcula siempre a partir de xp/achievements de
     // arriba (services/cosmetics.js) -- aca solo se guarda la eleccion.
