@@ -663,13 +663,9 @@ router.get('/profile-stats', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/user/achievements - catalogo completo (Fase 4 del roadmap
-// PRO), con cuales ya desbloqueo el jugador -- asi el perfil puede
 // GET /api/user/weekly-challenges (Fase 13, "OZAMA PRO / Experiencia
-// Final"): retos semanales calculados de partidas reales de esta
-// semana -- ver services/weeklyChallenges.js para por que no hay meta
-// de puzzles (no hay fecha por puzzle resuelto, solo un contador
-// total).
+// Final"): retos semanales calculados de partidas/puzzles reales de
+// esta semana -- ver services/weeklyChallenges.js.
 router.get('/weekly-challenges', requireAuth, async (req, res) => {
   try {
     res.set('Cache-Control', 'no-store');
@@ -716,6 +712,8 @@ router.get('/season-history', requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/user/achievements - catalogo completo (Fase 4 del roadmap
+// PRO), con cuales ya desbloqueo el jugador -- asi el perfil puede
 // mostrar los bloqueados tambien, no solo los conseguidos.
 router.get('/achievements', requireAuth, async (req, res) => {
   res.set('Cache-Control', 'no-store');

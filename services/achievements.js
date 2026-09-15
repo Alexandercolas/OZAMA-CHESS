@@ -125,6 +125,14 @@ const ACHIEVEMENTS = [
     check: (ctx) => ctx.game === 'damas' && ctx.justPromoted,
   },
   {
+    key: 'captura_multiple',
+    name: 'Captura Triple',
+    description: 'Captura 3 o mas fichas en una sola jugada en Damas.',
+    icon: '💥',
+    rarity: 'poco-comun',
+    check: (ctx) => ctx.game === 'damas' && ctx.justMultiCapture,
+  },
+  {
     key: 'campeon_torneo',
     name: 'Campeón de Torneo',
     description: 'Gana un torneo de eliminación directa en OZAMA.',
@@ -259,7 +267,7 @@ function xpIntoLevel(xp) {
 // User ya actualizado (stats/streak/elo ya deberian estar aplicados
 // ANTES de llamar esto) y de datos puntuales de la partida que recien
 // termino.
-function buildContext({ user, game, outcome, opponentElo, moveCount, endedAt, totalPuzzlesSolved, justPromoted }) {
+function buildContext({ user, game, outcome, opponentElo, moveCount, endedAt, totalPuzzlesSolved, justPromoted, justMultiCapture }) {
   const stats = game === 'damas' ? user.damasStats : user.stats;
   const totalWins = stats?.wins || 0;
   const totalGames = (stats?.wins || 0) + (stats?.losses || 0) + (stats?.draws || 0);
@@ -278,6 +286,7 @@ function buildContext({ user, game, outcome, opponentElo, moveCount, endedAt, to
     // dos catalogos salvo que el llamador pase un total ya calculado.
     totalPuzzlesSolved: totalPuzzlesSolved ?? ((user.puzzles?.totalSolved || 0) + (user.damasPuzzles?.totalSolved || 0)),
     justPromoted: !!justPromoted,
+    justMultiCapture: !!justMultiCapture,
   };
 }
 

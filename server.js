@@ -367,6 +367,7 @@ async function finishDamasGame(room, code, { winner, reason }) {
           moveCount: 0,
           game: 'damas',
           promotions: room.hadPromotion,
+          multiCaptures: room.hadMultiCapture,
         });
 
         eloChange.white = wUser.damasElo - wBefore;
@@ -700,7 +701,7 @@ function bumpStreak(statsObj, won) {
 // stats/streak/elo de cada usuario (buildContext necesita los totales
 // ya actualizados) y ANTES de guardarlos -- no agrega un save() extra,
 // reusa el que ya iba a pasar para cerrar la partida.
-function applyProgressionForMatch({ wUser, bUser, wOutcome, bOutcome, wEloBefore, bEloBefore, moveCount, game, promotions }) {
+function applyProgressionForMatch({ wUser, bUser, wOutcome, bOutcome, wEloBefore, bEloBefore, moveCount, game, promotions, multiCaptures }) {
   // Bono de Evento Tematico (Fase 12): si hay un evento activo ahora
   // mismo (services/thematicEvents.js), multiplica el XP de esta
   // partida -- real, no cosmetico. Se calcula una vez por partida, no
@@ -708,13 +709,13 @@ function applyProgressionForMatch({ wUser, bUser, wOutcome, bOutcome, wEloBefore
   // mismo multiplicador aunque el reloj cruce la ventana entre un save
   // y otro (extremadamente improbable, pero asi queda determinista).
   const xpMultiplier = activeThematicEvent()?.xpMultiplier || 1;
-  for (const [user, outcome, opponentElo, justPromoted] of [
-    [wUser, wOutcome, bEloBefore, promotions?.w],
-    [bUser, bOutcome, wEloBefore, promotions?.b],
+  for (const [user, outcome, opponentElo, justPromoted, justMultiCapture] of [
+    [wUser, wOutcome, bEloBefore, promotions?.w, multiCaptures?.w],
+    [bUser, bOutcome, wEloBefore, promotions?.b, multiCaptures?.b],
   ]) {
     if (!user) continue;
     user.xp = Number(user.xp || 0) + Math.round(xpForResult(outcome) * xpMultiplier);
-    const ctx = buildContext({ user, game, outcome, opponentElo, moveCount, endedAt: new Date(), justPromoted: !!justPromoted });
+    const ctx = buildContext({ user, game, outcome, opponentElo, moveCount, endedAt: new Date(), justPromoted: !!justPromoted, justMultiCapture: !!justMultiCapture });
     const newKeys = checkNewAchievements(user, ctx);
     if (newKeys.length) {
       user.achievements = [...(user.achievements || []), ...newKeys.map((key) => ({ key, unlockedAt: new Date() }))];
@@ -2754,6 +2755,12 @@ if (room.white && room.black && !room.clockInterval) {
     // la partida (finishDamasGame), no hace falta nada mas alla de
     // este flag por color.
     if (result.promoted) { room.hadPromotion = room.hadPromotion || {}; room.hadPromotion[myColor] = true; }
+    // Guardado para el logro "Captura Triple" -- mismo patron que
+    // hadPromotion arriba. result.captured ya trae TODA la cadena de
+    // saltos de esta jugada resuelta (el engine solo ofrece la
+    // secuencia mas larga cuando hay captura obligatoria), asi que
+    // "3 o mas" es un dato real, nunca inventado.
+    if (result.captured.length >= 3) { room.hadMultiCapture = room.hadMultiCapture || {}; room.hadMultiCapture[myColor] = true; }
     const status = OzamaCheckers.checkGameOver(room.board, room.turn);
     if (status.over) { room.status = 'finished'; damasStopClock(room); }
 
@@ -2864,6 +2871,7 @@ if (room.white && room.black && !room.clockInterval) {
       room.rematchReady = new Set();
       room.drawOfferBy = null;
       room.hadPromotion = null;
+      room.hadMultiCapture = null;
       room.startedAt = new Date();
       room.tokens = { w: createRoomToken(), b: createRoomToken() };
       // La revancha mantiene el MISMO ritmo de tiempo de la partida
