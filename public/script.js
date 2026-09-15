@@ -1719,6 +1719,22 @@ function offerDraw() {
   );
 }
 
+// Fase 19, "Revancha": pedir revancha no daba NINGUN feedback -- el
+// boton se veia exactamente igual antes y despues de pedirla, y si el
+// rival la rechazaba, quien la pidio nunca se enteraba (el overlay
+// que se ocultaba en rematch-declined era el del RIVAL, que el que
+// pide jamas llega a ver). A nivel de MODULO (no dentro de
+// setupControls ni setupOnlineSocket) porque el click que arranca el
+// pedido vive en setupControls() y la respuesta del servidor
+// (rematch-declined/rematch-start) se escucha en setupOnlineSocket()
+// -- dos funciones distintas que necesitan compartir este estado.
+let _myRematchPending = false;
+function resetRematchBtn() {
+  _myRematchPending = false;
+  const btn = document.getElementById('rematch-btn');
+  if (btn) { btn.textContent = 'Revancha'; btn.disabled = false; }
+}
+
 function setupControls() {
   document.getElementById('resign-btn')?.addEventListener('click', resignGame);
   document.getElementById('draw-offer-btn')?.addEventListener('click', offerDraw);
@@ -1740,7 +1756,11 @@ function setupControls() {
     window.location.href = '/lobby.html';
   });
   document.getElementById('rematch-btn')?.addEventListener('click', () => {
-    if (IS_ONLINE && socket) socket.emit('rematch-request', { room: ROOM_CODE });
+    if (!IS_ONLINE || !socket || _myRematchPending) return;
+    socket.emit('rematch-request', { room: ROOM_CODE });
+    _myRematchPending = true;
+    const btn = document.getElementById('rematch-btn');
+    if (btn) { btn.textContent = 'Esperando…'; btn.disabled = true; }
   });
   document.getElementById('rematch-accept-btn')?.addEventListener('click', () => {
     document.getElementById('rematch-overlay')?.classList.add('hidden');
@@ -1917,11 +1937,17 @@ function setupOnlineSocket() {
 
   socket.on('rematch-declined', () => {
     document.getElementById('rematch-overlay')?.classList.add('hidden');
+    // Si YO era quien esperaba respuesta, avisar que la rechazaron --
+    // sin esto el boton se quedaba en "Esperando..." para siempre y
+    // nada le decia a esa persona que el rival ya dijo que no.
+    if (_myRematchPending && typeof appendSystemMessage === 'function') appendSystemMessage('Tu rival rechazó la revancha.');
+    resetRematchBtn();
   });
 
   socket.on('rematch-start', ({ clockW, clockB, roomToken } = {}) => {
     hideGameEnd();
     document.getElementById('rematch-overlay')?.classList.add('hidden');
+    resetRematchBtn();
     startNewGame();
     if (roomToken) sessionStorage.setItem('ozama-room-token', roomToken);
     CLOCK.set(clockW || 600000, clockB || 600000);

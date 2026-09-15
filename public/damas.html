@@ -922,6 +922,7 @@
         <button class="btn-primary hidden" type="button" id="gameover-rematch-btn" onclick="damasRequestRematch()">Revancha</button>
         <a class="btn-mode" href="/lobby.html" style="text-decoration:none; display:inline-flex; align-items:center;">Volver al lobby</a>
       </div>
+      <div class="online-note hidden" id="damas-rematch-status" style="margin-top:10px;"></div>
     </div>
   </div>
 
@@ -2056,9 +2057,21 @@
 
       socket.on('damas:rematch-declined', () => {
         document.getElementById('damas-rematch-overlay').classList.add('hidden');
+        // Si YO era quien esperaba respuesta, avisar que la rechazaron
+        // -- sin esto el boton se quedaba en "Esperando..." para
+        // siempre sin ninguna explicacion. Guardar el flag ANTES de
+        // resetear (resetDamasRematchBtn tambien oculta este mismo
+        // status, asi que el mensaje se muestra DESPUES del reset).
+        const wasPending = _myDamasRematchPending;
+        resetDamasRematchBtn();
+        if (wasPending) {
+          const status = document.getElementById('damas-rematch-status');
+          if (status) { status.textContent = 'Tu rival rechazó la revancha.'; status.classList.remove('hidden'); }
+        }
       });
 
       socket.on('damas:rematch-start', (data) => {
+        resetDamasRematchBtn();
         onlineRoomToken = data.roomToken;
         onlineStatus = 'playing';
         selfResigned = false;
@@ -2293,9 +2306,25 @@
       document.getElementById('damas-disconnect-overlay').classList.add('hidden');
     }
 
+    // Fase 19, "Revancha": pedir revancha no daba ningun feedback --
+    // el boton se veia igual antes y despues, y si el rival la
+    // rechazaba, quien la pidio nunca se enteraba (damas-rematch-overlay
+    // es el que ve el RIVAL, quien pide jamas lo ve). Mismo patron que
+    // ya se agrego en Ajedrez (script.js).
+    let _myDamasRematchPending = false;
+    function resetDamasRematchBtn() {
+      _myDamasRematchPending = false;
+      const btn = document.getElementById('gameover-rematch-btn');
+      if (btn) { btn.textContent = 'Revancha'; btn.disabled = false; }
+      const status = document.getElementById('damas-rematch-status');
+      if (status) status.classList.add('hidden');
+    }
     function damasRequestRematch() {
-      if (mode !== 'online' || !onlineRoomCode) return;
+      if (mode !== 'online' || !onlineRoomCode || _myDamasRematchPending) return;
       socket.emit('damas:rematch-request', { room: onlineRoomCode });
+      _myDamasRematchPending = true;
+      const btn = document.getElementById('gameover-rematch-btn');
+      if (btn) { btn.textContent = 'Esperando…'; btn.disabled = true; }
     }
     function damasAcceptRematch() {
       document.getElementById('damas-rematch-overlay').classList.add('hidden');
