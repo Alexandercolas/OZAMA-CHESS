@@ -430,6 +430,21 @@ function cancelTimer(room) {
 // ── CLOCK SYSTEM ─────────────────────────────────────────────────
 const DEFAULT_TIME_MS = 10 * 60 * 1000;
 
+// Tablas automaticas por falta de progreso en Damas (Fase 15): sin
+// esto, dos reyes podian mover de un lado a otro para siempre sin que
+// ninguno de los dos ofreciera tablas -- Ajedrez ya tiene su propia
+// version de esta misma idea (game.halfMoveClock >= 100, la regla real
+// de 50 movimientos, ver getServerGameConclusion() mas abajo). 40
+// jugadas (20 por jugador) sin ninguna captura ni coronacion es una
+// simplificacion deliberada, no una regla FMJD oficial -- pensada para
+// cortar una partida estancada sin inventar un numero exotico.
+// Configurable via env SOLO para que los scripts de verificacion
+// puedan probar el corte real con una partida corta de verdad, en vez
+// de tener que jugar 40 jugadas reales sin ninguna captura disponible
+// (dificil de armar a mano desde el tablero inicial). En produccion
+// (sin la variable) siempre es 40.
+const NO_PROGRESS_PLY_LIMIT = Number(process.env.OZAMA_NO_PROGRESS_PLY_LIMIT) || 40;
+
 function stopClock(room) {
   if (room && room.clockInterval) { clearInterval(room.clockInterval); room.clockInterval = null; }
 }
@@ -2761,7 +2776,15 @@ if (room.white && room.black && !room.clockInterval) {
     // secuencia mas larga cuando hay captura obligatoria), asi que
     // "3 o mas" es un dato real, nunca inventado.
     if (result.captured.length >= 3) { room.hadMultiCapture = room.hadMultiCapture || {}; room.hadMultiCapture[myColor] = true; }
-    const status = OzamaCheckers.checkGameOver(room.board, room.turn);
+    // Contador de jugadas sin progreso (Fase 15): se reinicia con
+    // cualquier captura o coronacion (mismo criterio que
+    // game.halfMoveClock en Ajedrez: capturar o mover peon reinicia),
+    // nunca con un simple desplazamiento.
+    room.noProgressPlies = (result.captured.length > 0 || result.promoted) ? 0 : (room.noProgressPlies || 0) + 1;
+    let status = OzamaCheckers.checkGameOver(room.board, room.turn);
+    if (!status.over && room.noProgressPlies >= NO_PROGRESS_PLY_LIMIT) {
+      status = { over: true, winner: null, reason: 'no-progress' };
+    }
     if (status.over) { room.status = 'finished'; damasStopClock(room); }
 
     io.to(code).emit('damas:board-update', {
@@ -2872,6 +2895,7 @@ if (room.white && room.black && !room.clockInterval) {
       room.drawOfferBy = null;
       room.hadPromotion = null;
       room.hadMultiCapture = null;
+      room.noProgressPlies = 0;
       room.startedAt = new Date();
       room.tokens = { w: createRoomToken(), b: createRoomToken() };
       // La revancha mantiene el MISMO ritmo de tiempo de la partida

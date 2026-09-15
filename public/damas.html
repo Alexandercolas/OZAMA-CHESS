@@ -1580,7 +1580,7 @@
       }
 
       const title = document.getElementById('gameover-title');
-      if (gameOver.reason === 'draw') title.textContent = 'TABLAS';
+      if (gameOver.reason === 'draw' || gameOver.reason === 'no-progress') title.textContent = 'TABLAS';
       else if (gameOver.winner === null) title.textContent = 'PARTIDA TERMINADA';
       else if (iWon === true) title.textContent = 'GANASTE';
       else if (iWon === false) title.textContent = 'PERDISTE';
@@ -1594,6 +1594,7 @@
         'admin-closed': 'un administrador cerro la sala',
         'draw': 'ambos aceptaron las tablas',
         'timeout': 'se acabo el tiempo',
+        'no-progress': '40 jugadas sin capturas -- tablas automaticas',
       };
       document.getElementById('gameover-reason').textContent = reasonLabels[gameOver.reason] || 'Partida terminada.';
       const again = document.getElementById('gameover-again-btn');

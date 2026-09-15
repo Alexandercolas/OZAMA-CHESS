@@ -31,7 +31,13 @@ const DamasMatchSchema = new mongoose.Schema(
     winner: { type: String, enum: ['w', 'b', null], default: null },
     reason: {
       type: String,
-      enum: ['no-pieces', 'no-moves', 'resign', 'opponent-left', 'admin-closed', 'draw'],
+      // 'no-progress' (Fase 15, "Damas"): tablas automaticas por falta
+      // de progreso -- ver NO_PROGRESS_PLY_LIMIT en server.js. Antes de
+      // esto, Damas no tenia ningun equivalente a la regla de 50
+      // movimientos de Ajedrez (game.halfMoveClock/'fifty_move' en
+      // server.js) y una partida entre dos reyes podia, en teoria,
+      // durar para siempre sin que ninguno de los dos ofreciera tablas.
+      enum: ['no-pieces', 'no-moves', 'resign', 'opponent-left', 'admin-closed', 'draw', 'no-progress'],
       required: true,
     },
 
