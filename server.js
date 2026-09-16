@@ -62,6 +62,22 @@ function checkRuntimeConfig() {
 
 checkRuntimeConfig();
 
+// Resiliencia de proceso (Fase 27, roadmap "OZAMA PRO"): sin esto, una
+// promesa sin capturar en UN handler de socket/ruta (un bug aislado,
+// no un fallo de todo el sistema) tumba el proceso entero -- Node
+// trata un unhandledRejection como un uncaughtException desde la v15.
+// Eso cerraria de golpe TODAS las salas en curso de TODOS los
+// jugadores por un solo error aislado. El resto del codigo ya envuelve
+// casi todo en try/catch (rutas) y Zod (payloads de socket); esto es
+// la ultima red, no la primera linea de defensa -- solo loguea, nunca
+// tapa un bug real (sigue apareciendo en los logs de Render igual).
+process.on('unhandledRejection', (reason) => {
+  console.error('[Server] unhandledRejection:', reason instanceof Error ? reason.stack : reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[Server] uncaughtException:', err.stack || err.message);
+});
+
 const ALLOWED_APP_ORIGINS = new Set([
   'https://ozama-chess.onrender.com',
   'https://localhost',
@@ -3304,3 +3320,39 @@ connectDatabase()
     console.error('[DB] Error conectando MongoDB Atlas:', err.message);
     process.exit(1);
   });
+
+// Apagado ordenado (Fase 27): Render manda SIGTERM antes de cada
+// deploy/reinicio -- sin manejarlo, Node mata el proceso de una vez,
+// cerrando todos los sockets de golpe (corte TCP, no un disconnect
+// limpio) y pudiendo cortar una escritura a Mongo a medio hacer. El
+// estado de las salas vive en memoria (`rooms`/`damasRooms`, nunca en
+// Mongo mientras la partida esta en curso), asi que un reinicio
+// SIEMPRE pierde las partidas activas -- un apagado ordenado no
+// resuelve eso. Lo que SI resuelve: que cada cliente conectado reciba
+// un evento 'disconnect' real de Socket.IO (dispara el overlay de
+// "reconectando" que ya existe desde la Fase 14, en vez de que el
+// socket quede colgado hasta que el navegador detecte el corte por su
+// cuenta) y que Mongoose cierre la conexion sin dejar una escritura
+// suelta a medio hacer.
+let shuttingDown = false;
+function gracefulShutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[Server] ${signal} recibido, cerrando de forma ordenada...`);
+  // io.close() ya cierra el http.Server subyacente (se lo pasamos en
+  // new Server(server, ...)) -- llamar tambien a server.close() por
+  // separado cierra el mismo handle dos veces y en Windows eso hace
+  // que el proceso truene con un assertion failure de libuv.
+  io.close(async () => {
+    try { await mongoose.connection.close(); } catch (_) { /* ya se estaba cerrando */ }
+    console.log('[Server] Apagado completo.');
+    process.exit(0);
+  });
+  // Salvaguarda: si algo se queda colgado (una request lenta, un
+  // socket que no termina de cerrar), no dejar el proceso vivo para
+  // siempre -- Render igual lo mataria con SIGKILL pasado su propio
+  // margen, mejor cerrar nosotros primero.
+  setTimeout(() => process.exit(1), 8000).unref();
+}
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));

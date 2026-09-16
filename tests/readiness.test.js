@@ -341,3 +341,21 @@ test('Android release base blocks backups and cleartext traffic', () => {
   assert.ok(fs.statSync(path.join(root, 'public/vendor/socket.io.min.js')).size > 10_000);
   assert.ok(fs.statSync(path.join(root, 'resources/icon.png')).size > 10_000);
 });
+
+// Resiliencia de proceso (Fase 27): sin estos handlers, Render mata el
+// proceso de golpe en cada deploy (SIGTERM sin manejar) o una sola
+// promesa sin capturar tumba TODAS las partidas en curso de TODOS los
+// jugadores (unhandledRejection sin manejar). Ver scripts/verify-
+// graceful-shutdown.js para la prueba de comportamiento real.
+test('server.js survives an unhandled rejection and shuts down cleanly on SIGTERM', () => {
+  const server = read('server.js');
+  assert.match(server, /process\.on\('unhandledRejection',/);
+  assert.match(server, /process\.on\('uncaughtException',/);
+  assert.match(server, /process\.on\('SIGTERM',.*gracefulShutdown/);
+  assert.match(server, /process\.on\('SIGINT',.*gracefulShutdown/);
+  // io.close() ya cierra el http.Server que le pasamos -- llamar
+  // tambien a server.close() por separado cierra el mismo handle dos
+  // veces y en Windows eso hace que el proceso truene (visto en vivo
+  // al construir esta fase). No debe volver a aparecer.
+  assert.doesNotMatch(server, /io\.close\(\);\s*\n\s*server\.close\(/);
+});
