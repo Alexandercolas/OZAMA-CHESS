@@ -416,6 +416,7 @@
         <button class="tab-button" type="button" data-tab="users">Usuarios</button>
         <button class="tab-button" type="button" data-tab="rooms">Salas en vivo</button>
         <button class="tab-button" type="button" data-tab="matches">Partidas</button>
+        <button class="tab-button" type="button" data-tab="reports">Denuncias</button>
         <button class="tab-button" type="button" data-tab="events">Eventos</button>
         <button class="tab-button" type="button" data-tab="system">Sistema</button>
       </nav>
@@ -443,6 +444,7 @@
               <div class="surface-body action-row">
                 <button class="secondary-button" type="button" data-go-tab="users">Gestionar usuarios</button>
                 <button class="secondary-button" type="button" data-go-tab="rooms">Ver salas</button>
+                <button class="secondary-button" type="button" data-go-tab="reports">Ver denuncias</button>
                 <button class="primary-button" type="button" data-open-event>Crear evento</button>
               </div>
             </section>
@@ -489,6 +491,29 @@
               </table>
             </div>
             <div class="pagination"><span id="match-page-label">Página 1</span><div class="pagination-controls"><button class="secondary-button" id="match-prev" type="button">Anterior</button><button class="secondary-button" id="match-next" type="button">Siguiente</button></div></div>
+          </div>
+        </section>
+
+        <section class="tab-panel" data-panel="reports">
+          <div class="section-head">
+            <div><h2 class="section-title">Denuncias de jugadores</h2><p class="section-sub">Revisa reportes de comportamiento tóxico, trampa sospechada o nombres inapropiados.</p></div>
+            <div class="toolbar">
+              <select class="inline-select" id="report-filter">
+                <option value="pending" selected>Pendientes</option>
+                <option value="reviewed">Revisadas</option>
+                <option value="dismissed">Descartadas</option>
+                <option value="all">Todas</option>
+              </select>
+              <button class="secondary-button" type="button" data-refresh="reports">Actualizar</button>
+            </div>
+          </div>
+          <div class="data-surface">
+            <div class="table-scroll">
+              <table>
+                <thead><tr><th>Denunciante</th><th>Denunciado</th><th>Motivo</th><th>Nota</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead>
+                <tbody id="report-table"></tbody>
+              </table>
+            </div>
           </div>
         </section>
 

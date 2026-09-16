@@ -18,6 +18,8 @@
     matchPage: 1,
     matchPages: 1,
     matchQuery: '',
+    reports: [],
+    reportFilter: 'pending',
     loaded: new Set(),
     confirmResolver: null,
     toastTimer: null,
@@ -184,6 +186,7 @@
       users: loadUsers,
       rooms: loadRooms,
       matches: loadMatches,
+      reports: loadReports,
       events: loadEvents,
       system: loadSystem,
     };
@@ -466,6 +469,85 @@
     $('#match-next').disabled = state.matchPage >= state.matchPages;
   }
 
+  const reportReasonLabels = {
+    comportamiento_toxico: 'Comportamiento tóxico',
+    trampa_sospechada: 'Trampa sospechada',
+    nombre_inapropiado: 'Nombre inapropiado',
+    otro: 'Otro',
+  };
+
+  function reportedCell(reported) {
+    const wrapper = element('span');
+    wrapper.append(document.createTextNode(reported?.username || 'Cuenta eliminada'));
+    if (reported && reported.isActive === false) {
+      wrapper.appendChild(document.createTextNode(' '));
+      wrapper.appendChild(badge('Suspendida', 'bad'));
+    }
+    return wrapper;
+  }
+
+  function renderReports() {
+    const body = $('#report-table');
+    body.replaceChildren();
+    for (const report of state.reports) {
+      const row = document.createElement('tr');
+      const statusBadge = report.status === 'pending'
+        ? badge('Pendiente', 'warn')
+        : report.status === 'reviewed'
+          ? badge('Revisada', 'good')
+          : badge('Descartada');
+      const actions = element('div', 'action-row');
+      if (report.status === 'pending') {
+        actions.append(
+          actionButton('Marcar revisada', 'secondary', async () => {
+            try { await reviewReport(report, 'reviewed'); }
+            catch (err) { showToast(err.message, 'error'); }
+          }),
+          actionButton('Descartar', 'danger', async () => {
+            try { await reviewReport(report, 'dismissed'); }
+            catch (err) { showToast(err.message, 'error'); }
+          }),
+        );
+      } else {
+        actions.appendChild(element('span', 'user-email', report.reviewedBy?.username ? `Por ${report.reviewedBy.username}` : ''));
+      }
+      row.append(
+        tableCell('Denunciante', report.reporter?.username || 'Cuenta eliminada'),
+        tableCell('Denunciado', reportedCell(report.reported)),
+        tableCell('Motivo', reportReasonLabels[report.reason] || report.reason),
+        tableCell('Nota', report.note || '--'),
+        tableCell('Fecha', formatDate(report.createdAt)),
+        tableCell('Estado', statusBadge),
+        tableCell('Acciones', actions),
+      );
+      body.appendChild(row);
+    }
+    if (!state.reports.length) {
+      const row = document.createElement('tr');
+      const cell = tableCell('', 'No hay denuncias en este filtro.');
+      cell.colSpan = 7;
+      row.appendChild(cell);
+      body.appendChild(row);
+    }
+  }
+
+  async function reviewReport(report, status) {
+    await api(`/api/admin/reports/${encodeURIComponent(report._id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+    showToast(status === 'reviewed' ? 'Denuncia marcada como revisada.' : 'Denuncia descartada.', 'success');
+    state.loaded.delete('system');
+    await loadReports();
+  }
+
+  async function loadReports() {
+    const params = new URLSearchParams({ status: state.reportFilter });
+    const data = await api(`/api/admin/reports?${params}`);
+    state.reports = data.reports || [];
+    renderReports();
+  }
+
   const eventStatusLabels = {
     draft: 'Borrador',
     active: 'Activo',
@@ -632,6 +714,10 @@
     $('#user-next').addEventListener('click', async () => { state.userPage += 1; await loadUsers(); });
     $('#match-prev').addEventListener('click', async () => { state.matchPage -= 1; await loadMatches(); });
     $('#match-next').addEventListener('click', async () => { state.matchPage += 1; await loadMatches(); });
+    $('#report-filter').addEventListener('change', async (event) => {
+      state.reportFilter = event.target.value;
+      try { await loadReports(); } catch (err) { showToast(err.message, 'error'); }
+    });
 
     $$('.modal').forEach((modal) => modal.addEventListener('click', (event) => {
       if (event.target !== modal) return;
