@@ -137,6 +137,13 @@ const PUZZLES = [
 const BY_KEY = new Map(PUZZLES.map((p) => [p.key, p]));
 const BY_DIFFICULTY_ASC = [...PUZZLES].sort((a, b) => a.difficulty - b.difficulty);
 
+// Categorias (Fase 21, "Entrenamiento") -- mismo criterio que
+// services/puzzles.js (Ajedrez): derivadas del catalogo real, nunca
+// una lista aparte.
+const CATEGORY_LABELS = { captura: 'Captura', 'captura-multiple': 'Captura Múltiple', coronacion: 'Coronación' };
+const CATEGORIES = [...new Set(PUZZLES.map((p) => p.category))]
+  .map((key) => ({ key, label: CATEGORY_LABELS[key] || key }));
+
 function byKey(key) {
   return BY_KEY.get(key) || null;
 }
@@ -157,9 +164,11 @@ function dailyPuzzleForDate(dateStr) {
   return PUZZLES[hash % PUZZLES.length];
 }
 
-function nextPracticePuzzle(solvedKeys) {
+function nextPracticePuzzle(solvedKeys, category) {
   const solved = new Set(solvedKeys || []);
-  return BY_DIFFICULTY_ASC.find((p) => !solved.has(p.key)) || BY_DIFFICULTY_ASC[0];
+  const pool = category ? BY_DIFFICULTY_ASC.filter((p) => p.category === category) : BY_DIFFICULTY_ASC;
+  if (!pool.length) return null;
+  return pool.find((p) => !solved.has(p.key)) || pool[0];
 }
 
 function solutionMatches(puzzle, submittedMoves) {
@@ -170,4 +179,4 @@ function solutionMatches(puzzle, submittedMoves) {
   });
 }
 
-module.exports = { PUZZLES, byKey, publicPuzzle, dailyPuzzleForDate, nextPracticePuzzle, solutionMatches };
+module.exports = { PUZZLES, CATEGORIES, byKey, publicPuzzle, dailyPuzzleForDate, nextPracticePuzzle, solutionMatches };

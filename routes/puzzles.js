@@ -6,7 +6,7 @@
 // los logros que otorga resolver puzzles.
 const express = require('express');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
-const { byKey, publicPuzzle, dailyPuzzleForDate, nextPracticePuzzle, solutionMatches } = require('../services/puzzles');
+const { CATEGORIES, byKey, publicPuzzle, dailyPuzzleForDate, nextPracticePuzzle, solutionMatches } = require('../services/puzzles');
 const { xpForPuzzle, levelFromXp, xpIntoLevel, buildContext, checkNewAchievements } = require('../services/achievements');
 const { bumpWeeklyPuzzleSolved } = require('../services/weeklyChallenges');
 
@@ -25,9 +25,22 @@ router.get('/daily', optionalAuth, async (req, res) => {
   res.json({ puzzle: publicPuzzle(puzzle), date: today, alreadyDone });
 });
 
+// `category` (Fase 21, "Entrenamiento") es opcional -- filtra el
+// catalogo por tactica (mate1/fork/pin) en vez de siempre dar el mas
+// facil de TODO el catalogo. Un valor desconocido simplemente no
+// matchea ningun puzzle (nextPracticePuzzle ya devuelve null en ese
+// caso), asi que no hace falta validar contra CATEGORIES aca.
 router.get('/practice', requireAuth, async (req, res) => {
-  const puzzle = nextPracticePuzzle(req.user.puzzles?.solvedKeys);
+  const category = CATEGORIES.some((c) => c.key === req.query.category) ? req.query.category : undefined;
+  const puzzle = nextPracticePuzzle(req.user.puzzles?.solvedKeys, category);
   res.json({ puzzle: publicPuzzle(puzzle) });
+});
+
+// GET /api/puzzles/categories - catalogo de categorias reales
+// (Fase 21), para que training.html arme los botones de filtro sin
+// tener una lista hardcodeada que se pueda desincronizar del catalogo.
+router.get('/categories', (_req, res) => {
+  res.json({ categories: CATEGORIES });
 });
 
 router.get('/stats', requireAuth, async (req, res) => {

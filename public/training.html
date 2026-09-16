@@ -46,6 +46,20 @@
     }
     .mode-tab.active { color: var(--gold); border-color: rgba(200,152,60,0.45); background: rgba(200,152,60,0.08); }
 
+    /* Filtro por categoria (Fase 21, "Entrenamiento") -- solo tiene
+       sentido en Practica libre (el Desafio del dia es siempre UNO
+       fijo por fecha, no algo que se elija). Mismo lenguaje visual
+       que .mode-tab pero mas chico y en fila con wrap, porque puede
+       haber mas de 2-3 categorias segun el catalogo. */
+    .category-row { display: none; flex-wrap: wrap; gap: 6px; margin: -8px 0 18px; }
+    .category-row.show { display: flex; }
+    .category-chip {
+      padding: 6px 12px; border-radius: 20px; cursor: pointer;
+      background: var(--s1); border: 1px solid rgba(200,152,60,0.16); color: var(--dim);
+      font-size: 11px; font-weight: 600;
+    }
+    .category-chip.active { color: var(--gold); border-color: rgba(200,152,60,0.45); background: rgba(200,152,60,0.08); }
+
     .puzzle-card { background: var(--s1); border: 1px solid rgba(200,152,60,0.18); border-radius: 12px; padding: 18px; }
     .puzzle-title { font-family: var(--ft); font-size: 19px; color: var(--gold); text-align: center; margin-bottom: 4px; }
     .puzzle-desc { font-size: 12.5px; color: var(--dim); text-align: center; margin-bottom: 16px; }
@@ -88,6 +102,11 @@
     let currentMode = 'daily';
     let selected = null;
     let solving = false;
+    // Fase 21, "Entrenamiento": categorias reales del catalogo
+    // (services/puzzles.js), nunca hardcodeadas -- se piden una vez a
+    // /api/puzzles/categories. currentCategory null = "Todas".
+    let categories = [];
+    let currentCategory = null;
 
     function sqName(row, col) { return String.fromCharCode(97 + col) + (8 - row); }
     function isOwnPiece(ch) {
@@ -110,6 +129,7 @@
           <div class="mode-tab active" id="tab-daily" onclick="switchMode('daily')">Desafío del día</div>
           <div class="mode-tab" id="tab-practice" onclick="switchMode('practice')">Práctica libre</div>
         </div>
+        <div class="category-row" id="category-row"></div>
         <div class="puzzle-card" id="puzzle-card">
           <div class="loading">Cargando puzzle...</div>
         </div>
@@ -121,6 +141,33 @@
       currentMode = mode;
       document.getElementById('tab-daily').classList.toggle('active', mode === 'daily');
       document.getElementById('tab-practice').classList.toggle('active', mode === 'practice');
+      document.getElementById('category-row').classList.toggle('show', mode === 'practice');
+      loadPuzzle();
+    }
+
+    async function loadCategories() {
+      try {
+        const res = await fetch('/api/puzzles/categories', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        categories = data.categories || [];
+        renderCategoryRow();
+      } catch (_) { /* silencioso -- sin categorias, Practica libre sigue funcionando sin filtro */ }
+    }
+
+    function renderCategoryRow() {
+      const row = document.getElementById('category-row');
+      if (!row) return;
+      const allChip = `<div class="category-chip${currentCategory === null ? ' active' : ''}" onclick="selectCategory(null)">Todas</div>`;
+      row.innerHTML = allChip + categories.map((c) =>
+        `<div class="category-chip${currentCategory === c.key ? ' active' : ''}" onclick="selectCategory('${c.key}')">${escapeHtml(c.label)}</div>`
+      ).join('');
+    }
+
+    function selectCategory(key) {
+      if (key === currentCategory) return;
+      currentCategory = key;
+      renderCategoryRow();
       loadPuzzle();
     }
 
@@ -141,10 +188,13 @@
       const card = document.getElementById('puzzle-card');
       card.innerHTML = '<div class="loading">Cargando puzzle...</div>';
       try {
-        const url = currentMode === 'daily' ? '/api/puzzles/daily' : '/api/puzzles/practice';
+        const url = currentMode === 'daily'
+          ? '/api/puzzles/daily'
+          : `/api/puzzles/practice${currentCategory ? `?category=${encodeURIComponent(currentCategory)}` : ''}`;
         const res = await fetch(url, { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'No se pudo cargar el puzzle.');
+        if (!data.puzzle) throw new Error('No hay puzzles en esta categoría todavía.');
         currentPuzzle = data.puzzle;
         currentPuzzle._alreadyDone = !!data.alreadyDone;
         renderPuzzle();
@@ -282,12 +332,14 @@
 
       renderShell();
       loadStats();
+      loadCategories();
       loadPuzzle();
     }
 
     window.switchMode = switchMode;
     window.onSquareClick = onSquareClick;
     window.loadPuzzle = loadPuzzle;
+    window.selectCategory = selectCategory;
     init();
   </script>
 </body>

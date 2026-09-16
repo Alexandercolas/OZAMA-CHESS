@@ -171,6 +171,17 @@ const PUZZLES = [
 const BY_KEY = new Map(PUZZLES.map((p) => [p.key, p]));
 const BY_DIFFICULTY_ASC = [...PUZZLES].sort((a, b) => a.difficulty - b.difficulty);
 
+// Categorias (Fase 21, "Entrenamiento"): el campo `category` de cada
+// puzzle ya existia en el catalogo desde el principio, pero training.html
+// nunca lo mostraba ni dejaba filtrar por el -- "Entrenamiento" era
+// exactamente la misma lista sin importar que tactica se queria
+// practicar. CATEGORY_LABELS/CATEGORIES se derivan del catalogo real
+// (nunca una lista aparte que se pueda desincronizar si se agrega un
+// puzzle de una categoria nueva).
+const CATEGORY_LABELS = { mate1: 'Mate en 1', fork: 'Horquilla', pin: 'Clavada' };
+const CATEGORIES = [...new Set(PUZZLES.map((p) => p.category))]
+  .map((key) => ({ key, label: CATEGORY_LABELS[key] || key }));
+
 function byKey(key) {
   return BY_KEY.get(key) || null;
 }
@@ -193,9 +204,14 @@ function dailyPuzzleForDate(dateStr) {
 // Siguiente puzzle de practica para un usuario: el mas facil que
 // todavia no resolvio. Si ya los resolvio todos, vuelve a ofrecer el
 // mas facil (el catalogo esta pensado para crecer con el tiempo).
-function nextPracticePuzzle(solvedKeys) {
+// `category` (Fase 21) es opcional -- filtra el catalogo ANTES de
+// buscar, asi "practica solo Horquillas" reusa exactamente esta misma
+// logica de dificultad/repeticion en vez de un camino aparte.
+function nextPracticePuzzle(solvedKeys, category) {
   const solved = new Set(solvedKeys || []);
-  return BY_DIFFICULTY_ASC.find((p) => !solved.has(p.key)) || BY_DIFFICULTY_ASC[0];
+  const pool = category ? BY_DIFFICULTY_ASC.filter((p) => p.category === category) : BY_DIFFICULTY_ASC;
+  if (!pool.length) return null;
+  return pool.find((p) => !solved.has(p.key)) || pool[0];
 }
 
 // Compara la solucion enviada por el cliente contra la guardada.
@@ -212,4 +228,4 @@ function solutionMatches(puzzle, submittedMoves) {
   });
 }
 
-module.exports = { PUZZLES, byKey, publicPuzzle, dailyPuzzleForDate, nextPracticePuzzle, solutionMatches };
+module.exports = { PUZZLES, CATEGORIES, byKey, publicPuzzle, dailyPuzzleForDate, nextPracticePuzzle, solutionMatches };

@@ -7,7 +7,7 @@
 // services/damas-puzzles.js y el campo User.damasPuzzles.
 const express = require('express');
 const { requireAuth, optionalAuth } = require('../middleware/auth');
-const { byKey, publicPuzzle, dailyPuzzleForDate, nextPracticePuzzle, solutionMatches } = require('../services/damas-puzzles');
+const { CATEGORIES, byKey, publicPuzzle, dailyPuzzleForDate, nextPracticePuzzle, solutionMatches } = require('../services/damas-puzzles');
 const { xpForPuzzle, levelFromXp, xpIntoLevel, buildContext, checkNewAchievements } = require('../services/achievements');
 const { bumpWeeklyPuzzleSolved } = require('../services/weeklyChallenges');
 
@@ -26,9 +26,16 @@ router.get('/daily', optionalAuth, async (req, res) => {
   res.json({ puzzle: publicPuzzle(puzzle), date: today, alreadyDone });
 });
 
+// `category` (Fase 21, "Entrenamiento"): ver el mismo comentario en
+// routes/puzzles.js.
 router.get('/practice', requireAuth, async (req, res) => {
-  const puzzle = nextPracticePuzzle(req.user.damasPuzzles?.solvedKeys);
+  const category = CATEGORIES.some((c) => c.key === req.query.category) ? req.query.category : undefined;
+  const puzzle = nextPracticePuzzle(req.user.damasPuzzles?.solvedKeys, category);
   res.json({ puzzle: publicPuzzle(puzzle) });
+});
+
+router.get('/categories', (_req, res) => {
+  res.json({ categories: CATEGORIES });
 });
 
 router.get('/stats', requireAuth, async (req, res) => {
