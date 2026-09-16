@@ -16,6 +16,7 @@ const { getActiveSeason, seasonProgressFor, seasonHistoryFor } = require('../ser
 const { activeThematicEvent } = require('../services/thematicEvents');
 const { weeklyProgressFor, claimWeeklyRewards } = require('../services/weeklyChallenges');
 const { timeControlByKey } = require('../services/timeControls');
+const { maybeReconcilePremium } = require('../services/paypal');
 const Notification = require('../models/Notification');
 const { notify } = require('../services/notifications');
 
@@ -92,6 +93,12 @@ function publicLeaderboardFilter() {
 // GET /api/user/me - own profile
 router.get('/me', requireAuth, async (req, res) => {
   res.set('Cache-Control', 'no-store');
+  // Reconciliacion perezosa de Premium (Fase 24): cubre el caso donde
+  // un webhook de renovacion de PayPal se perdio -- ver el comentario
+  // en services/paypal.js. Se llama aca porque /me es el endpoint que
+  // valida la sesion en CADA carga de pagina (validateStoredSession en
+  // script.js), asi que cualquier arreglo se refleja de inmediato.
+  await maybeReconcilePremium(req.user);
   // isAdmin se calcula server-side contra ADMIN_EMAILS (env), nunca se
   // almacena en el documento del usuario: solo el dueno del servidor
   // puede otorgar este flag, cambiando esa variable de entorno.
@@ -107,6 +114,7 @@ router.get('/me', requireAuth, async (req, res) => {
 });
 
 router.get('/plan', requireAuth, async (req, res) => {
+  await maybeReconcilePremium(req.user);
   res.json(premiumCapabilities(req.user));
 });
 

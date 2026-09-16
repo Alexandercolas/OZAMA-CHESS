@@ -8,6 +8,8 @@
 // confirme explicitamente 'live' -- asi nunca se cobra de verdad por
 // accidente mientras se prueba).
 
+const User = require('../models/User');
+
 function paypalBaseUrl() {
   return String(process.env.PAYPAL_ENV || '').trim() === 'live'
     ? 'https://api-m.paypal.com'
@@ -159,6 +161,72 @@ async function verifyWebhookSignature(headers, body) {
   return result?.verification_status === 'SUCCESS';
 }
 
+// Reconciliacion perezosa (Fase 24, "Premium"): la auditoria de Fase 0
+// encontro el unico hueco real de este sistema -- si el webhook de
+// renovacion (PAYMENT.SALE.COMPLETED) de PayPal se pierde, premiumUntil
+// nunca se extiende y un usuario que SIGUE pagando pierde el acceso
+// igual. Mismo principio que services/seasons.js (maybeEnsureSeasons):
+// nunca un cron de verdad -- en vez de eso, se reconsulta contra PayPal
+// solo cuando hace falta (plan='premium' pero premiumUntil ya vencio
+// localmente Y subscriptionStatus sigue 'active', la unica combinacion
+// que indica un posible webhook perdido) y con throttle en memoria por
+// usuario, para nunca generarle trafico a PayPal en el camino comun.
+//
+// Si un usuario cancelo o dejo de pagar de verdad (subscriptionStatus
+// ya es 'past_due'/'cancelled'), no hay nada que reconciliar: eso ya
+// llego por webhook y isPremiumActive() (routes/user.js) ya lo trata
+// como vencido por la fecha, sin necesidad de tocar la API de PayPal.
+const _reconcileThrottle = new Map(); // userId (string) -> ultimo intento (ms)
+const RECONCILE_THROTTLE_MS = 10 * 60 * 1000;
+const RECONCILE_MAP_MAX = 5000;
+
+function _rememberReconcileAttempt(userId) {
+  _reconcileThrottle.set(userId, Date.now());
+  if (_reconcileThrottle.size > RECONCILE_MAP_MAX) {
+    _reconcileThrottle.delete(_reconcileThrottle.keys().next().value);
+  }
+}
+
+async function maybeReconcilePremium(user, { fetchFn = fetchSubscription } = {}) {
+  try {
+    if (!user || user.plan !== 'premium') return;
+    const premiumUntil = user.premiumUntil ? new Date(user.premiumUntil) : null;
+    if (!premiumUntil || premiumUntil > new Date()) return; // no vencido, nada que reconciliar
+    if (user.subscriptionStatus !== 'active') return; // ya sincronizado por webhook (cancelled/past_due)
+
+    const userId = String(user._id);
+    const lastAttempt = _reconcileThrottle.get(userId) || 0;
+    if (Date.now() - lastAttempt < RECONCILE_THROTTLE_MS) return;
+    _rememberReconcileAttempt(userId);
+
+    const full = user.paypalSubscriptionId !== undefined
+      ? user
+      : await User.findById(user._id).select('+paypalSubscriptionId');
+    const subscriptionId = full?.paypalSubscriptionId;
+    if (!subscriptionId) return;
+
+    const subscription = await fetchFn(subscriptionId);
+    if (!subscription) return; // PayPal no respondio -- mejor mantener el ultimo estado conocido que apagarle el premium a alguien por un error transitorio
+
+    if (subscription.status === 'ACTIVE') {
+      const nextBilling = subscription.billing_info?.next_billing_time
+        ? new Date(subscription.billing_info.next_billing_time)
+        : new Date(Date.now() + 31 * 24 * 60 * 60 * 1000); // colchon, mismo fallback que el webhook PAYMENT.SALE.COMPLETED
+      await User.updateOne({ _id: user._id }, { $set: { premiumUntil: nextBilling, subscriptionStatus: 'active' } });
+      user.premiumUntil = nextBilling; // refleja el arreglo en esta misma respuesta, sin esperar el proximo request
+    } else {
+      // PayPal confirma que de verdad ya no esta activa -- sincroniza
+      // el estado para que quede claro en perfil/admin (isPremiumActive
+      // ya la trataba como vencida por la fecha, esto no le da ni le
+      // quita acceso a nadie).
+      await User.updateOne({ _id: user._id }, { $set: { subscriptionStatus: 'cancelled' } });
+      user.subscriptionStatus = 'cancelled';
+    }
+  } catch (err) {
+    console.warn('[Billing] maybeReconcilePremium:', err.message);
+  }
+}
+
 module.exports = {
   paypalConfigured,
   billingProviderConfig,
@@ -166,4 +234,5 @@ module.exports = {
   createPremiumProductAndPlan,
   cancelSubscription,
   verifyWebhookSignature,
+  maybeReconcilePremium,
 };
