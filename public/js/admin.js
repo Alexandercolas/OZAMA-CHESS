@@ -508,6 +508,18 @@
             catch (err) { showToast(err.message, 'error'); }
           }),
         );
+        if (report.reported && report.reported.isActive !== false) {
+          actions.appendChild(actionButton('Suspender cuenta', 'danger', async () => {
+            const accepted = await confirmAction(
+              'Suspender cuenta',
+              `Se cerrarán las sesiones de ${report.reported.username} y no podrá entrar hasta ser reactivado. La denuncia queda marcada como revisada.`,
+              'Suspender',
+            );
+            if (!accepted) return;
+            try { await suspendReportedUser(report); }
+            catch (err) { showToast(err.message, 'error'); }
+          }));
+        }
       } else {
         actions.appendChild(element('span', 'user-email', report.reviewedBy?.username ? `Por ${report.reviewedBy.username}` : ''));
       }
@@ -538,6 +550,27 @@
     });
     showToast(status === 'reviewed' ? 'Denuncia marcada como revisada.' : 'Denuncia descartada.', 'success');
     state.loaded.delete('system');
+    await loadReports();
+  }
+
+  // Cierra el circuito denuncia -> accion real (Fase 26, "Moderacion"):
+  // antes, resolver una denuncia legitima obligaba a salir de esta
+  // pestaña, ir a Usuarios y buscar el nombre a mano. Reusa el mismo
+  // endpoint que ya usa la pestaña de Usuarios (PATCH .../isActive),
+  // no un camino de suspension paralelo.
+  async function suspendReportedUser(report) {
+    await api(`/api/admin/users/${encodeURIComponent(report.reported._id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isActive: false }),
+    });
+    await api(`/api/admin/reports/${encodeURIComponent(report._id)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'reviewed' }),
+    });
+    showToast(`${report.reported.username} suspendido. Denuncia marcada como revisada.`, 'success');
+    state.loaded.delete('dashboard');
+    state.loaded.delete('system');
+    state.loaded.delete('users');
     await loadReports();
   }
 
