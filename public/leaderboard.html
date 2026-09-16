@@ -345,6 +345,24 @@
       box-shadow: 0 0 0 2px rgba(226,185,96,0.55), 0 0 14px rgba(226,185,96,0.35);
     }
 
+    /* Marco de perfil equipado (Fase 23, "Ranking"): el ranking es la
+       pagina MAS publica de toda la app, pero nunca mostraba nivel/
+       titulo/marco -- mismos colores por marco que ya usan player.html
+       y profile.html (duplicados a proposito, mismo criterio que esas
+       dos paginas: no vale la pena una hoja de estilos compartida
+       solo para 8 reglas de box-shadow). */
+    .avatar[data-frame="bronce"] { box-shadow: 0 0 0 3px #8B5A2B; }
+    .avatar[data-frame="plata"] { box-shadow: 0 0 0 3px #C7CCD1; }
+    .avatar[data-frame="oro"] { box-shadow: 0 0 0 3px #FFD34D; }
+    .avatar[data-frame="racha"] { box-shadow: 0 0 0 3px #E2571C, 0 0 12px 2px rgba(226,87,28,0.5); }
+    .avatar[data-frame="tactico"] { box-shadow: 0 0 0 3px #3F7D4E; }
+    .avatar[data-frame="cazador"] { box-shadow: 0 0 0 3px #7A1F2B; }
+    .avatar[data-frame="centenario"] { box-shadow: 0 0 0 3px #6B4A2A; }
+    .avatar[data-frame="campeon"] { box-shadow: 0 0 0 3px #FFD700, 0 0 16px 3px rgba(255,215,0,0.55); }
+    .avatar[data-frame="temporada"] { box-shadow: 0 0 0 3px #7FB8E8, 0 0 16px 3px rgba(127,184,232,0.55); }
+
+    .player-title { color: var(--gold-2); font-weight: 700; }
+
     .player-name {
       overflow: hidden;
       color: var(--warm);
@@ -596,11 +614,12 @@
 
     function avatar(player) {
       const premiumClass = player.premiumActive ? ' premium' : '';
+      const frameAttr = ` data-frame="${escapeHtml(player.equippedFrame || 'ninguno')}"`;
       if (player.avatarImage) {
-        return `<span class="avatar${premiumClass}"><img src="${escapeHtml(player.avatarImage)}" alt=""></span>`;
+        return `<span class="avatar${premiumClass}"${frameAttr}><img src="${escapeHtml(player.avatarImage)}" alt=""></span>`;
       }
       const initial = escapeHtml((player.username || '?').charAt(0).toUpperCase());
-      return `<span class="avatar${premiumClass}">${initial}</span>`;
+      return `<span class="avatar${premiumClass}"${frameAttr}>${initial}</span>`;
     }
 
     function statsFor(player) {
@@ -638,6 +657,7 @@
                 <div class="player-country">
                   <img class="flag" src="https://flagcdn.com/40x30/${code}.png" alt="${code.toUpperCase()}" onerror="this.style.visibility='hidden'">
                   <span>${code.toUpperCase()}</span>
+                  <span class="player-title">· ${escapeHtml(player.globalTitle || 'Novato')}</span>
                 </div>
               </div>
             </div>

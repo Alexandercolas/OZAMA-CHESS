@@ -946,15 +946,20 @@ router.get('/leaderboard', optionalAuth, async (req, res) => {
   try {
     res.set('Cache-Control', 'no-store');
     const game = req.query.game === 'damas' ? 'damas' : 'chess';
+    // xp/achievements/equippedFrame/equippedTitle (Fase 23, "Ranking"):
+    // el leaderboard es la pagina MAS publica y competitiva de toda la
+    // app, pero nunca mostraba nivel/titulo/marco -- todo eso ya existe
+    // y se muestra en player.html a un click de distancia. Mismos
+    // campos que ya selecciona el perfil publico, ver mas abajo.
     const players = game === 'damas'
       ? await User.find(publicLeaderboardFilter())
         .sort({ damasElo: -1 })
         .limit(20)
-        .select('username country avatar avatarImage damasElo damasStats plan premiumUntil')
+        .select('username country avatar avatarImage damasElo damasStats plan premiumUntil xp achievements equippedFrame equippedTitle')
       : await User.find(publicLeaderboardFilter())
         .sort({ elo: -1 })
         .limit(20)
-        .select('username country avatar avatarImage elo stats plan premiumUntil');
+        .select('username country avatar avatarImage elo stats plan premiumUntil xp achievements equippedFrame equippedTitle');
 
     const payload = {
       season: await getActiveSeason(game),
@@ -962,8 +967,12 @@ router.get('/leaderboard', optionalAuth, async (req, res) => {
       players: players.map((player) => {
         const json = player.toJSON();
         json.premiumActive = isPremiumActive(player);
+        json.level = levelFromXp(player.xp);
+        json.globalTitle = resolveGlobalTitle(player, levelFromXp);
         delete json.plan;
         delete json.premiumUntil;
+        delete json.xp;
+        delete json.achievements;
         if (game === 'damas') {
           json.elo = json.damasElo;
           json.stats = json.damasStats;

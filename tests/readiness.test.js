@@ -249,7 +249,12 @@ test('public leaderboard stays finite and excludes known test accounts', () => {
   assert.match(route, /\$not: \/\^sec\[A-D\]_\\d\{8\}\$\/i/);
   assert.match(route, /\$nin: \['imgsrconeerror'\]/);
   assert.match(route, /\.limit\(20\)/);
-  assert.match(route, /\.select\('username country avatar avatarImage elo stats plan premiumUntil'\)/);
+  // xp/achievements/equippedFrame/equippedTitle (Fase 23, "Ranking"):
+  // se agregaron para mostrar nivel/titulo/marco en el ranking, mismos
+  // campos que ya son publicos en player.html -- la guarda real de
+  // esta prueba son los doesNotMatch de abajo (nunca email/lastSeenAt),
+  // no la lista exacta de campos publicos, que puede crecer.
+  assert.match(route, /\.select\('username country avatar avatarImage elo stats plan premiumUntil xp achievements equippedFrame equippedTitle'\)/);
   assert.doesNotMatch(route, /\.select\([^)]*email/);
   assert.doesNotMatch(route, /\.select\([^)]*lastSeenAt/);
 });
