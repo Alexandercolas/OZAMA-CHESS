@@ -164,8 +164,10 @@ function dailyPuzzleForDate(dateStr) {
   return PUZZLES[hash % PUZZLES.length];
 }
 
-function nextPracticePuzzle(solvedKeys, category) {
-  const solved = new Set(solvedKeys || []);
+// `excludeKeys` (Fase 22, "Puzzles") -- ver el mismo comentario en
+// services/puzzles.js.
+function nextPracticePuzzle(solvedKeys, category, excludeKeys) {
+  const solved = new Set([...(solvedKeys || []), ...(excludeKeys || [])]);
   const pool = category ? BY_DIFFICULTY_ASC.filter((p) => p.category === category) : BY_DIFFICULTY_ASC;
   if (!pool.length) return null;
   return pool.find((p) => !solved.has(p.key)) || pool[0];

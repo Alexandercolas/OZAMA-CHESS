@@ -28,14 +28,25 @@ router.get('/daily', optionalAuth, async (req, res) => {
 
 // `category` (Fase 21, "Entrenamiento"): ver el mismo comentario en
 // routes/puzzles.js.
+// `exclude` (Fase 22, "Puzzles") -- ver el mismo comentario en
+// routes/puzzles.js.
 router.get('/practice', requireAuth, async (req, res) => {
   const category = CATEGORIES.some((c) => c.key === req.query.category) ? req.query.category : undefined;
-  const puzzle = nextPracticePuzzle(req.user.damasPuzzles?.solvedKeys, category);
+  const excludeKeys = String(req.query.exclude || '').split(',').map((k) => k.trim()).filter(Boolean);
+  const puzzle = nextPracticePuzzle(req.user.damasPuzzles?.solvedKeys, category, excludeKeys);
   res.json({ puzzle: publicPuzzle(puzzle) });
 });
 
 router.get('/categories', (_req, res) => {
   res.json({ categories: CATEGORIES });
+});
+
+// GET /api/damas-puzzles/:key/solution - "Ver solucion" (Fase 22,
+// "Puzzles"). Ver el mismo comentario en routes/puzzles.js.
+router.get('/:key/solution', requireAuth, async (req, res) => {
+  const puzzle = byKey(req.params.key);
+  if (!puzzle) return res.status(404).json({ error: 'Puzzle no encontrado.' });
+  res.json({ solution: puzzle.solution });
 });
 
 router.get('/stats', requireAuth, async (req, res) => {

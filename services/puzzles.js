@@ -207,8 +207,12 @@ function dailyPuzzleForDate(dateStr) {
 // `category` (Fase 21) es opcional -- filtra el catalogo ANTES de
 // buscar, asi "practica solo Horquillas" reusa exactamente esta misma
 // logica de dificultad/repeticion en vez de un camino aparte.
-function nextPracticePuzzle(solvedKeys, category) {
-  const solved = new Set(solvedKeys || []);
+// `excludeKeys` (Fase 22, "Puzzles"): claves a tratar como "ya vistas"
+// SOLO para esta busqueda (nunca se guardan) -- asi "Saltar puzzle"
+// no repite el mismo que se acaba de saltar, sin marcarlo como
+// resuelto de verdad en el perfil del usuario.
+function nextPracticePuzzle(solvedKeys, category, excludeKeys) {
+  const solved = new Set([...(solvedKeys || []), ...(excludeKeys || [])]);
   const pool = category ? BY_DIFFICULTY_ASC.filter((p) => p.category === category) : BY_DIFFICULTY_ASC;
   if (!pool.length) return null;
   return pool.find((p) => !solved.has(p.key)) || pool[0];

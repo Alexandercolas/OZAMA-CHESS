@@ -82,6 +82,13 @@
     .btn:hover { border-color: var(--gold); }
     .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
 
+    /* Ayuda cuando alguien se traba (Fase 22, "Puzzles") -- deliberadamente
+       discreto (texto chico, no otro boton grande) para no competir
+       visualmente con la accion principal (mover en el tablero). */
+    .help-row { display: flex; justify-content: center; gap: 4px; margin-top: 12px; font-size: 11.5px; }
+    .help-link { color: var(--dim); text-decoration: underline; cursor: pointer; }
+    .help-link:hover { color: var(--gold); }
+
     .login-gate { text-align: center; padding: 60px 20px; color: var(--dim); }
     .login-gate a { color: var(--gold); font-weight: 700; text-decoration: none; }
     .loading { text-align: center; padding: 40px 20px; color: var(--dim); }
@@ -107,6 +114,15 @@
     // /api/puzzles/categories. currentCategory null = "Todas".
     let categories = [];
     let currentCategory = null;
+    // Fase 22, "Puzzles": antes de esto, trabarse en un puzzle no
+    // tenia salida -- sin pista, sin solucion, sin forma de pasar a
+    // otro salvo resolverlo bien o irse de la pagina. attemptCount se
+    // reinicia en cada loadPuzzle(); sessionSkipped es SOLO de esta
+    // sesion de navegador (nunca se guarda), para que "Saltar puzzle"
+    // no repita el mismo que se acaba de saltar.
+    let attemptCount = 0;
+    const SOLUTION_THRESHOLD = 2;
+    const sessionSkipped = new Set();
 
     function sqName(row, col) { return String.fromCharCode(97 + col) + (8 - row); }
     function isOwnPiece(ch) {
@@ -183,14 +199,21 @@
       } catch (_) { /* silencioso */ }
     }
 
-    async function loadPuzzle() {
+    async function loadPuzzle({ skipCurrent } = {}) {
       selected = null;
+      attemptCount = 0;
+      if (skipCurrent && currentPuzzle?.key) sessionSkipped.add(currentPuzzle.key);
       const card = document.getElementById('puzzle-card');
       card.innerHTML = '<div class="loading">Cargando puzzle...</div>';
       try {
-        const url = currentMode === 'daily'
-          ? '/api/puzzles/daily'
-          : `/api/puzzles/practice${currentCategory ? `?category=${encodeURIComponent(currentCategory)}` : ''}`;
+        let url = '/api/puzzles/daily';
+        if (currentMode === 'practice') {
+          const params = new URLSearchParams();
+          if (currentCategory) params.set('category', currentCategory);
+          if (sessionSkipped.size) params.set('exclude', [...sessionSkipped].join(','));
+          const qs = params.toString();
+          url = `/api/puzzles/practice${qs ? `?${qs}` : ''}`;
+        }
         const res = await fetch(url, { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'No se pudo cargar el puzzle.');
@@ -216,6 +239,7 @@
         <div class="board" id="board"></div>
         <div class="feedback" id="feedback"></div>
         <div class="actions" id="actions"></div>
+        <div class="help-row" id="help-row"></div>
       `;
       if (currentMode === 'daily' && currentPuzzle._alreadyDone) {
         document.getElementById('feedback').className = 'feedback info';
@@ -223,6 +247,44 @@
         document.getElementById('feedback').textContent = 'Ya resolviste el desafío de hoy. Vuelve mañana por uno nuevo, o prueba la práctica libre.';
       }
       renderBoard();
+      renderHelpRow();
+    }
+
+    // Fase 22, "Puzzles": "Saltar puzzle" solo tiene sentido en
+    // Practica libre (el Desafio del dia es siempre UNO por fecha,
+    // saltarlo no ofrece otro). "Ver solución" aparece en CUALQUIER
+    // modo despues de fallar un par de veces -- no antes, para no
+    // regalar la respuesta a quien recien empieza a pensar.
+    function renderHelpRow() {
+      const row = document.getElementById('help-row');
+      if (!row || !currentPuzzle) return;
+      if (currentPuzzle._alreadyDone || currentPuzzle._solved) { row.innerHTML = ''; return; }
+      const parts = [];
+      if (currentMode === 'practice') parts.push(`<span class="help-link" onclick="skipPuzzle()">Saltar puzzle →</span>`);
+      if (attemptCount >= SOLUTION_THRESHOLD) parts.push(`<span class="help-link" onclick="revealSolution()">¿Trabado? Ver solución</span>`);
+      row.innerHTML = parts.join(' · ');
+    }
+
+    function skipPuzzle() {
+      loadPuzzle({ skipCurrent: true });
+    }
+
+    async function revealSolution() {
+      if (!currentPuzzle) return;
+      const feedback = document.getElementById('feedback');
+      try {
+        const res = await fetch(`/api/puzzles/${currentPuzzle.key}/solution`, { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'No se pudo cargar la solución.');
+        const text = data.solution.map((mv) => `${mv.from} → ${mv.to}`).join(', ');
+        feedback.className = 'feedback info';
+        feedback.style.display = 'block';
+        feedback.textContent = `Solución: ${text}`;
+      } catch (err) {
+        feedback.className = 'feedback bad';
+        feedback.style.display = 'block';
+        feedback.textContent = err.message || 'No se pudo cargar la solución.';
+      }
     }
 
     function renderBoard() {
@@ -277,8 +339,10 @@
         if (!res.ok) throw new Error(data.error || 'Error al verificar la jugada.');
 
         if (!data.correct) {
+          attemptCount += 1;
           feedback.className = 'feedback bad';
           feedback.textContent = 'No es la jugada. Prueba de nuevo.';
+          renderHelpRow();
           solving = false;
           return;
         }
@@ -301,6 +365,8 @@
           feedback.textContent = parts.join(' · ');
         }
         loadStats();
+        currentPuzzle._solved = true;
+        renderHelpRow();
 
         const actions = document.getElementById('actions');
         if (currentMode === 'practice') {
@@ -340,6 +406,8 @@
     window.onSquareClick = onSquareClick;
     window.loadPuzzle = loadPuzzle;
     window.selectCategory = selectCategory;
+    window.skipPuzzle = skipPuzzle;
+    window.revealSolution = revealSolution;
     init();
   </script>
 </body>

@@ -30,9 +30,13 @@ router.get('/daily', optionalAuth, async (req, res) => {
 // facil de TODO el catalogo. Un valor desconocido simplemente no
 // matchea ningun puzzle (nextPracticePuzzle ya devuelve null en ese
 // caso), asi que no hace falta validar contra CATEGORIES aca.
+// `exclude` (Fase 22, "Puzzles"): claves separadas por coma a evitar
+// SOLO en esta busqueda (para "Saltar puzzle" -- ver training.html),
+// nunca se guardan como resueltas.
 router.get('/practice', requireAuth, async (req, res) => {
   const category = CATEGORIES.some((c) => c.key === req.query.category) ? req.query.category : undefined;
-  const puzzle = nextPracticePuzzle(req.user.puzzles?.solvedKeys, category);
+  const excludeKeys = String(req.query.exclude || '').split(',').map((k) => k.trim()).filter(Boolean);
+  const puzzle = nextPracticePuzzle(req.user.puzzles?.solvedKeys, category, excludeKeys);
   res.json({ puzzle: publicPuzzle(puzzle) });
 });
 
@@ -41,6 +45,21 @@ router.get('/practice', requireAuth, async (req, res) => {
 // tener una lista hardcodeada que se pueda desincronizar del catalogo.
 router.get('/categories', (_req, res) => {
   res.json({ categories: CATEGORIES });
+});
+
+// GET /api/puzzles/:key/solution - "Ver solucion" (Fase 22, "Puzzles"):
+// antes de esto, si alguien se trababa en un puzzle no tenia forma de
+// destrabarse mas que adivinar para siempre -- ni pista, ni solucion,
+// ni saltar (ese SI ya existia del lado del cliente, con "Siguiente
+// puzzle"). El cliente decide CUANDO mostrar el boton (tras un par de
+// intentos fallidos, ver training.html), pero la solucion en si SIEMPRE
+// viene del servidor -- nunca se manda de entrada junto al puzzle
+// (publicPuzzle() la excluye a proposito) para no arruinar el intento
+// honesto de quien recien empieza.
+router.get('/:key/solution', requireAuth, async (req, res) => {
+  const puzzle = byKey(req.params.key);
+  if (!puzzle) return res.status(404).json({ error: 'Puzzle no encontrado.' });
+  res.json({ solution: puzzle.solution });
 });
 
 router.get('/stats', requireAuth, async (req, res) => {
