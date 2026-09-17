@@ -70,6 +70,15 @@
     a { color: inherit; text-decoration: none; }
     [hidden] { display: none !important; }
 
+    /* Foco visible (Fase 32, accesibilidad): mismo tratamiento que
+       theme.css usa en el resto de la app -- el panel de admin no lo
+       importa. El !important le gana al outline:none especifico de
+       los inputs de mas abajo (que ya tienen su propio :focus con
+       box-shadow, pero eso reacciona a CUALQUIER foco, mouse incluido
+       -- esto asegura que quien navega por teclado vea un anillo
+       real en botones, pestañas y enlaces tambien, no solo inputs). */
+    :focus-visible { outline: 2px solid var(--gold) !important; outline-offset: 2px !important; }
+
     .admin-header {
       position: sticky;
       top: 0;

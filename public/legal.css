@@ -13,6 +13,16 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/* Foco visible (Fase 32, accesibilidad): mismo tratamiento que ya usa
+   theme.css en el resto de la app -- estas 4 paginas (privacy/terms/
+   support/account-deletion) no lo importan, asi que quien navega por
+   teclado dependia del outline nativo del navegador, sin nada que
+   coincida con el tema. */
+:focus-visible {
+  outline: 2px solid var(--gold) !important;
+  outline-offset: 2px !important;
+}
+
 html { color-scheme: dark; }
 
 body {

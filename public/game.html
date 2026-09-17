@@ -1499,7 +1499,7 @@
     if(!c||c==='OTHER') return '';
     const code=String(c).trim().toLowerCase();
     if(!/^[a-z]{2}$/.test(code)) return '';
-    return `<img src="https://flagcdn.com/32x24/${code}.png" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'">`;
+    return `<img src="https://flagcdn.com/32x24/${code}.png" alt="${code.toUpperCase()}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'">`;
   }
 
   function setFlag(id,c){ const e=document.getElementById(id); if(e)e.innerHTML=getFlag(c); }

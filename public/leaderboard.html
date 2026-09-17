@@ -27,6 +27,10 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    /* Foco visible (Fase 32, accesibilidad): mismo tratamiento que
+       theme.css usa en el resto de la app -- el ranking no lo importa. */
+    :focus-visible { outline: 2px solid var(--gold) !important; outline-offset: 2px !important; }
+
     :root {
       --black: #060504;
       --carbon: #0D0B08;

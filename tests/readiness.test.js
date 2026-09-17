@@ -342,6 +342,36 @@ test('Android release base blocks backups and cleartext traffic', () => {
   assert.ok(fs.statSync(path.join(root, 'resources/icon.png')).size > 10_000);
 });
 
+// Accesibilidad (Fase 32): theme.css ya trae un :focus-visible global
+// desde una fase anterior, pero 9 paginas no lo importan en absoluto
+// (index/admin/leaderboard/offline y las 4 legales via legal.css) --
+// quien navega por teclado dependia del outline nativo del navegador
+// ahi, sin nada que coincida con el tema (y en admin.html, un
+// outline:none en los inputs sin ningun :focus-visible que lo
+// reemplace). De paso, 6 <img> de banderas de pais en damas.html/
+// game.html/lobby.html no tenian alt -- un lector de pantalla los
+// anunciaba sin nombre.
+test('pages without theme.css still get a visible keyboard focus ring', () => {
+  const legal = read('public/legal.css');
+  assert.match(legal, /:focus-visible \{[^}]*outline: 2px solid var\(--gold\) !important;/);
+  for (const page of ['public/index.html', 'public/admin.html', 'public/leaderboard.html']) {
+    const html = read(page);
+    assert.match(html, /:focus-visible \{ outline: 2px solid var\(--gold\) !important; outline-offset: 2px !important; \}/, `${page} deberia definir su propio :focus-visible`);
+  }
+  assert.match(read('public/offline.html'), /:focus-visible \{ outline: 2px solid #C8983C !important;/);
+});
+
+test('country flag images always carry an alt attribute for screen readers', () => {
+  for (const page of ['public/damas.html', 'public/game.html', 'public/lobby.html']) {
+    const html = read(page);
+    const imgTags = html.match(/<img[^>]*flagcdn\.com[^>]*>/g) || [];
+    assert.ok(imgTags.length > 0, `${page} deberia tener al menos una bandera de flagcdn.com para que esta prueba tenga sentido`);
+    for (const tag of imgTags) {
+      assert.match(tag, /alt=/, `${page}: "${tag}" deberia tener alt`);
+    }
+  }
+});
+
 // Responsive (Fase 31): la auditoria de Fase 0 ya habia marcado
 // profile.html como uno de los mas debiles en breakpoints. Auditando
 // esta fase se encontraron dos bugs reales: (1) "Coleccion" faltaba

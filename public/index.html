@@ -101,6 +101,10 @@
       --dur-slow: 0.6s;
     }
 
+    /* Foco visible (Fase 32, accesibilidad): mismo tratamiento que
+       theme.css usa en el resto de la app -- la landing no lo importa. */
+    :focus-visible { outline: 2px solid var(--gold) !important; outline-offset: 2px !important; }
+
     html { scroll-behavior: smooth; }
 
     body {
