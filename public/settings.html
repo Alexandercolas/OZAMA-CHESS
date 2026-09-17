@@ -640,6 +640,13 @@
       background: rgba(13,11,8,0.9);
       border-bottom: 1px solid rgba(200,152,60,0.1);
       overflow-x: auto;
+      /* Con 4 pestanas (Perfil/Historial/Coleccion/Ajustes) no entran
+         completas en un telefono angosto -- se puede desplazar (a
+         proposito, ver comentario arriba), pero sin esta mascara la
+         ultima pestana se corta de golpe sin ningun indicio de que
+         hay mas contenido a la derecha. */
+      -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
+      mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent 100%);
     }
     .profile-tab {
       padding: 8px 16px;
@@ -671,8 +678,15 @@
   <div class="profile-tabs">
     <a href="/profile.html" class="profile-tab">Perfil</a>
     <a href="/history.html" class="profile-tab">Historial</a>
+    <a href="/collection.html" class="profile-tab">Colección</a>
     <a href="/settings.html" class=" profile-tab is-active">Ajustes</a>
   </div>
+  <script>
+    // Con 4 pestanas, la activa (Ajustes, la ultima) queda cortada en
+    // un telefono angosto sin esto -- 'nearest' no hace nada si ya
+    // esta visible, asi que esto es gratis en desktop.
+    document.querySelector('.profile-tab.is-active')?.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+  </script>
 
   <!-- Contenido principal -->
   <div id="main-content"></div>

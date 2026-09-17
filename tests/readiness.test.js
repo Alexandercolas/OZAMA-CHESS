@@ -342,6 +342,26 @@ test('Android release base blocks backups and cleartext traffic', () => {
   assert.ok(fs.statSync(path.join(root, 'resources/icon.png')).size > 10_000);
 });
 
+// Responsive (Fase 31): la auditoria de Fase 0 ya habia marcado
+// profile.html como uno de los mas debiles en breakpoints. Auditando
+// esta fase se encontraron dos bugs reales: (1) "Coleccion" faltaba
+// del selector de pestañas en history.html y settings.html -- solo
+// se podia llegar a esa pagina desde profile.html; (2) con las 4
+// pestañas completas, la ultima se cortaba de golpe en un telefono
+// angosto sin ningun indicio de que habia mas para desplazar, y la
+// pestaña ACTIVA (ej. "Ajustes") podia arrancar cortada sin scrollear
+// sola a la vista.
+test('the Perfil/Historial/Colección/Ajustes tab bar stays consistent and usable on narrow screens', () => {
+  for (const page of ['public/profile.html', 'public/history.html', 'public/settings.html']) {
+    const html = read(page);
+    for (const href of ['/profile.html', '/history.html', '/collection.html', '/settings.html']) {
+      assert.match(html, new RegExp(`href="${href.replace('.', '\\.')}" class="\\s?profile-tab`), `${page} deberia enlazar ${href} en su selector de pestañas`);
+    }
+    assert.match(html, /mask-image: linear-gradient\(to right, #000 calc\(100% - 28px\), transparent 100%\)/, `${page} deberia difuminar el borde de la barra de pestañas cuando hay mas para desplazar`);
+    assert.match(html, /document\.querySelector\('\.profile-tab\.is-active'\)\?\.scrollIntoView/, `${page} deberia llevar la pestaña activa a la vista si arranca cortada`);
+  }
+});
+
 // Sonido (Fase 30): Damas ya distinguia victoria de derrota
 // tonalmente desde antes de esta fase (playWinSound/playLoseSound en
 // damas.html) -- Ajedrez usaba el mismo 'gameover' neutro para ganar,
