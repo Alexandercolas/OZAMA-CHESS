@@ -76,8 +76,47 @@ function playSound(name) {
       case 'check':    _soundCheck(ctx);    break;
       case 'castle':   _soundCastle(ctx);   break;
       case 'gameover': _soundGameover(ctx); break;
+      case 'victory':  _soundVictory(ctx);  break;
+      case 'defeat':   _soundDefeat(ctx);   break;
     }
   } catch(e) {}
+}
+
+// Fase 30 (Sonido): Damas ya distinguia victoria de derrota
+// tonalmente (playWinSound/playLoseSound en damas.html) desde antes
+// de esta fase -- Ajedrez usaba el mismo 'gameover' neutro para
+// ganar, perder Y tablas, la unica asimetria real que la auditoria
+// de Fase 0 encontro entre los dos juegos. 'gameover' se deja intacto
+// como el sonido neutro (tablas, cierre de sala, partida local/
+// espectador sin "yo" que gane o pierda -- mismo criterio que ya usa
+// Damas para su caso null).
+function _soundVictory(ctx) {
+  _noise(ctx,{duration:.14,vol:.18,filter:1600,type:'bandpass'});
+  [{freq:262,delay:0},{freq:330,delay:.11},{freq:392,delay:.22},{freq:523,delay:.34}]
+    .forEach(({freq,delay})=>_tone(ctx,{type:'triangle',freq,endFreq:freq*1.02,vol:.17,duration:.5,delay}));
+  _tone(ctx,{type:'sine',freq:784,endFreq:784,vol:.10,duration:.6,delay:.34});
+}
+function _soundDefeat(ctx) {
+  _noise(ctx,{duration:.5,vol:.14,filter:200,type:'lowpass',delay:.02});
+  [{freq:220,delay:0},{freq:185,delay:.18},{freq:147,delay:.4}]
+    .forEach(({freq,delay})=>_tone(ctx,{type:'triangle',freq,endFreq:freq*0.7,vol:.16,duration:.55,delay}));
+}
+
+// Perspectiva del jugador LOCAL (nunca del servidor -- el resultado
+// real ya lo decidio el servidor/el tablero antes de llegar aca, esto
+// solo elige QUE sonido tocar). null cuando no hay un "yo" que gane o
+// pierda (partida local compartida, espectador): mismo criterio que
+// showGameOverOverlay() ya usa en damas.html.
+function myColorForSound() {
+  if (IS_ONLINE) return PLAYER_COLOR;
+  if (IS_BOT_MODE) return enemy(BOT_COLOR);
+  return null;
+}
+function playOutcomeSound(winnerColor) {
+  if (IS_SPECTATE || IS_LOCAL_MODE || winnerColor == null) { playSound('gameover'); return; }
+  const mine = myColorForSound();
+  if (mine == null) { playSound('gameover'); return; }
+  playSound(winnerColor === mine ? 'victory' : 'defeat');
 }
 
 function _soundMove(ctx) {
@@ -815,7 +854,7 @@ function finishMoveExecution() {
 
   if (status === STATUS.CHECKMATE) {
     state.winner = enemy(state.turn);
-    playSound('gameover');
+    playOutcomeSound(state.winner);
     CLOCK.stop();
   } else if (status === STATUS.STALEMATE || status === STATUS.DRAW) {
     playSound('gameover');
@@ -872,7 +911,7 @@ function handleClockTimeout(loserColor) {
   _botThinking = false;
 
   clearLocalGameSnapshot();
-  playSound('gameover');
+  playOutcomeSound(winner);
   renderBoard();
   updateStatusDisplay();
   showGameEnd(
@@ -1688,7 +1727,10 @@ function showConfirm(title, message, onAccept, acceptText = 'Confirmar') {
 
 function completeResignation() {
   CLOCK.stop();
-  playSound('gameover');
+  // Rendirse siempre es MI propia derrota (online o contra el bot) --
+  // salvo en modo local (mismo dispositivo, dos jugadores), donde no
+  // hay un "yo" fijo que pierda.
+  playSound(IS_LOCAL_MODE ? 'gameover' : 'defeat');
 
   if (IS_ONLINE) {
     socket?.emit('player-resign', { room: ROOM_CODE, pgn: exportMoveList() });
@@ -1850,7 +1892,7 @@ function setupOnlineSocket() {
 
   socket.on('opponent-resigned', ({ playerName } = {}) => {
     CLOCK.stop();
-    playSound('gameover');
+    playSound(IS_SPECTATE ? 'gameover' : 'victory');
     state.status = STATUS.CHECKMATE;
     // Un espectador no tiene "rival" propio -- no hay un color ganador
     // desde su punto de vista, asi que no se toca state.winner.
@@ -1886,12 +1928,12 @@ function setupOnlineSocket() {
 
   socket.on('time-out', ({ loser, winner } = {}) => {
     CLOCK.stop();
-    playSound('gameover');
     state.status = STATUS.CHECKMATE;
     state.winner = winner === COLOR.WHITE || winner === COLOR.BLACK ? winner : enemy(loser);
     state.endReason = 'timeout';
     state.selected = null;
     state.legalMoves = [];
+    playOutcomeSound(state.winner);
     updateStatusDisplay();
     renderBoard();
     const loserLabel = loser === COLOR.WHITE ? 'Doradas' : 'Hierro';
@@ -1905,7 +1947,6 @@ function setupOnlineSocket() {
 
   socket.on('game-finished', ({ result, winner, reason } = {}) => {
     CLOCK.stop();
-    playSound('gameover');
     state.winner = winner === COLOR.WHITE || winner === COLOR.BLACK ? winner : null;
     state.endReason = reason || null;
     state.selected = null;
@@ -1913,6 +1954,7 @@ function setupOnlineSocket() {
     if (result === 'draw') state.status = reason === 'stalemate' ? STATUS.STALEMATE : STATUS.DRAW;
     else if (result === 'white_win' || result === 'black_win') state.status = STATUS.CHECKMATE;
     else state.status = STATUS.DRAW;
+    playOutcomeSound(result === 'draw' ? null : state.winner);
     updateStatusDisplay();
     renderBoard();
     if (result === 'draw') {

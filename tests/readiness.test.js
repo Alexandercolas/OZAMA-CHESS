@@ -342,6 +342,34 @@ test('Android release base blocks backups and cleartext traffic', () => {
   assert.ok(fs.statSync(path.join(root, 'resources/icon.png')).size > 10_000);
 });
 
+// Sonido (Fase 30): Damas ya distinguia victoria de derrota
+// tonalmente desde antes de esta fase (playWinSound/playLoseSound en
+// damas.html) -- Ajedrez usaba el mismo 'gameover' neutro para ganar,
+// perder Y tablas, la unica asimetria real que encontro la auditoria
+// de Fase 0. Se agregaron _soundVictory/_soundDefeat + un helper de
+// perspectiva (playOutcomeSound/myColorForSound). El bug real que se
+// encontro armando esto: en modo bot, PLAYER_COLOR queda VACIO
+// (lobby.html borra 'ozama-color' antes de arrancar contra el bot) --
+// comparar el ganador contra PLAYER_COLOR directo habria dado
+// 'defeat' SIEMPRE en modo bot, incluso ganando. myColorForSound()
+// resuelve el color real del jugador en modo bot via enemy(BOT_COLOR).
+test('chess distinguishes victory from defeat by sound, matching Damas, with the bot-mode PLAYER_COLOR gotcha handled', () => {
+  const script = read('public/script.js');
+  assert.match(script, /function _soundVictory\(/);
+  assert.match(script, /function _soundDefeat\(/);
+  assert.match(script, /function myColorForSound\(\)/);
+  // El bug real: PLAYER_COLOR esta vacio en modo bot, hay que usar
+  // enemy(BOT_COLOR) -- no comparar contra PLAYER_COLOR a secas.
+  assert.match(script, /if \(IS_BOT_MODE\) return enemy\(BOT_COLOR\);/);
+  assert.match(script, /function playOutcomeSound\(winnerColor\)/);
+  // Los finales donde SI se puede saber quien gano usan el helper
+  // perspectiva-consciente, no el 'gameover' neutro de siempre.
+  assert.match(script, /state\.winner = enemy\(state\.turn\);\s*\n\s*playOutcomeSound\(state\.winner\);/);
+  assert.match(script, /playOutcomeSound\(winner\);/); // handleClockTimeout
+  assert.match(script, /playSound\(IS_LOCAL_MODE \? 'gameover' : 'defeat'\);/); // completeResignation: rendirse siempre es mi derrota
+  assert.match(script, /playSound\(IS_SPECTATE \? 'gameover' : 'victory'\);/); // opponent-resigned: el rival se rindio, yo gano
+});
+
 // Idiomas (Fase 29): landing, login/registro y lobby se tradujeron
 // como v1 real (public/i18n.js + public/locales/{es,en}.json). Un
 // [data-i18n="key"] o t('key') sin esa key en ambos diccionarios no
