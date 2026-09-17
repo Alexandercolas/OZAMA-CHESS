@@ -342,6 +342,31 @@ test('Android release base blocks backups and cleartext traffic', () => {
   assert.ok(fs.statSync(path.join(root, 'resources/icon.png')).size > 10_000);
 });
 
+// PWA (Fase 28): damas.html y watch.html no tenian NINGUNA etiqueta de
+// PWA (ni <link rel="manifest">, ni el script pwa.js que registra el
+// service worker) -- Damas, uno de los dos juegos centrales, y la
+// pagina de espectador (a menudo la PRIMERA que ve un visitante nuevo,
+// via un link compartido) quedaban completamente afuera del modo
+// instalable. Esta prueba evita que una pagina nueva vuelva a quedar
+// afuera por accidente: pieces-preview.html (herramienta interna, sin
+// CSP ni titulo real) y offline.html (la pagina de respaldo misma --
+// registrar el service worker ahi seria circular) son las unicas
+// excepciones legitimas.
+test('every real user-facing page registers the installable PWA (manifest + service worker)', () => {
+  const excluded = new Set(['pieces-preview.html']);
+  const pwaOptional = new Set(['offline.html']);
+  const pages = fs.readdirSync(path.join(root, 'public'))
+    .filter((file) => file.endsWith('.html') && !excluded.has(file));
+  assert.ok(pages.length > 20, 'deberia haber bastantes paginas publicas para que esta prueba tenga sentido');
+  for (const page of pages) {
+    const html = read(`public/${page}`);
+    assert.match(html, /<link rel="manifest" href="\/manifest\.webmanifest">/, `${page} deberia enlazar el manifest de la PWA`);
+    if (!pwaOptional.has(page)) {
+      assert.match(html, /<script src="\/pwa\.js"/, `${page} deberia registrar el service worker (pwa.js)`);
+    }
+  }
+});
+
 // Resiliencia de proceso (Fase 27): sin estos handlers, Render mata el
 // proceso de golpe en cada deploy (SIGTERM sin manejar) o una sola
 // promesa sin capturar tumba TODAS las partidas en curso de TODOS los
