@@ -18,6 +18,7 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=5">
   <link rel="manifest" href="/manifest.webmanifest">
   <script src="/pwa.js" defer></script>
+  <script src="/i18n.js" defer></script>
   <script src="/js/admin-access.js" defer></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -1182,17 +1183,18 @@
       <span class="hd-sub">Dominican Heritage Edition</span>
     </div>
     <div class="hd-user">
+      <div id="lang-switch"></div>
       <div class="hd-bell" id="hd-bell-wrap">
-        <button class="hd-bell-icon-btn" id="hd-bell-btn" type="button" onclick="OZAMA_NOTIFS.toggle()" aria-label="Notificaciones">
+        <button class="hd-bell-icon-btn" id="hd-bell-btn" type="button" onclick="OZAMA_NOTIFS.toggle()" aria-label="Notificaciones" data-i18n-aria-label="lobby.notifications">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
           <span class="hd-bell-badge hidden" id="hd-bell-badge">0</span>
         </button>
         <div class="hd-bell-dropdown hidden" id="hd-bell-dropdown">
           <div class="hd-bell-dropdown-hd">
-            <span class="hd-bell-dropdown-title">Notificaciones</span>
-            <button class="hd-bell-mark-all" type="button" onclick="event.stopPropagation(); OZAMA_NOTIFS.markAllRead()">Marcar todo leido</button>
+            <span class="hd-bell-dropdown-title" data-i18n="lobby.notifications">Notificaciones</span>
+            <button class="hd-bell-mark-all" type="button" onclick="event.stopPropagation(); OZAMA_NOTIFS.markAllRead()" data-i18n="lobby.markAllRead">Marcar todo leido</button>
           </div>
-          <div id="hd-bell-list"><div class="hd-notif-empty">Cargando...</div></div>
+          <div id="hd-bell-list"><div class="hd-notif-empty" data-i18n="common.loading">Cargando...</div></div>
         </div>
       </div>
       <a class="hd-pro-btn" id="hd-pro-btn" href="/settings.html#premium-panel">Activa PRO</a>
@@ -1212,70 +1214,70 @@
       <nav class="sb-nav">
         <a class="sb-item on" href="/lobby.html#jugar">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 20h10v2H7v-2Zm2-3h6l1 2H8l1-2Zm2-7h2l2 7H9l2-7Zm1-8 5 4-5 4-5-4 5-4Z"/></svg></span>
-          <div class="sb-txt"><span class="sb-name">Jugar</span><span class="sb-desc">Partida rápida</span></div>
+          <div class="sb-txt"><span class="sb-name" data-i18n="lobby.navPlay">Jugar</span><span class="sb-desc" data-i18n="lobby.navPlayDesc">Partida rápida</span></div>
         </a>
         <a class="sb-item" href="/damas.html">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 4h16v16H4V4Zm2 2v3h3V6H6Zm5 0v3h3V6h-3Zm5 0v3h3V6h-3ZM6 11v3h3v-3H6Zm5 0v3h3v-3h-3Zm5 0v3h3v-3h-3ZM6 16v3h3v-3H6Zm5 0v3h3v-3h-3Zm5 0v3h3v-3h-3Z"/></svg></span>
-          <div class="sb-txt"><span class="sb-name">Damas</span><span class="sb-desc">Bot y online</span></div>
+          <div class="sb-txt"><span class="sb-name" data-i18n="landing.damas">Damas</span><span class="sb-desc" data-i18n="lobby.navDamasDesc">Bot y online</span></div>
         </a>
         <a class="sb-item" href="/lobby.html#bot">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2 19 6v6c0 5-3 9-7 11-4-2-7-6-7-11V6l7-4Zm0 4-4 2v4c0 3 1.5 5.5 4 7 2.5-1.5 4-4 4-7V8l-4-2Zm-1 4h2v2h2v2h-2v2h-2v-2H9v-2h2v-2Z"/></svg></span>
-          <div class="sb-txt"><span class="sb-name">Bot</span><span class="sb-desc">Practicar IA</span></div>
+          <div class="sb-txt"><span class="sb-name" data-i18n="lobby.navBot">Bot</span><span class="sb-desc" data-i18n="lobby.navBotDesc">Practicar IA</span></div>
         </a>
         <a class="sb-item" href="/lobby.html#salas">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 3h2v18H5V3Zm4 1h10l-3 4 3 4H9V4Z"/></svg></span>
-          <div class="sb-txt"><span class="sb-name">Salas</span><span class="sb-desc">Crear o unirse</span></div>
+          <div class="sb-txt"><span class="sb-name" data-i18n="lobby.navRooms">Salas</span><span class="sb-desc" data-i18n="lobby.navRoomsDesc">Crear o unirse</span></div>
         </a>
         <a class="sb-item" href="/lobby.html#desafios">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m6 3 5 5-2 2-5-5V3h2Zm12 0h2v2l-5 5-2-2 5-5ZM4 20l6-6 2 2-6 6H4v-2Zm10-4 2-2 6 6v2h-2l-6-6Z"/></svg></span>
-          <div class="sb-txt"><span class="sb-name">Desafíos</span><span class="sb-desc">Retar jugador</span></div>
+          <div class="sb-txt"><span class="sb-name" data-i18n="lobby.navChallenges">Desafíos</span><span class="sb-desc" data-i18n="lobby.navChallengesDesc">Retar jugador</span></div>
         </a>
         <a class="sb-item" href="/tournaments.html">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 3h4v3h6V3h4v6h-3.05a4.5 4.5 0 0 1-3.45 4.33V16h4v2H7v-2h4v-2.67A4.5 4.5 0 0 1 8.05 9H5V3Zm2 2v2h1.1a5 5 0 0 0 0-2H7Zm10 0h-1.1a5 5 0 0 1 0 2H17V5Z"/></svg></span>
-          <div class="sb-txt"><span class="sb-name">Torneos</span><span class="sb-desc">Eliminacion directa</span></div>
+          <div class="sb-txt"><span class="sb-name" data-i18n="lobby.navTournaments">Torneos</span><span class="sb-desc" data-i18n="lobby.navTournamentsDesc">Eliminacion directa</span></div>
         </a>
         <a class="sb-item" href="/training.html">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2c-1.1 0-2 .9-2 2 0 .74.4 1.38 1 1.72V7H9a2 2 0 0 0-2 2v1.28A2 2 0 0 0 6 12a2 2 0 0 0 1 1.72V15a2 2 0 0 0 2 2h2v1.28a2 2 0 1 0 2 0V17h2a2 2 0 0 0 2-2v-1.28A2 2 0 0 0 18 12a2 2 0 0 0-1-1.72V9a2 2 0 0 0-2-2h-2V5.72A2 2 0 0 0 14 4c0-1.1-.9-2-2-2Z"/></svg></span>
-          <div class="sb-txt"><span class="sb-name">Entrenamiento</span><span class="sb-desc">Puzzles tácticos</span></div>
+          <div class="sb-txt"><span class="sb-name" data-i18n="lobby.navTraining">Entrenamiento</span><span class="sb-desc" data-i18n="lobby.navTrainingDesc">Puzzles tácticos</span></div>
         </a>
         <a class="sb-item" href="/openings.html">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 4h7v16H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm9 0h7a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-7V4Z"/></svg></span>
-          <div class="sb-txt"><span class="sb-name">Aperturas</span><span class="sb-desc">Explorador de teoría</span></div>
+          <div class="sb-txt"><span class="sb-name" data-i18n="lobby.navOpenings">Aperturas</span><span class="sb-desc" data-i18n="lobby.navOpeningsDesc">Explorador de teoría</span></div>
         </a>
         <div class="sb-div"></div>
-        <div class="sb-account-label eyebrow">Cuenta</div>
+        <div class="sb-account-label eyebrow" data-i18n="lobby.account">Cuenta</div>
         <a class="sb-item" href="/dashboard.html">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 4h7v7H4V4Zm9 0h7v7h-7V4ZM4 13h7v7H4v-7Zm9 0h7v7h-7v-7Z"/></svg></span>
-          <div class="sb-txt"><span class="sb-name">Panel</span><span class="sb-desc">Resumen de ambos juegos</span></div>
+          <div class="sb-txt"><span class="sb-name" data-i18n="lobby.navDashboard">Panel</span><span class="sb-desc" data-i18n="lobby.navDashboardDesc">Resumen de ambos juegos</span></div>
         </a>
         <a class="sb-item" href="/profile.html">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 12c4 0 8 2.2 8 5v1H4v-1c0-2.8 4-5 8-5Z"/></svg></span>
-          <div class="sb-txt"><span class="sb-name">Perfil</span><span class="sb-desc">Estadísticas</span></div>
+          <div class="sb-txt"><span class="sb-name" data-i18n="common.profile">Perfil</span><span class="sb-desc" data-i18n="lobby.navProfileDesc">Estadísticas</span></div>
         </a>
         <a class="sb-item" href="/history.html">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M5 4h14v3H5V4Zm0 5h14v3H5V9Zm0 5h9v3H5v-3Zm11 0h3v3h-3v-3Z"/></svg></span>
-          <div class="sb-txt"><span class="sb-name">Historial</span><span class="sb-desc">Partidas recientes</span></div>
+          <div class="sb-txt"><span class="sb-name" data-i18n="lobby.navHistory">Historial</span><span class="sb-desc" data-i18n="lobby.navHistoryDesc">Partidas recientes</span></div>
         </a>
         <a class="sb-item" href="/collection.html">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2 4 6v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V6l-8-4Zm0 4a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z"/></svg></span>
-          <div class="sb-txt"><span class="sb-name">Colección</span><span class="sb-desc">Marcos de perfil</span></div>
+          <div class="sb-txt"><span class="sb-name" data-i18n="lobby.navCollection">Colección</span><span class="sb-desc" data-i18n="lobby.navCollectionDesc">Marcos de perfil</span></div>
         </a>
         <a class="sb-item" href="/leaderboard.html">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 4h10v3h3v4c0 3-2 5-5 5h-1v2h3v2H7v-2h3v-2H9c-3 0-5-2-5-5V7h3V4Zm2 2v8h6V6H9Zm8 3v4c1-.4 2-1.2 2-2V9h-2ZM5 9v2c0 .8 1 1.6 2 2V9H5Z"/></svg></span>
-          <div class="sb-txt"><span class="sb-name">Ranking</span><span class="sb-desc">Hall of Fame</span></div>
+          <div class="sb-txt"><span class="sb-name" data-i18n="landing.navRanking">Ranking</span><span class="sb-desc" data-i18n="lobby.navRankingDesc">Hall of Fame</span></div>
         </a>
         <a class="sb-item" href="/settings.html">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m12 2 2 3 4-.5 1.5 3.5-3 2 1 4-3 2-3-2-3 2-3-2 1-4-3-2L6 4.5 10 5l2-3Zm0 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"/></svg></span>
-          <div class="sb-txt"><span class="sb-name">Ajustes</span><span class="sb-desc">Perfil y país</span></div>
+          <div class="sb-txt"><span class="sb-name" data-i18n="lobby.navSettings">Ajustes</span><span class="sb-desc" data-i18n="lobby.navSettingsDesc">Perfil y país</span></div>
         </a>
         <a class="sb-item" href="/admin.html" data-admin-access hidden aria-hidden="true">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2 20 5v6c0 5.2-3.2 9.2-8 11-4.8-1.8-8-5.8-8-11V5l8-3Zm0 4L8 7.5V11c0 3.1 1.6 5.6 4 7 2.4-1.4 4-3.9 4-7V7.5L12 6Zm-1 3h2v5h-2V9Zm0 6h2v2h-2v-2Z"/></svg></span>
-          <div class="sb-txt"><span class="sb-name">Administración</span><span class="sb-desc">Control privado</span></div>
+          <div class="sb-txt"><span class="sb-name" data-i18n="lobby.navAdmin">Administración</span><span class="sb-desc" data-i18n="lobby.navAdminDesc">Control privado</span></div>
         </a>
         <div class="sb-div"></div>
         <a class="sb-item sb-logout" id="logout-sb" href="/login.html">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 11h10v2H4v-2Zm4-5 1.5 1.5L6 11l3.5 3.5L8 16l-6-5 6-5Zm7-2h5v16h-5v-2h3V6h-3V4Z"/></svg></span>
-          <div class="sb-txt"><span class="sb-name">Cerrar sesión</span><span class="sb-desc">Salir de la cuenta</span></div>
+          <div class="sb-txt"><span class="sb-name" data-i18n="lobby.navLogout">Cerrar sesión</span><span class="sb-desc" data-i18n="lobby.navLogoutDesc">Salir de la cuenta</span></div>
         </a>
       </nav>
       <div class="sb-foot"><span class="heritage-stripes"><span></span></span><br>Dominican Heritage</div>
@@ -1309,18 +1311,18 @@
           <div class="card-head">
             <div class="card-head-main">
               <div class="card-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M13 2 4 14h6l-1 8 10-13h-6l1-7Z"/></svg></div>
-              <div class="card-title">Juego Rápido</div>
+              <div class="card-title" data-i18n="lobby.quickTitle">Juego Rápido</div>
             </div>
             <div class="elo-chip" id="quick-elo-badge">ELO 1200</div>
           </div>
-          <div class="card-desc">Encuentra un rival al instante</div>
+          <div class="card-desc" data-i18n="lobby.quickDesc">Encuentra un rival al instante</div>
 
-          <select class="card-input" id="quick-time-control" aria-label="Ritmo de tiempo">
+          <select class="card-input" id="quick-time-control" aria-label="Ritmo de tiempo" data-i18n-aria-label="lobby.timeControl">
             <option value="1+0">1+0 · Bullet</option>
             <option value="2+1">2+1 · Blitz</option>
             <option value="3+0">3+0 · Blitz</option>
             <option value="5+0">5+0 · Blitz</option>
-            <option value="10+0" selected>10+0 · Rápida</option>
+            <option value="10+0" selected data-i18n="lobby.rapidOption">10+0 · Rápida</option>
           </select>
 
           <!-- Waiting indicator (hidden by default) -->
@@ -1328,10 +1330,10 @@
             <div class="waiting-dots">
               <span></span><span></span><span></span>
             </div>
-            <div class="waiting-text">Buscando rival…</div>
+            <div class="waiting-text" data-i18n="lobby.searchingRival">Buscando rival…</div>
           </div>
 
-          <button class="btn-primary" id="find-match-btn">
+          <button class="btn-primary" id="find-match-btn" data-i18n="lobby.findRival">
             Buscar Rival
           </button>
           <div class="card-status" id="quick-status"></div>
@@ -1347,15 +1349,15 @@
               <div class="card-title">Ozama Bot</div>
             </div>
           </div>
-          <div class="card-desc">Practica contra la IA</div>
+          <div class="card-desc" data-i18n="lobby.botDesc">Practica contra la IA</div>
           <div class="bot-controls">
-            <select class="card-input" id="bot-difficulty" aria-label="Dificultad del bot">
-              <option value="easy">Aprendiz</option>
-              <option value="medium" selected>Centinela</option>
-              <option value="hard">Maestro</option>
-              <option value="master">Alcázar</option>
+            <select class="card-input" id="bot-difficulty" aria-label="Dificultad del bot" data-i18n-aria-label="lobby.botDifficulty">
+              <option value="easy" data-i18n="lobby.diffEasy">Aprendiz</option>
+              <option value="medium" selected data-i18n="lobby.diffMedium">Centinela</option>
+              <option value="hard" data-i18n="lobby.diffHard">Maestro</option>
+              <option value="master" data-i18n="lobby.diffMaster">Alcázar</option>
             </select>
-            <button class="btn-primary" id="start-bot-btn">Jugar</button>
+            <button class="btn-primary" id="start-bot-btn" data-i18n="lobby.play">Jugar</button>
           </div>
           <div class="card-status" id="bot-status"></div>
         </div>
@@ -1370,8 +1372,8 @@
               <div class="card-title">J1 vs J2</div>
             </div>
           </div>
-          <div class="card-desc">Dos personas, un dispositivo</div>
-          <button class="btn-primary" id="start-local-btn">
+          <div class="card-desc" data-i18n="lobby.localDesc">Dos personas, un dispositivo</div>
+          <button class="btn-primary" id="start-local-btn" data-i18n="lobby.play">
             Jugar
           </button>
           <div class="card-status" id="local-status"></div>
@@ -1384,27 +1386,27 @@
            siempre); en desktop agrupa las 2 acciones en un solo
            modulo, ver .friends-module en el <style>. -->
       <div class="friends-module">
-      <div class="friends-module-title">Jugar con Amigos</div>
+      <div class="friends-module-title" data-i18n="lobby.playWithFriends">Jugar con Amigos</div>
       <div class="social-row">
 
         <!-- CREAR SALA -->
         <div class="social-card oz-enter" id="card-create" style="--d:3">
-          <div class="social-title">Crear Sala</div>
-          <input class="card-input" id="create-username-input" type="text" placeholder="Tu nombre" maxlength="20"/>
-          <select class="card-input" id="create-time-control" aria-label="Ritmo de tiempo">
+          <div class="social-title" data-i18n="lobby.createRoom">Crear Sala</div>
+          <input class="card-input" id="create-username-input" type="text" placeholder="Tu nombre" data-i18n-placeholder="lobby.yourName" maxlength="20"/>
+          <select class="card-input" id="create-time-control" aria-label="Ritmo de tiempo" data-i18n-aria-label="lobby.timeControl">
             <option value="1+0">1+0 · Bullet</option>
             <option value="2+1">2+1 · Blitz</option>
             <option value="3+0">3+0 · Blitz</option>
             <option value="5+0">5+0 · Blitz</option>
-            <option value="10+0" selected>10+0 · Rápida</option>
+            <option value="10+0" selected data-i18n="lobby.rapidOption">10+0 · Rápida</option>
           </select>
 
           <!-- Room code display (after creating) -->
           <div class="room-code-display" id="room-code-display">
-            <div class="room-code-value" id="room-code-value" title="Haz clic para copiar">——————</div>
+            <div class="room-code-value" id="room-code-value" title="Haz clic para copiar" data-i18n-title="lobby.clickToCopy">——————</div>
           </div>
 
-          <button class="btn-primary" id="create-room-btn">
+          <button class="btn-primary" id="create-room-btn" data-i18n="lobby.create">
             Crear
           </button>
           <div class="card-status" id="create-status"></div>
@@ -1412,10 +1414,10 @@
 
         <!-- UNIRSE -->
         <div class="social-card oz-enter" id="card-join" style="--d:4">
-          <div class="social-title">Unirse</div>
-          <input class="card-input" id="join-username-input" type="text" placeholder="Tu nombre" maxlength="20"/>
-          <input class="card-input" id="room-code-input" type="text" placeholder="Código de sala" maxlength="10" style="letter-spacing:4px;text-transform:uppercase;"/>
-          <button class="btn-primary" id="join-room-btn">
+          <div class="social-title" data-i18n="lobby.join">Unirse</div>
+          <input class="card-input" id="join-username-input" type="text" placeholder="Tu nombre" data-i18n-placeholder="lobby.yourName" maxlength="20"/>
+          <input class="card-input" id="room-code-input" type="text" placeholder="Código de sala" data-i18n-placeholder="lobby.roomCode" maxlength="10" style="letter-spacing:4px;text-transform:uppercase;"/>
+          <button class="btn-primary" id="join-room-btn" data-i18n="lobby.join">
             Unirse
           </button>
           <div class="card-status" id="join-status"></div>
@@ -1440,19 +1442,19 @@
           <div class="tb-name" id="tb-name"></div>
           <div class="tb-meta" id="tb-meta"></div>
         </div>
-        <span class="tb-cta">Ver torneo →</span>
+        <span class="tb-cta" data-i18n="lobby.viewTournament">Ver torneo →</span>
       </a>
 
       <!-- DESAFIAR JUGADOR -->
       <div class="challenge-section" id="desafios">
         <div class="challenge-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m6 3 5 5-2 2-5-5V3h2Zm12 0h2v2l-5 5-2-2 5-5ZM4 20l6-6 2 2-6 6H4v-2Zm10-4 2-2 6 6v2h-2l-6-6Z"/></svg></div>
         <div class="challenge-info">
-          <div class="challenge-title">Desafiar Jugador</div>
-          <div class="challenge-desc">Busca un jugador por nombre y desafíalo directamente.</div>
+          <div class="challenge-title" data-i18n="lobby.challengePlayer">Desafiar Jugador</div>
+          <div class="challenge-desc" data-i18n="lobby.challengeDesc">Busca un jugador por nombre y desafíalo directamente.</div>
         </div>
         <div class="challenge-form">
-          <input class="challenge-input" id="challenge-username" type="text" placeholder="Nombre de usuario…" maxlength="30" autocomplete="off"/>
-          <button class="challenge-btn" id="challenge-btn">Desafiar</button>
+          <input class="challenge-input" id="challenge-username" type="text" placeholder="Nombre de usuario…" data-i18n-placeholder="lobby.usernamePlaceholder" maxlength="30" autocomplete="off"/>
+          <button class="challenge-btn" id="challenge-btn" data-i18n="lobby.challenge">Desafiar</button>
           <div class="search-dropdown hidden" id="search-dropdown"></div>
         </div>
         <div class="challenge-status" id="challenge-status"></div>
@@ -1462,10 +1464,10 @@
       <div class="players-section">
         <div class="players-section-title">
           <div class="online-dot"></div>
-          Jugadores en línea
+          <span data-i18n="lobby.playersOnline">Jugadores en línea</span>
         </div>
         <div class="players-list" id="players-online-list">
-          <div class="players-empty">Nadie conectado aún…</div>
+          <div class="players-empty" data-i18n="lobby.nobodyOnline">Nadie conectado aún…</div>
         </div>
       </div>
 
@@ -1478,11 +1480,11 @@
 <div class="modal-overlay" id="challenge-modal">
   <div class="modal-card">
     <div class="modal-icon">OC</div>
-    <div class="modal-title">DESAFÍO RECIBIDO</div>
+    <div class="modal-title" data-i18n="lobby.challengeReceived">DESAFÍO RECIBIDO</div>
     <div class="modal-sub" id="challenge-modal-sub">Un jugador te desafía</div>
     <div class="modal-buttons">
-      <button class="btn-accept"  id="challenge-accept-btn">Aceptar</button>
-      <button class="btn-decline" id="challenge-decline-btn">Rechazar</button>
+      <button class="btn-accept"  id="challenge-accept-btn" data-i18n="lobby.accept">Aceptar</button>
+      <button class="btn-decline" id="challenge-decline-btn" data-i18n="lobby.decline">Rechazar</button>
     </div>
   </div>
 </div>
@@ -1491,6 +1493,12 @@
 <script>
   (async () => {
   await window.OZAMA_RUNTIME?.ready;
+  // window.OZAMA_I18N lo asigna un <script defer> -- sondear hasta que
+  // exista de verdad antes de esperar su promesa (ver el mismo
+  // comentario en index.html: un await sobre "algo?.ready" cuando ese
+  // "algo" todavia no existe no espera nada).
+  while (!window.OZAMA_I18N) await new Promise((r) => setTimeout(r, 10));
+  await window.OZAMA_I18N.ready;
   // ── Auth check ──
   function readSessionUser() {
     try {
@@ -1553,7 +1561,7 @@
     if (hdProBtn) {
       const premiumUntil = user.premiumUntil ? new Date(user.premiumUntil) : null;
       const premiumActive = user.plan === 'premium' && (!premiumUntil || premiumUntil > new Date());
-      hdProBtn.textContent = premiumActive ? 'PRO' : 'Activa PRO';
+      hdProBtn.textContent = premiumActive ? 'PRO' : (window.OZAMA_I18N?.t('lobby.activatePro') || 'Activa PRO');
       hdProBtn.classList.toggle('is-pro', premiumActive);
     }
     // El servidor calcula isAdmin contra ADMIN_EMAILS; este toggle es solo
@@ -1569,6 +1577,7 @@
     renderEventBanner(user.activeEvent);
   }
   renderLobbyUser();
+  document.addEventListener('ozama:language-changed', renderLobbyUser);
 
   // Evento tematico (Fase 12) -- viene en /api/user/me (activeEvent),
   // calculado en el servidor a partir de la fecha, nunca guardado. El

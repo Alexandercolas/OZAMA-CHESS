@@ -342,6 +342,39 @@ test('Android release base blocks backups and cleartext traffic', () => {
   assert.ok(fs.statSync(path.join(root, 'resources/icon.png')).size > 10_000);
 });
 
+// Idiomas (Fase 29): landing, login/registro y lobby se tradujeron
+// como v1 real (public/i18n.js + public/locales/{es,en}.json). Un
+// [data-i18n="key"] o t('key') sin esa key en ambos diccionarios no
+// truena -- i18n.js cae de vuelta al KEY MISMO como texto visible
+// (ver t() en i18n.js), un bug silencioso que solo se nota mirando la
+// pantalla. Esta prueba recorre las 3 paginas y confirma que cada key
+// referenciada (en markup o en <script>) resuelve en los dos idiomas,
+// para que un data-i18n nuevo sin su traduccion no pase desapercibido.
+test('every data-i18n / t() key used in the translated pages resolves in both locales', () => {
+  const es = JSON.parse(read('public/locales/es.json'));
+  const en = JSON.parse(read('public/locales/en.json'));
+  const lookup = (dict, key) => key.split('.').reduce((node, part) => (node && typeof node === 'object' ? node[part] : undefined), dict);
+
+  const pages = ['public/index.html', 'public/login.html', 'public/lobby.html'];
+  const markupRe = /data-i18n(?:-placeholder|-aria-label|-title)?="([^"]+)"/g;
+  const jsRe = /(?:\bt\(|OZAMA_I18N\??\.t\()\s*['"]([a-zA-Z0-9_.]+)['"]/g;
+
+  let checked = 0;
+  for (const page of pages) {
+    const html = read(page);
+    for (const re of [markupRe, jsRe]) {
+      let match;
+      while ((match = re.exec(html))) {
+        const key = match[1];
+        checked++;
+        assert.ok(lookup(es, key) !== undefined, `${page}: "${key}" no existe en locales/es.json`);
+        assert.ok(lookup(en, key) !== undefined, `${page}: "${key}" no existe en locales/en.json`);
+      }
+    }
+  }
+  assert.ok(checked > 150, `deberian haber bastantes keys de i18n referenciadas para que esta prueba tenga sentido, se revisaron ${checked}`);
+});
+
 // PWA (Fase 28): damas.html y watch.html no tenian NINGUNA etiqueta de
 // PWA (ni <link rel="manifest">, ni el script pwa.js que registra el
 // service worker) -- Damas, uno de los dos juegos centrales, y la

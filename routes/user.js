@@ -225,6 +225,15 @@ router.patch('/preferences', requireAuth, async (req, res) => {
       updates['preferences.effectsEnabled'] = body.effectsEnabled;
     }
 
+    // Idioma de la interfaz (Fase 29): solo guarda la preferencia para
+    // sincronizarla entre dispositivos -- el texto en si lo resuelve
+    // public/i18n.js en el navegador, esto nunca traduce nada server-side.
+    if (body.language !== undefined) {
+      const language = String(body.language || '').trim();
+      if (!['es', 'en'].includes(language)) return res.status(400).json({ error: 'Idioma invalido.' });
+      updates['preferences.language'] = language;
+    }
+
     if (!Object.keys(updates).length) {
       return res.status(400).json({ error: 'Nada para actualizar.' });
     }
