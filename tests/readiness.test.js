@@ -342,6 +342,30 @@ test('Android release base blocks backups and cleartext traffic', () => {
   assert.ok(fs.statSync(path.join(root, 'resources/icon.png')).size > 10_000);
 });
 
+// Base de datos (Fase 34): una auditoria anterior (OZAMA_PRO_AUDIT.md,
+// seccion 27) habia encontrado que User no tenia indice en elo/
+// damasElo pese a que el ranking ordena por esos campos, y que
+// DamasMatch no tenia indice en result. Auditando esta fase se
+// encontro que esos indices YA estaban declarados -- lo unico sin
+// confirmar era que el query planner de Mongo realmente los usa (ver
+// scripts/verify-database-indices.js, que lo prueba con datos reales
+// via explain()). Este pin es la guarda barata: si alguien borra la
+// declaracion sin querer, esto falla al instante en `npm test`, sin
+// esperar a correr el script pesado contra Mongo.
+test('the leaderboard/climbers/history hot-path indices stay declared', () => {
+  const user = read('models/User.js');
+  assert.match(user, /UserSchema\.index\(\{ elo: -1 \}\)/);
+  assert.match(user, /UserSchema\.index\(\{ damasElo: -1 \}\)/);
+  const match = read('models/Match.js');
+  assert.match(match, /MatchSchema\.index\(\{ result: 1 \}\)/);
+  assert.match(match, /MatchSchema\.index\(\{ endedAt: -1 \}\)/);
+  assert.match(match, /MatchSchema\.index\(\{ 'whitePlayer\.userId': 1, createdAt: -1 \}\)/);
+  assert.match(match, /MatchSchema\.index\(\{ 'blackPlayer\.userId': 1, createdAt: -1 \}\)/);
+  const damasMatch = read('models/DamasMatch.js');
+  assert.match(damasMatch, /DamasMatchSchema\.index\(\{ result: 1 \}\)/);
+  assert.match(damasMatch, /DamasMatchSchema\.index\(\{ endedAt: -1 \}\)/);
+});
+
 // Accesibilidad (Fase 32): theme.css ya trae un :focus-visible global
 // desde una fase anterior, pero 9 paginas no lo importan en absoluto
 // (index/admin/leaderboard/offline y las 4 legales via legal.css) --
