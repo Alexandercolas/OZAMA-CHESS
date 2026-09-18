@@ -10,6 +10,7 @@
     "test:dynamic-security": "node scripts/dynamic-security-check.js",
     "test:tournament-flow": "node scripts/verify-tournament-flow.js",
     "verify": "node scripts/verify.js",
+    "verify:all": "node scripts/run-all-verifications.js",
     "check": "npm run verify && npm test",
     "mobile:sync": "node scripts/mobile-sync.js",
     "mobile:open": "npx cap open android",
