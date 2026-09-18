@@ -790,8 +790,13 @@
                     eloClass = 'elo-down'; eloText = change != null ? `${change}` : '-'; resultText = result === 'abandoned' ? 'Abandono' : 'Derrota';
                   }
 
+                  // 'opponent-left' con un ganador (Fase 37): para quien se
+                  // quedo es "Rival se fue", pero para quien PERDIO es
+                  // que se desconecto el mismo -- la etiqueta no puede ser
+                  // la misma para los dos lados.
+                  const leftAndLost = m.reason === 'opponent-left' && won === false && result !== 'abandoned';
                   const extraDetail = game === 'damas'
-                    ? (DAMAS_REASON_LABELS[m.reason] || '')
+                    ? (leftAndLost ? 'Te desconectaste' : (DAMAS_REASON_LABELS[m.reason] || ''))
                     : `${movesCount} movidas`;
                   const detail = [resultText, myColor === 'w' ? 'Blancas' : 'Negras', extraDetail, `Sala ${m.roomCode || ''}`]
                     .filter(Boolean).join(' · ');

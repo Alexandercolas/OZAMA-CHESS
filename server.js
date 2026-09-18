@@ -296,10 +296,10 @@ function damasStartCloseTimer(code) {
       // mas abajo), asi que la partida desaparecia de damasRooms SIN
       // dejar ningun DamasMatch, ni siquiera como abandono. Ajedrez
       // (startCloseTimer, mas arriba) ya llama finishMatch sin
-      // importar si hay ganador, dejando 'abandoned'; finishDamasGame
-      // ya sabe manejar winner:null exactamente igual (reason
-      // 'opponent-left' siempre da result:'abandoned'), asi que la
-      // correccion es sacar ese "if" y llamarla siempre.
+      // importar si hay ganador; finishDamasGame ya sabe manejar
+      // winner:null (sin ganador -> 'abandoned'; con un sobreviviente
+      // -> gana por abandono, ver Fase 37), asi que la correccion fue
+      // sacar ese "if" y llamarla siempre.
       const survivorColor = room.white ? 'w' : room.black ? 'b' : null;
       room.status = 'finished';
       io.to(code).emit('damas:game-over', { winner: survivorColor, reason: 'opponent-left' });
@@ -343,15 +343,27 @@ function damasStartClock(code) {
 // Guarda el resultado final de una partida de Damas (historial + ELO
 // propio de Damas, separado del de ajedrez). Solo persiste cuando
 // ambos lados son cuentas reales -- una partida de invitado no tiene a
-// quien atribuirsela. Abandono (rival se fue / cerro un admin) se
-// registra en el historial pero nunca mueve el ELO, igual que el
-// ajedrez trata sus partidas 'abandoned'.
+// quien atribuirsela. 'abandoned' (los dos se fueron, o un admin cerro
+// la sala) se registra en el historial pero nunca mueve el ELO, igual
+// que Ajedrez. Un rival que se desconecta con el otro todavia en la
+// sala NO es 'abandoned': es una derrota real para quien se fue (ver
+// forfeitWin mas abajo).
 async function finishDamasGame(room, code, { winner, reason }) {
   const wInfo = room.playerInfo?.w;
   const bInfo = room.playerInfo?.b;
   if (!wInfo || !bInfo || !wInfo.userId || !bInfo.userId) return;
 
-  const abandoned = reason === 'opponent-left' || reason === 'admin-closed';
+  // Paridad con Ajedrez (Fase 37, QA): si UNO solo se fue y el otro
+  // sigue conectado tras el margen de 30s, el que se quedo GANA por
+  // abandono y el que se fue PIERDE -- igual que startCloseTimer() en
+  // Ajedrez (result white_win/black_win + applyEloForRoom). Antes
+  // Damas trataba cualquier 'opponent-left' como 'abandoned' sin
+  // tocar ELO ni estadisticas, asi que quien iba perdiendo podia
+  // simplemente cerrar la pestaña: peor para el rival que rendirse (que
+  // si cuenta como derrota). 'abandoned' queda solo para cuando NO hay
+  // ganador (los dos se fueron) o un admin cerro la sala a la fuerza.
+  const forfeitWin = reason === 'opponent-left' && (winner === 'w' || winner === 'b');
+  const abandoned = reason === 'admin-closed' || (reason === 'opponent-left' && !forfeitWin);
   const result = abandoned ? 'abandoned'
     : winner === 'w' ? 'white_win'
     : winner === 'b' ? 'black_win'

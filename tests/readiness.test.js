@@ -342,6 +342,20 @@ test('Android release base blocks backups and cleartext traffic', () => {
   assert.ok(fs.statSync(path.join(root, 'resources/icon.png')).size > 10_000);
 });
 
+// Paridad Ajedrez/Damas (Fase 37, QA): en Ajedrez, quien se desconecta y
+// no vuelve en 30s PIERDE (el que se quedo gana con ELO). Damas trataba
+// todo 'opponent-left' como 'abandoned' sin tocar nada -- quien iba
+// perdiendo cerraba la pestaña sin penalizacion. Ver
+// scripts/verify-forfeit-parity.js para la prueba de comportamiento.
+test('Damas counts a lone disconnect as a real loss, like Chess, and history labels it per side', () => {
+  const server = read('server.js');
+  assert.match(server, /const forfeitWin = reason === 'opponent-left' && \(winner === 'w' \|\| winner === 'b'\);/);
+  assert.match(server, /const abandoned = reason === 'admin-closed' \|\| \(reason === 'opponent-left' && !forfeitWin\);/);
+  const history = read('public/history.html');
+  assert.match(history, /const leftAndLost = m\.reason === 'opponent-left' && won === false && result !== 'abandoned';/);
+  assert.match(history, /'Te desconectaste'/);
+});
+
 // Base de datos (Fase 34): una auditoria anterior (OZAMA_PRO_AUDIT.md,
 // seccion 27) habia encontrado que User no tenia indice en elo/
 // damasElo pese a que el ranking ordena por esos campos, y que
