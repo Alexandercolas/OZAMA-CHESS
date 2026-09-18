@@ -288,12 +288,22 @@ function damasStartCloseTimer(code) {
   damasStopClock(room); // igual que Ajedrez: el reloj se pausa mientras el rival tiene su grace period para reconectar
   room.closeTimer = setTimeout(async () => {
     if (room.status === 'playing') {
+      // Cuando SOLO uno se fue, survivorColor es su color y gana por
+      // abandono. Cuando los DOS se fueron (encontrado en vivo
+      // armando la Fase 33 -- ver scripts/verify-simultaneous-
+      // disconnect.js), survivorColor queda null -- antes eso hacia
+      // que este bloque entero se saltara (el "if (survivorColor)" de
+      // mas abajo), asi que la partida desaparecia de damasRooms SIN
+      // dejar ningun DamasMatch, ni siquiera como abandono. Ajedrez
+      // (startCloseTimer, mas arriba) ya llama finishMatch sin
+      // importar si hay ganador, dejando 'abandoned'; finishDamasGame
+      // ya sabe manejar winner:null exactamente igual (reason
+      // 'opponent-left' siempre da result:'abandoned'), asi que la
+      // correccion es sacar ese "if" y llamarla siempre.
       const survivorColor = room.white ? 'w' : room.black ? 'b' : null;
-      if (survivorColor) {
-        room.status = 'finished';
-        io.to(code).emit('damas:game-over', { winner: survivorColor, reason: 'opponent-left' });
-        await finishDamasGame(room, code, { winner: survivorColor, reason: 'opponent-left' });
-      }
+      room.status = 'finished';
+      io.to(code).emit('damas:game-over', { winner: survivorColor, reason: 'opponent-left' });
+      await finishDamasGame(room, code, { winner: survivorColor, reason: 'opponent-left' });
     }
     damasRooms.delete(code);
   }, 30_000);
