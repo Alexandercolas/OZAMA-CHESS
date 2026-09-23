@@ -1880,18 +1880,21 @@
     if (!list) return;
     const others = players.filter(p => p.username !== user?.username);
     if (!others.length) {
-      list.innerHTML = '<div class="players-empty">Nadie más conectado aún…</div>';
+      const emptyLabel = window.OZAMA_I18N?.t('lobby.playersOnlineEmpty') || 'Nadie más conectado aún…';
+      list.innerHTML = `<div class="players-empty">${emptyLabel}</div>`;
       return;
     }
+    const inGameLabel = window.OZAMA_I18N?.t('lobby.playersOnlineInGame') || ' · EN PARTIDA';
+    const friendLabel = window.OZAMA_I18N?.t('lobby.playersOnlineAddFriend') || 'Amigo';
     list.innerHTML = others.map(p => {
       const flag = (p.country||'DO').toLowerCase();
       const username = escapeHtml(p.username || 'Jugador');
-      const disabled = p.inGame ? ' · EN PARTIDA' : '';
+      const disabled = p.inGame ? inGameLabel : '';
       return `<div class="player-chip" onclick="challengePlayer('${username}')">
         <div class="player-chip-flag"><img src="https://flagcdn.com/20x15/${flag}.png" alt="${flag.toUpperCase()}" onerror="this.style.display='none'"/></div>
         <span class="player-chip-name">${username}</span>
         <span class="player-chip-elo">${p.elo||1200}${disabled}</span>
-        <button class="player-chip-friend" onclick="addFriendFromLobby(event, '${username}')">Amigo</button>
+        <button class="player-chip-friend" onclick="addFriendFromLobby(event, '${username}')">${friendLabel}</button>
       </div>`;
     }).join('');
   });

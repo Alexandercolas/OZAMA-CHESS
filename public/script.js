@@ -1598,9 +1598,18 @@ function updateStatusDisplay() {
   let message = '';
 
   if (state.status === STATUS.CHECKMATE) {
+    // Fase 40 (QA flujos completos end-to-end): completeResignation()
+    // y el handler de 'opponent-resigned' reusan STATUS.CHECKMATE (no
+    // hay un estado propio para "se rindio") para que este mismo
+    // letrero cierre la partida -- pero sin distinguir endReason, este
+    // letrero (el de arriba del tablero, NO el modal de fin de
+    // partida, que si acertaba) decia "¡Jaque Mate!" en una rendicion
+    // de verdad, para los DOS jugadores.
     message = state.endReason === 'timeout'
       ? `Tiempo agotado. Ganan las ${state.winner === COLOR.WHITE ? 'Blancas' : 'Negras'}.`
-      : `¡Jaque Mate! Ganan las ${state.winner === COLOR.WHITE ? 'Blancas' : 'Negras'}.`;
+      : state.endReason === 'resign'
+        ? `Rendición. Ganan las ${state.winner === COLOR.WHITE ? 'Blancas' : 'Negras'}.`
+        : `¡Jaque Mate! Ganan las ${state.winner === COLOR.WHITE ? 'Blancas' : 'Negras'}.`;
   } else if (state.status === STATUS.STALEMATE) {
     message = 'Tablas por rey ahogado.';
   } else if (state.status === STATUS.DRAW) {
@@ -1894,6 +1903,7 @@ function setupOnlineSocket() {
     CLOCK.stop();
     playSound(IS_SPECTATE ? 'gameover' : 'victory');
     state.status = STATUS.CHECKMATE;
+    state.endReason = 'resign';
     // Un espectador no tiene "rival" propio -- no hay un color ganador
     // desde su punto de vista, asi que no se toca state.winner.
     if (!IS_SPECTATE) state.winner = PLAYER_COLOR;
@@ -2118,17 +2128,38 @@ function setupOnlineSocket() {
   // mas arriba). isReconnect es false en el primer connect (la carga
   // normal de la pagina) para no mostrar "reconectado" sin haber
   // avisado antes de ningun corte.
+  // Fase 40 (QA flujos completos end-to-end): en una conexion rapida
+  // (localhost, o simplemente buena red) el socket ya podia estar
+  // conectado para cuando el codigo sincrono de mas abajo llegaba al
+  // `if (socket.connected) rejoin()` -- el evento 'connect' de arriba
+  // YA habia disparado rejoin() una vez, y esta linea lo disparaba OTRA
+  // VEZ para la MISMA conexion. Un 'rejoin' de mas es inofensivo del
+  // lado propio (el servidor solo reescribe el mismo estado), pero
+  // server.js reemite 'opponent-reconnected' cada vez -- el RIVAL veia
+  // el mensaje de sistema "X reconectado" duplicado justo al arrancar
+  // una partida nueva, sin que nadie se hubiera desconectado nunca.
+  // rejoinedThisConnection evita que las dos vias disparen rejoin() dos
+  // veces para la MISMA conexion -- se resetea en cada 'disconnect'
+  // real, asi que una reconexion de verdad SI sigue re-uniendose sola
+  // (el comportamiento que arreglo la Fase 18, sin tocar).
   let _hadDisconnected = false;
+  let _rejoinedThisConnection = false;
+  function rejoinOnce() {
+    if (_rejoinedThisConnection) return;
+    _rejoinedThisConnection = true;
+    rejoin();
+  }
   socket.on('connect', () => {
     if (_hadDisconnected && typeof appendSystemMessage === 'function') appendSystemMessage('Reconectado.');
     _hadDisconnected = false;
-    rejoin();
+    rejoinOnce();
   });
   socket.on('disconnect', () => {
+    _rejoinedThisConnection = false;
     _hadDisconnected = true;
     if (typeof appendSystemMessage === 'function') appendSystemMessage('Conexión perdida. Reconectando…');
   });
-  if (socket.connected) rejoin();
+  if (socket.connected) rejoinOnce();
 }
 
 // Iniciar juego al cargar la página

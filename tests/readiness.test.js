@@ -597,3 +597,39 @@ test('quick-match guards against the same socket re-entering matchmaking before 
   assert.match(server, /matchmakingInFlight\.delete\(socket\.id\);/);
   assert.match(server, /damasMatchmakingInFlight\.delete\(socket\.id\);/);
 });
+
+// Flujos completos de usuario end-to-end (Fase 40): jugando una
+// partida de verdad por el navegador -- registro real, quick-match
+// real contra un rival real, y "Rendirse" real -- salieron dos bugs
+// del lado del cliente que ningun script de verificacion contra el
+// backend (Fases 36-39) podia atrapar, porque ninguno carga game.html
+// ni corre public/script.js de verdad en un navegador.
+//
+// 1) En una conexion rapida, el socket de game.html ya podia estar
+// conectado para cuando el codigo sincrono llegaba al
+// `if (socket.connected) rejoin()` de mas abajo -- el handler de
+// 'connect' YA habia disparado rejoin() una vez, y esa linea lo volvia
+// a disparar para la MISMA conexion. server.js reemite
+// 'opponent-reconnected' en cada rejoin: el RIVAL veia el mensaje de
+// sistema "X reconectado" duplicado al arrancar una partida nueva, sin
+// que nadie se hubiera desconectado nunca.
+//
+// 2) completeResignation() y el handler de 'opponent-resigned' reusan
+// STATUS.CHECKMATE (no hay un estado propio para "se rindio") para
+// cerrar la partida -- pero updateStatusDisplay() (el letrero de
+// arriba del tablero, DISTINTO del modal de fin de partida, que si
+// acertaba con "TE RENDISTE") solo sabia distinguir 'timeout' de
+// 'endReason', nunca 'resign' -- una rendicion de VERDAD (nadie dio
+// jaque mate) mostraba "¡Jaque Mate!" arriba del tablero, para los DOS
+// jugadores.
+test('game.html avoids a duplicate rejoin on a fast first connect, and the resign banner never claims checkmate', () => {
+  const script = read('public/script.js');
+  assert.match(script, /let _rejoinedThisConnection = false;/);
+  assert.match(script, /function rejoinOnce\(\) \{\s*\n\s*if \(_rejoinedThisConnection\) return;/);
+  assert.match(script, /socket\.on\('disconnect', \(\) => \{\s*\n\s*_rejoinedThisConnection = false;/);
+  assert.match(script, /if \(socket\.connected\) rejoinOnce\(\);/);
+  assert.doesNotMatch(script, /if \(socket\.connected\) rejoin\(\);/);
+
+  assert.match(script, /state\.endReason === 'resign'\s*\n\s*\? `Rendición\. Ganan las/);
+  assert.match(script, /socket\.on\('opponent-resigned', \(\{ playerName \} = \{\}\) => \{\s*\n\s*CLOCK\.stop\(\);\s*\n\s*playSound\(IS_SPECTATE \? 'gameover' : 'victory'\);\s*\n\s*state\.status = STATUS\.CHECKMATE;\s*\n\s*state\.endReason = 'resign';/);
+});
