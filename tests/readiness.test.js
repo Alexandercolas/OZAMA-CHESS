@@ -533,3 +533,46 @@ test('server.js survives an unhandled rejection and shuts down cleanly on SIGTER
   // al construir esta fase). No debe volver a aparecer.
   assert.doesNotMatch(server, /io\.close\(\);\s*\n\s*server\.close\(/);
 });
+
+// Dispositivos y viewports (Fase 38): la auditoria manual recorrio las
+// ~26 paginas publicas mas los tableros de Ajedrez y Damas (con una
+// partida real contra el bot) en 320px, 375px, 768px y 1440px, y no
+// encontro overflow horizontal en ninguna -- cada pagina ya declara el
+// viewport responsivo y una red de seguridad `overflow-x:hidden` en
+// html/body (propia o heredada de theme.css/style.css), y los pocos
+// contenedores mas anchos que la pantalla (tabla de ranking, pestañas,
+// tablas de admin) son scroll interno a proposito (`overflow-x:auto`),
+// no fuga de la pagina. Estas dos pruebas fijan ese estado para que una
+// pagina nueva, o una que pierda el meta viewport o la red de
+// seguridad, no vuelva a romper el layout movil sin que nadie lo note.
+test('every public page declares the responsive viewport meta tag', () => {
+  const pages = fs.readdirSync(path.join(root, 'public')).filter((file) => file.endsWith('.html'));
+  assert.ok(pages.length > 20, 'deberia haber bastantes paginas publicas para que esta prueba tenga sentido');
+  for (const page of pages) {
+    const html = read(`public/${page}`);
+    assert.match(html, /<meta name="viewport" content="width=device-width/, `${page} deberia declarar el meta viewport responsivo`);
+  }
+});
+
+test('every public page keeps a horizontal-overflow safety net, own or shared', () => {
+  // pieces-preview.html es la misma herramienta interna que ya excluye
+  // el test de PWA de arriba (sin CSP ni titulo real).
+  const pages = fs.readdirSync(path.join(root, 'public'))
+    .filter((file) => file.endsWith('.html') && file !== 'pieces-preview.html');
+  const ownGuard = /(?:html,\s*body|body)\s*\{[^}]*overflow-x:\s*hidden/;
+  const sharedSheet = /<link rel="stylesheet" href="\/(theme|style|legal)\.css">/;
+  for (const page of pages) {
+    const html = read(`public/${page}`);
+    assert.ok(
+      ownGuard.test(html) || sharedSheet.test(html),
+      `${page} deberia traer 'overflow-x:hidden' en html/body (propio o via theme.css/style.css/legal.css)`
+    );
+  }
+  // Las hojas compartidas son la red de seguridad real para las paginas
+  // que no la declaran inline -- si esto se borra, todas esas paginas
+  // pierden la proteccion de golpe. legal.css no la traia (unica
+  // excepcion real que encontro esta fase, ver commit) -- ya se agrego.
+  assert.match(read('public/theme.css'), /html,\s*body\s*\{[^}]*overflow-x:\s*hidden/);
+  assert.match(read('public/style.css'), /body\s*\{[^}]*overflow-x:\s*hidden/);
+  assert.match(read('public/legal.css'), /body\s*\{[^}]*overflow-x:\s*hidden/);
+});
