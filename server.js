@@ -456,6 +456,23 @@ const matchQueue = [];
 // esta separado de rooms.
 const damasMatchQueue = [];
 
+// Guardia de reentrada (Fase 39, QA concurrencia y carga): cada
+// handler de quick-match hace 2 await (getPlayerInfo, blockedUsers)
+// ANTES de empujar a la cola o de emparejar. El "ya estoy en cola" que
+// hace splice() al principio de cada handler solo mira el estado
+// ANTES de esos await -- si el MISMO socket dispara quick-match dos
+// veces seguidas (doble click, o un reintento del cliente por lentitud
+// bajo carga) antes de que la primera llamada termine, la segunda no
+// ve la primera entrada todavia y tambien la empuja: el socket queda
+// con DOS entradas en la cola. Si otro rival distinto empareja con esa
+// segunda entrada fantasma mientras el jugador ya esta en su primera
+// partida, createMatchBetween()/createDamasMatchBetween() pisan
+// socket.data.roomCode sin fijarse si ya habia uno -- el jugador queda
+// arrancado de su primera partida sin aviso. Colas separadas (ver
+// arriba), guardias separadas.
+const matchmakingInFlight = new Set();
+const damasMatchmakingInFlight = new Set();
+
 function generateCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
@@ -1686,59 +1703,69 @@ io.on('connection', (socket) => {
     if (!data) return;
     const { playerName = 'Jugador', country = 'DO', timeControl = DEFAULT_TIME_CONTROL_KEY } = data;
     if (!requireSocketAuth()) return;
-    const existingIdx = matchQueue.findIndex(e => e.socketId === socket.id);
-    if (existingIdx !== -1) matchQueue.splice(existingIdx, 1);
+    // Ver el comentario junto a matchmakingInFlight: sin esto, un
+    // segundo quick-match del mismo socket que llega antes de que el
+    // primero termine sus await de abajo se cuela con una segunda
+    // entrada fantasma en la cola.
+    if (matchmakingInFlight.has(socket.id)) return;
+    matchmakingInFlight.add(socket.id);
+    try {
+      const existingIdx = matchQueue.findIndex(e => e.socketId === socket.id);
+      if (existingIdx !== -1) matchQueue.splice(existingIdx, 1);
 
-    const pInfo = await getPlayerInfo(playerName, country);
-    socket.data.playerName = pInfo.name;
+      const pInfo = await getPlayerInfo(playerName, country);
+      socket.data.playerName = pInfo.name;
 
-    // Bloqueo (Fase 10): no emparejar con nadie que yo bloquee ni con
-    // nadie que me haya bloqueado a mi. blockedUsers va aparte de
-    // pInfo a proposito -- pInfo termina guardado en Match/DamasMatch
-    // como snapshot del jugador, y esto no tiene que filtrarse ahi.
-    const myBlockedDoc = pInfo.userId
-      ? await User.findById(pInfo.userId).select('blockedUsers').lean().catch(() => null)
-      : null;
-    const myBlocked = (myBlockedDoc?.blockedUsers || []).map(String);
+      // Bloqueo (Fase 10): no emparejar con nadie que yo bloquee ni con
+      // nadie que me haya bloqueado a mi. blockedUsers va aparte de
+      // pInfo a proposito -- pInfo termina guardado en Match/DamasMatch
+      // como snapshot del jugador, y esto no tiene que filtrarse ahi.
+      const myBlockedDoc = pInfo.userId
+        ? await User.findById(pInfo.userId).select('blockedUsers').lean().catch(() => null)
+        : null;
+      const myBlocked = (myBlockedDoc?.blockedUsers || []).map(String);
 
-    // Emparejar solo con quien pidio el MISMO ritmo de tiempo (Fase 2,
-    // Blitz) -- no tendria sentido mezclar a alguien que quiere 1+0 con
-    // alguien que quiere 10+0 en la misma cola.
-    const rivalIdx = matchQueue.findIndex(e => {
-      if (e.socketId === socket.id) return false;
-      if (e.timeControl !== timeControl) return false;
-      if (pInfo.userId && e.playerInfo.userId.toString() === pInfo.userId.toString()) return false;
-      if (pInfo.userId && myBlocked.includes(e.playerInfo.userId?.toString())) return false;
-      if (pInfo.userId && (e.blockedUsers || []).includes(pInfo.userId.toString())) return false;
-      const rivalSocket = io.sockets.sockets.get(e.socketId);
-      return rivalSocket.connected;
-    });
+      // Emparejar solo con quien pidio el MISMO ritmo de tiempo (Fase 2,
+      // Blitz) -- no tendria sentido mezclar a alguien que quiere 1+0 con
+      // alguien que quiere 10+0 en la misma cola.
+      const rivalIdx = matchQueue.findIndex(e => {
+        if (e.socketId === socket.id) return false;
+        if (e.timeControl !== timeControl) return false;
+        if (pInfo.userId && e.playerInfo.userId.toString() === pInfo.userId.toString()) return false;
+        if (pInfo.userId && myBlocked.includes(e.playerInfo.userId?.toString())) return false;
+        if (pInfo.userId && (e.blockedUsers || []).includes(pInfo.userId.toString())) return false;
+        const rivalSocket = io.sockets.sockets.get(e.socketId);
+        return rivalSocket.connected;
+      });
 
-    if (rivalIdx !== -1) {
-      const [rival] = matchQueue.splice(rivalIdx, 1);
-      const rivalSocket = io.sockets.sockets.get(rival.socketId);
+      if (rivalIdx !== -1) {
+        const [rival] = matchQueue.splice(rivalIdx, 1);
+        const rivalSocket = io.sockets.sockets.get(rival.socketId);
 
-      if (!rivalSocket.connected) {
+        if (!rivalSocket.connected) {
+          matchQueue.push({ socketId: socket.id, playerInfo: pInfo, joinedAt: Date.now(), blockedUsers: myBlocked, timeControl });
+          socket.emit('matchmaking-searching', { position: matchQueue.length });
+          return;
+        }
+
+        let code;
+        do { code = generateCode(); } while (rooms.has(code));
+
+        const flip = Math.random() < 0.5;
+        const wInfo = flip ? pInfo       : rival.playerInfo;
+        const bInfo = flip ? rival.playerInfo : pInfo;
+        const wSock = flip ? socket      : rivalSocket;
+        const bSock = flip ? rivalSocket : socket;
+
+        await createMatchBetween(wSock, wInfo, bSock, bInfo, code, timeControl);
+
+      } else {
         matchQueue.push({ socketId: socket.id, playerInfo: pInfo, joinedAt: Date.now(), blockedUsers: myBlocked, timeControl });
         socket.emit('matchmaking-searching', { position: matchQueue.length });
-        return;
+        console.log(`[MM] ${pInfo.name} en cola (${timeControl}). Cola: ${matchQueue.length}`);
       }
-
-      let code;
-      do { code = generateCode(); } while (rooms.has(code));
-
-      const flip = Math.random() < 0.5;
-      const wInfo = flip ? pInfo       : rival.playerInfo;
-      const bInfo = flip ? rival.playerInfo : pInfo;
-      const wSock = flip ? socket      : rivalSocket;
-      const bSock = flip ? rivalSocket : socket;
-
-      await createMatchBetween(wSock, wInfo, bSock, bInfo, code, timeControl);
-
-    } else {
-      matchQueue.push({ socketId: socket.id, playerInfo: pInfo, joinedAt: Date.now(), blockedUsers: myBlocked, timeControl });
-      socket.emit('matchmaking-searching', { position: matchQueue.length });
-      console.log(`[MM] ${pInfo.name} en cola (${timeControl}). Cola: ${matchQueue.length}`);
+    } finally {
+      matchmakingInFlight.delete(socket.id);
     }
   });
 
@@ -2581,54 +2608,62 @@ if (room.white && room.black && !room.clockInterval) {
     // damas:create-room/join-room: Damas permite jugar como invitado.
     const { playerName = 'Jugador', country = 'DO', timeControl = DEFAULT_TIME_CONTROL_KEY } = data;
 
-    const existingIdx = damasMatchQueue.findIndex((e) => e.socketId === socket.id);
-    if (existingIdx !== -1) damasMatchQueue.splice(existingIdx, 1);
+    // Ver el comentario junto a damasMatchmakingInFlight (misma razon
+    // que el guardia de Ajedrez, cola separada).
+    if (damasMatchmakingInFlight.has(socket.id)) return;
+    damasMatchmakingInFlight.add(socket.id);
+    try {
+      const existingIdx = damasMatchQueue.findIndex((e) => e.socketId === socket.id);
+      if (existingIdx !== -1) damasMatchQueue.splice(existingIdx, 1);
 
-    const pInfo = await getPlayerInfo(playerName, country);
-    if (socket.data.user) pInfo.elo = Number(socket.data.user.damasElo ?? 1200);
-    socket.data.playerName = pInfo.name;
+      const pInfo = await getPlayerInfo(playerName, country);
+      if (socket.data.user) pInfo.elo = Number(socket.data.user.damasElo ?? 1200);
+      socket.data.playerName = pInfo.name;
 
-    // Bloqueo (Fase 10, igual que en Ajedrez): solo se computa si hay
-    // sesion -- un invitado no tiene blockedUsers que consultar.
-    const myBlockedDoc = pInfo.userId
-      ? await User.findById(pInfo.userId).select('blockedUsers').lean().catch(() => null)
-      : null;
-    const myBlocked = (myBlockedDoc?.blockedUsers || []).map(String);
+      // Bloqueo (Fase 10, igual que en Ajedrez): solo se computa si hay
+      // sesion -- un invitado no tiene blockedUsers que consultar.
+      const myBlockedDoc = pInfo.userId
+        ? await User.findById(pInfo.userId).select('blockedUsers').lean().catch(() => null)
+        : null;
+      const myBlocked = (myBlockedDoc?.blockedUsers || []).map(String);
 
-    const rivalIdx = damasMatchQueue.findIndex((e) => {
-      if (e.socketId === socket.id) return false;
-      if (e.timeControl !== timeControl) return false;
-      if (pInfo.userId && e.playerInfo.userId?.toString() === pInfo.userId.toString()) return false;
-      if (pInfo.userId && myBlocked.includes(e.playerInfo.userId?.toString())) return false;
-      if (pInfo.userId && (e.blockedUsers || []).includes(pInfo.userId.toString())) return false;
-      const rivalSocket = io.sockets.sockets.get(e.socketId);
-      return rivalSocket?.connected;
-    });
+      const rivalIdx = damasMatchQueue.findIndex((e) => {
+        if (e.socketId === socket.id) return false;
+        if (e.timeControl !== timeControl) return false;
+        if (pInfo.userId && e.playerInfo.userId?.toString() === pInfo.userId.toString()) return false;
+        if (pInfo.userId && myBlocked.includes(e.playerInfo.userId?.toString())) return false;
+        if (pInfo.userId && (e.blockedUsers || []).includes(pInfo.userId.toString())) return false;
+        const rivalSocket = io.sockets.sockets.get(e.socketId);
+        return rivalSocket?.connected;
+      });
 
-    if (rivalIdx !== -1) {
-      const [rival] = damasMatchQueue.splice(rivalIdx, 1);
-      const rivalSocket = io.sockets.sockets.get(rival.socketId);
+      if (rivalIdx !== -1) {
+        const [rival] = damasMatchQueue.splice(rivalIdx, 1);
+        const rivalSocket = io.sockets.sockets.get(rival.socketId);
 
-      if (!rivalSocket?.connected) {
+        if (!rivalSocket?.connected) {
+          damasMatchQueue.push({ socketId: socket.id, playerInfo: pInfo, joinedAt: Date.now(), blockedUsers: myBlocked, timeControl });
+          socket.emit('damas:matchmaking-searching', { position: damasMatchQueue.length });
+          return;
+        }
+
+        let code;
+        do { code = generateCode(); } while (rooms.has(code) || damasRooms.has(code));
+
+        const flip = Math.random() < 0.5;
+        const wInfo = flip ? pInfo : rival.playerInfo;
+        const bInfo = flip ? rival.playerInfo : pInfo;
+        const wSock = flip ? socket : rivalSocket;
+        const bSock = flip ? rivalSocket : socket;
+
+        await createDamasMatchBetween(wSock, wInfo, bSock, bInfo, code, timeControl);
+      } else {
         damasMatchQueue.push({ socketId: socket.id, playerInfo: pInfo, joinedAt: Date.now(), blockedUsers: myBlocked, timeControl });
         socket.emit('damas:matchmaking-searching', { position: damasMatchQueue.length });
-        return;
+        console.log(`[DAMAS MM] ${pInfo.name} en cola (${timeControl}). Cola: ${damasMatchQueue.length}`);
       }
-
-      let code;
-      do { code = generateCode(); } while (rooms.has(code) || damasRooms.has(code));
-
-      const flip = Math.random() < 0.5;
-      const wInfo = flip ? pInfo : rival.playerInfo;
-      const bInfo = flip ? rival.playerInfo : pInfo;
-      const wSock = flip ? socket : rivalSocket;
-      const bSock = flip ? rivalSocket : socket;
-
-      await createDamasMatchBetween(wSock, wInfo, bSock, bInfo, code, timeControl);
-    } else {
-      damasMatchQueue.push({ socketId: socket.id, playerInfo: pInfo, joinedAt: Date.now(), blockedUsers: myBlocked, timeControl });
-      socket.emit('damas:matchmaking-searching', { position: damasMatchQueue.length });
-      console.log(`[DAMAS MM] ${pInfo.name} en cola (${timeControl}). Cola: ${damasMatchQueue.length}`);
+    } finally {
+      damasMatchmakingInFlight.delete(socket.id);
     }
   });
 

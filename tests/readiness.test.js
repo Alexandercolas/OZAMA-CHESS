@@ -576,3 +576,24 @@ test('every public page keeps a horizontal-overflow safety net, own or shared', 
   assert.match(read('public/style.css'), /body\s*\{[^}]*overflow-x:\s*hidden/);
   assert.match(read('public/legal.css'), /body\s*\{[^}]*overflow-x:\s*hidden/);
 });
+
+// Concurrencia y carga (Fase 39): quick-match (Ajedrez y Damas) hace 2
+// await (getPlayerInfo, blockedUsers) antes de empujar a la cola o de
+// emparejar. Sin un guardia de reentrada, un segundo 'quick-match' del
+// MISMO socket que llega antes de que el primero termine esos await
+// (doble click, o un reintento del cliente por lentitud bajo carga) se
+// cuela con una segunda entrada fantasma -- y si otro rival empareja
+// con ella, el jugador queda arrancado de su primera partida sin
+// aviso (createMatchBetween/createDamasMatchBetween pisan
+// socket.data.roomCode sin comprobar si ya habia uno). Ver
+// scripts/verify-matchmaking-reentry.js para la reproduccion real
+// (falla contra el server.js de antes de esta fase).
+test('quick-match guards against the same socket re-entering matchmaking before its first call finishes', () => {
+  const server = read('server.js');
+  assert.match(server, /const matchmakingInFlight = new Set\(\);/);
+  assert.match(server, /const damasMatchmakingInFlight = new Set\(\);/);
+  assert.match(server, /if \(matchmakingInFlight\.has\(socket\.id\)\) return;\s*\n\s*matchmakingInFlight\.add\(socket\.id\);/);
+  assert.match(server, /if \(damasMatchmakingInFlight\.has\(socket\.id\)\) return;\s*\n\s*damasMatchmakingInFlight\.add\(socket\.id\);/);
+  assert.match(server, /matchmakingInFlight\.delete\(socket\.id\);/);
+  assert.match(server, /damasMatchmakingInFlight\.delete\(socket\.id\);/);
+});
