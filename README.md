@@ -124,7 +124,7 @@ Cambio de contrasena desde Ajustes en Chrome y Mongo temporal:
 npm run test:e2e:password
 ```
 
-Comprueba el rechazo de la clave actual incorrecta, el cierre de sesion tras el cambio y el acceso solo con la clave nueva.
+Comprueba el rechazo de la clave actual incorrecta, el cierre de sesion tras el cambio, el acceso solo con la clave nueva y el limite de intentos por cuenta sin afectar a otros usuarios.
 
 URL local principal:
 

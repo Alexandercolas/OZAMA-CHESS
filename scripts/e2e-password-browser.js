@@ -100,6 +100,36 @@ async function main() {
     });
     assert.equal(newLogin.status(), 200, 'La clave nueva debe autenticar');
     console.log('Cambio confirmado: sesión cerrada, clave anterior rechazada y clave nueva aceptada.');
+
+    const contextB = await browser.newContext({ baseURL: baseUrl });
+    const contextC = await browser.newContext({ baseURL: baseUrl });
+    const blockedUser = `blocked_${String(Date.now()).slice(-8)}`;
+    const otherUser = `other_${String(Date.now()).slice(-8)}`;
+    for (const [target, name] of [[contextB, blockedUser], [contextC, otherUser]]) {
+      const response = await target.request.post('/api/auth/register', {
+        data: { username: name, email: `${name}@example.test`, password: oldPassword, country: 'DO' },
+      });
+      assert.equal(response.status(), 201, `Register ${name}: ${await response.text()}`);
+    }
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      const response = await contextB.request.put('/api/user/password', {
+        headers: { Origin: baseUrl },
+        data: { currentPassword: 'WrongCurrent99!', newPassword },
+      });
+      assert.equal(response.status(), 401, `Wrong password attempt ${attempt}`);
+    }
+    const blocked = await contextB.request.put('/api/user/password', {
+      headers: { Origin: baseUrl },
+      data: { currentPassword: oldPassword, newPassword },
+    });
+    assert.equal(blocked.status(), 429);
+    assert.ok(Number(blocked.headers()['retry-after']) > 0);
+    const unaffected = await contextC.request.put('/api/user/password', {
+      headers: { Origin: baseUrl },
+      data: { currentPassword: oldPassword, newPassword },
+    });
+    assert.equal(unaffected.status(), 200, 'Otra cuenta no debe quedar bloqueada');
+    console.log('Límite por cuenta: intento 6 rechazado con 429; otra cuenta cambió su clave normalmente.');
     console.log('PASSWORD_BROWSER_FLOW_OK');
   } finally {
     await browser?.close();

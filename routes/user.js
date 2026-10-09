@@ -1,6 +1,7 @@
 'use strict';
 
 const express              = require('express');
+const { RateLimiterMemory } = require('rate-limiter-flexible');
 const User                 = require('../models/User');
 const Match                = require('../models/Match');
 const DamasMatch           = require('../models/DamasMatch');
@@ -21,6 +22,8 @@ const Notification = require('../models/Notification');
 const { notify } = require('../services/notifications');
 
 const router = express.Router();
+// La clave es el usuario, no la IP: varios jugadores pueden compartir una red.
+const passwordChangeLimiter = new RateLimiterMemory({ points: 5, duration: 15 * 60, blockDuration: 15 * 60 });
 
 function validUsername(value) {
   return /^[a-zA-Z0-9_]{3,20}$/.test(String(value || ''));
@@ -1124,6 +1127,12 @@ router.get('/elo-history', requireAuth, async (req, res) => {
 // PUT /api/user/password - change password with active session
 router.put('/password', requireAuth, async (req, res) => {
   try {
+    try {
+      await passwordChangeLimiter.consume(String(req.user._id));
+    } catch (limit) {
+      res.set('Retry-After', String(Math.ceil(Math.max(limit.msBeforeNext || 0, 1000) / 1000)));
+      return res.status(429).json({ error: 'Demasiados intentos de cambio de contrasena. Intenta mas tarde.' });
+    }
     const { currentPassword, newPassword } = req.body;
 
     if (!currentPassword || !newPassword) {
@@ -1142,6 +1151,7 @@ router.put('/password', requireAuth, async (req, res) => {
     user.password = newPassword;
     user.tokenVersion = Number(user.tokenVersion || 0) + 1;
     await user.save();
+    await passwordChangeLimiter.delete(String(req.user._id));
 
     res.json({ message: 'Contrasena actualizada correctamente.' });
   } catch (err) {
