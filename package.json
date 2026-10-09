@@ -10,6 +10,7 @@
     "test:dynamic-security": "node scripts/dynamic-security-check.js",
     "test:e2e:chess": "node scripts/e2e-chess-browser.js",
     "test:e2e:damas": "node scripts/e2e-damas-browser.js",
+    "test:e2e:password": "node scripts/e2e-password-browser.js",
     "test:tournament-flow": "node scripts/verify-tournament-flow.js",
     "verify": "node scripts/verify.js",
     "verify:all": "node scripts/run-all-verifications.js",

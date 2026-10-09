@@ -118,6 +118,14 @@ npm run test:e2e:damas
 
 Crea y une una sala desde la interfaz, mueve una ficha, recupera la partida tras recargar y verifica la rendicion y el resultado en MongoDB.
 
+Cambio de contrasena desde Ajustes en Chrome y Mongo temporal:
+
+```bash
+npm run test:e2e:password
+```
+
+Comprueba el rechazo de la clave actual incorrecta, el cierre de sesion tras el cambio y el acceso solo con la clave nueva.
+
 URL local principal:
 
 ```text

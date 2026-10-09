@@ -447,6 +447,22 @@
       text-transform: uppercase;
     }
     .account-links a:hover { border-color: var(--gold); color: var(--gold); }
+    .password-zone { border-top: 1px solid rgba(200,152,60,0.16); padding: 14px 0; }
+    .password-zone summary {
+      color: var(--gold); cursor: pointer; font-size: 11px; font-weight: 900;
+      letter-spacing: 1.5px; text-transform: uppercase;
+    }
+    .password-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin-top: 14px; }
+    .password-form label { display: grid; gap: 6px; color: var(--dim); font-size: 11px; }
+    .password-form input {
+      width: 100%; min-width: 0; padding: 10px 12px; border: 1px solid rgba(200,152,60,0.24);
+      border-radius: 4px; color: var(--text); background: rgba(0,0,0,0.28); font: inherit;
+    }
+    .password-form input:focus { outline: none; border-color: var(--gold); }
+    .password-form button { justify-self: start; grid-column: 1 / -1; }
+    .password-form button:disabled { opacity: 0.55; cursor: wait; }
+    .password-status { min-height: 18px; margin-top: 9px; color: #d98275; font-size: 11px; }
+    .password-status.success { color: #7FD98A; }
     .danger-zone { border-top: 1px solid rgba(203,72,58,0.26); padding-top: 14px; }
     .danger-zone summary {
       color: #d98275;
@@ -622,6 +638,7 @@
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
       .friends-form { flex-direction: column; }
       .danger-form { grid-template-columns: 1fr; }
+      .password-form { grid-template-columns: 1fr; }
       .match-row { gap: 10px; padding: 12px; }
       .match-result-badge { width: 34px; height: 34px; font-size: 15px; border-radius: 8px; }
       .match-detail { white-space: nowrap; max-width: 100%; }
@@ -931,6 +948,23 @@
                         <a href="/terms.html">Terminos</a>
                         <a href="/support.html">Soporte</a>
                       </div>
+                      ${user.authProviders?.password !== false ? `
+                      <details class="password-zone">
+                        <summary>Cambiar contraseña</summary>
+                        <form class="password-form" id="change-password-form" autocomplete="on">
+                          <label for="current-password">Contraseña actual
+                            <input id="current-password" type="password" autocomplete="current-password" maxlength="128" required>
+                          </label>
+                          <label for="new-password">Nueva contraseña
+                            <input id="new-password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required>
+                          </label>
+                          <label for="confirm-password">Confirmar nueva contraseña
+                            <input id="confirm-password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required>
+                          </label>
+                          <button class="btn-save btn-primary" id="change-password-btn" type="submit">Cambiar contraseña</button>
+                        </form>
+                        <div class="password-status" id="change-password-status" role="status" aria-live="polite"></div>
+                      </details>` : ''}
                       <details class="danger-zone">
                         <summary>Eliminar cuenta</summary>
                         <p class="danger-copy">Esta accion elimina tu acceso, perfil, foto y amistades. Los resultados competitivos pueden permanecer anonimizados y no se puede deshacer.</p>
@@ -945,6 +979,7 @@
 
         </div>
       `;
+      document.getElementById('change-password-form')?.addEventListener('submit', changePassword);
     }
 
     let _paypalSdkPromise = null;
@@ -1093,6 +1128,52 @@
         if (msg) { msg.style.display = 'inline'; setTimeout(() => { msg.style.display = 'none'; }, 2000); }
       } catch (err) {
         notify('Error al guardar.');
+      }
+    }
+
+    async function changePassword(event) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const current = form.querySelector('#current-password');
+      const next = form.querySelector('#new-password');
+      const confirm = form.querySelector('#confirm-password');
+      const button = form.querySelector('#change-password-btn');
+      const status = document.getElementById('change-password-status');
+      status.classList.remove('success');
+      status.textContent = '';
+
+      if (next.value !== confirm.value) {
+        status.textContent = 'Las contraseñas nuevas no coinciden.';
+        return;
+      }
+      if (next.value.length < 8 || next.value.length > 128) {
+        status.textContent = 'La nueva contraseña debe tener entre 8 y 128 caracteres.';
+        return;
+      }
+
+      button.disabled = true;
+      button.textContent = 'Guardando...';
+      try {
+        const response = await fetch('/api/user/password', {
+          method: 'PUT',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(_token ? { Authorization: `Bearer ${_token}` } : {}),
+          },
+          body: JSON.stringify({ currentPassword: current.value, newPassword: next.value }),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'No se pudo cambiar la contraseña.');
+        form.reset();
+        status.classList.add('success');
+        status.textContent = 'Contraseña actualizada. Inicia sesión de nuevo.';
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+        await logout();
+      } catch (error) {
+        status.textContent = error.message || 'No se pudo cambiar la contraseña.';
+        button.disabled = false;
+        button.textContent = 'Cambiar contraseña';
       }
     }
 
