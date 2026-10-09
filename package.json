@@ -8,6 +8,7 @@
     "dev": "node --watch server.js",
     "test": "node --test tests/*.test.js",
     "test:dynamic-security": "node scripts/dynamic-security-check.js",
+    "test:e2e:chess": "node scripts/e2e-chess-browser.js",
     "test:tournament-flow": "node scripts/verify-tournament-flow.js",
     "verify": "node scripts/verify.js",
     "verify:all": "node scripts/run-all-verifications.js",
@@ -35,6 +36,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@capacitor/cli": "8.4.3"
+    "@capacitor/cli": "8.4.3",
+    "playwright": "^1.64.0"
   }
 }

@@ -102,6 +102,14 @@ Prueba dinamica aislada de cookies, sockets, colores, turnos y reconexion:
 npm run test:dynamic-security
 ```
 
+Recorrido real de Ajedrez en dos navegadores (requiere Chrome y `MONGODB_URI` en `.env`):
+
+```bash
+npm run test:e2e:chess
+```
+
+Crea una base temporal, juega un mate desde el lobby, comprueba la reconexion y el resultado en MongoDB, y elimina esa base al terminar. Puede usarse `OZAMA_E2E_BROWSER=chromium` si se instalo el navegador de Playwright en lugar de Chrome.
+
 URL local principal:
 
 ```text
