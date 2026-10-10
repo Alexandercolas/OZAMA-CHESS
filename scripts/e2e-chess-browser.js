@@ -146,6 +146,10 @@ async function main() {
   try {
     await waitForServer(proc);
     databaseTouched = true;
+    const versionResponse = await fetch(`${baseUrl}/api/app-version`, { cache: 'no-store' });
+    assert.equal(versionResponse.status, 200);
+    assert.match(versionResponse.headers.get('cache-control') || '', /no-store/);
+    assert.ok((await versionResponse.json()).version);
     browser = await chromium.launch({ channel: chromeChannel, headless: true });
     const contextA = await browser.newContext({ baseURL: baseUrl });
     const contextB = await browser.newContext({ baseURL: baseUrl });

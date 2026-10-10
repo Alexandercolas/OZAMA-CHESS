@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'ozama-pwa-v4';
+const CACHE_VERSION = 'ozama-pwa-v5';
 const PUBLIC_NAVIGATION = new Set([
   '/',
   '/index.html',

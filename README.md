@@ -235,9 +235,13 @@ public/icon-512.png
 
 El service worker no almacena respuestas de `/api/`, Socket.IO ni solicitudes autenticadas. Las partidas online siguen usando al servidor como fuente de verdad.
 
+Las instalaciones web/PWA reciben los archivos nuevos desde Render al abrir o navegar. Con la app abierta se comprueba la version del despliegue al volver a ella y cada cinco minutos: las paginas publicas se refrescan solas; en paginas de cuenta y lobby aparece un aviso para actualizar; una partida en curso nunca se recarga automaticamente. Sin conexion se conserva la version ya abierta.
+
+El flujo se puede verificar localmente, sin Mongo, con `npm run test:e2e:updates`.
+
 ## Android
 
-La base Android esta en `android/` y usa Capacitor. El frontend viaja dentro de la aplicacion; solo las solicitudes de API y Socket.IO se conectan por HTTPS a Render. MongoDB, JWT y las variables de entorno nunca se incluyen en el APK.
+La base Android esta en `android/` y usa Capacitor. La configuracion actual carga la web de Render mediante `server.url`, por lo que cambios web se ven al reabrir o actualizar la pantalla; los archivos de `public/` tambien se empaquetan, pero no son la interfaz que usa esa configuracion. Una actualizacion del binario nativo requiere una nueva version firmada e instalada por el mismo canal. MongoDB, JWT y las variables de entorno nunca se incluyen en el APK.
 
 ```bash
 npm run mobile:sync

@@ -203,6 +203,12 @@ app.get('/api/health/db', (_req, res) => {
   });
 });
 
+const appBuildVersion = String(process.env.OZAMA_APP_VERSION || process.env.RENDER_GIT_COMMIT || require('./package.json').version).trim().slice(0, 64);
+app.get('/api/app-version', (_req, res) => {
+  res.set('Cache-Control', 'no-store, max-age=0');
+  res.json({ version: appBuildVersion });
+});
+
 app.get('/api/matches/recent', async (_req, res) => {
   try {
     const matches = await Match.find({ result: { $ne: 'in_progress' } })

@@ -10,6 +10,78 @@
   let installPrompt = null;
   let installCard = null;
   let showingInstructions = false;
+  let currentBuild = '';
+  let checkingBuild = false;
+  let updateNotice = null;
+  let dismissedBuild = '';
+
+  const autoRefreshPaths = new Set(['/', '/index.html', '/leaderboard.html', '/privacy.html', '/terms.html', '/support.html', '/account-deletion.html']);
+  const activeGamePaths = new Set(['/game.html', '/damas.html']);
+
+  function showUpdateNotice(version) {
+    if (updateNotice || dismissedBuild === version || activeGamePaths.has(location.pathname)) return;
+    closeInstallCard({ remember: false });
+    if (!document.querySelector('style[data-ozama-update]')) {
+      const style = document.createElement('style');
+      style.dataset.ozamaUpdate = 'true';
+      style.textContent = `
+      .oz-update-notice {
+        position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+        z-index: 1201; display: flex; align-items: center; gap: 12px;
+        width: min(420px, calc(100vw - 32px)); padding: 12px 14px;
+        border: 1px solid rgba(200,152,60,0.62); border-radius: 4px;
+        background: #131008; color: #E9E4DA;
+        box-shadow: 0 14px 40px rgba(0,0,0,0.65);
+        font: 600 12px/1.4 Inter, Arial, sans-serif;
+      }
+      .oz-update-notice span { flex: 1; min-width: 0; }
+      .oz-update-notice button {
+        flex: 0 0 auto; min-height: 36px; padding: 0 12px;
+        border: 1px solid #E2B960; border-radius: 2px;
+        background: #C8983C; color: #0D0B08;
+        font: 800 10px Inter, Arial, sans-serif; cursor: pointer;
+      }
+      .oz-update-notice .oz-update-close {
+        width: 28px; min-height: 28px; padding: 0;
+        border: 0; background: transparent; color: #E9E4DA;
+        font: 22px/1 Arial, sans-serif;
+      }
+    `;
+      document.head.appendChild(style);
+    }
+    updateNotice = document.createElement('aside');
+    updateNotice.className = 'oz-update-notice';
+    updateNotice.setAttribute('role', 'status');
+    updateNotice.innerHTML = '<span>Hay una nueva versión de OZAMA.</span><button type="button" class="oz-update-action">Actualizar</button><button type="button" class="oz-update-close" aria-label="Más tarde" title="Más tarde">&times;</button>';
+    updateNotice.querySelector('.oz-update-action').addEventListener('click', () => location.reload());
+    updateNotice.querySelector('.oz-update-close').addEventListener('click', () => {
+      dismissedBuild = version;
+      updateNotice.remove();
+      updateNotice = null;
+    });
+    document.body.appendChild(updateNotice);
+  }
+
+  async function checkBuildVersion() {
+    if (checkingBuild || document.visibilityState === 'hidden') return;
+    checkingBuild = true;
+    try {
+      const response = await fetch('/api/app-version', { cache: 'no-store', credentials: 'include' });
+      if (!response.ok) return;
+      const version = String((await response.json()).version || '');
+      if (!version) return;
+      if (currentBuild && currentBuild !== version) {
+        if (autoRefreshPaths.has(location.pathname)) location.reload();
+        else showUpdateNotice(version);
+        return;
+      }
+      currentBuild = version;
+    } catch (_) {
+      // Sin red se conserva la version actual hasta la proxima comprobacion.
+    } finally {
+      checkingBuild = false;
+    }
+  }
 
   function wasDismissed() {
     try {
@@ -212,14 +284,18 @@
     if (isMobile) showInstallCard();
   }, { once: true });
 
-  if (!('serviceWorker' in navigator)) return;
-
   window.addEventListener('load', async () => {
-    try {
-      const registration = await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
-      registration.update().catch(() => {});
-    } catch (error) {
-      console.warn('[PWA] No se pudo registrar el modo instalable.', error);
+    if ('serviceWorker' in navigator) {
+      try {
+        const registration = await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
+        registration.update().catch(() => {});
+      } catch (error) {
+        console.warn('[PWA] No se pudo registrar el modo instalable.', error);
+      }
     }
+    checkBuildVersion();
   });
+  window.addEventListener('ozama:resume', checkBuildVersion);
+  window.addEventListener('focus', checkBuildVersion);
+  window.setInterval(checkBuildVersion, 5 * 60 * 1000);
 })();

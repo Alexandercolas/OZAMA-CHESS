@@ -7,10 +7,14 @@ Esta guia describe el camino desde el repositorio actual hasta una publicacion r
 - App ID Android: `com.ozamachess.app`
 - Nombre: `OZAMA CHESS`
 - Contenedor: Capacitor 8
-- Frontend: archivos de `public/` empaquetados dentro de la app
+- Frontend actual: `server.url` carga `https://ozama-chess.onrender.com` en el WebView; `public/` tambien se empaqueta como respaldo de build, pero no es la interfaz servida por esta configuracion
 - Backend remoto: `https://ozama-chess.onrender.com`
 - Comunicacion: HTTPS para REST y WSS para Socket.IO
 - Secretos: permanecen en Render; nunca se copian al APK
+
+Los cambios web llegan a las instalaciones actuales al volver a abrir o actualizar la pantalla; el binario, plugins, permisos e iconos NO cambian asi. Capacitor documenta `server.url` para live reload y no para produccion: antes de publicar en tienda hay que decidir una arquitectura de frontend empaquetado y distribuir cambios nativos mediante una version firmada. Un APK debug ya instalado no se convierte automaticamente en una instalacion de Google Play.
+
+El refresco del cliente evita recargar una partida por una nueva version web, pero un deploy de Render reinicia el proceso. Las salas online actuales viven en memoria y se pierden en ese reinicio; antes de prometer actualizaciones sin interrupcion para partidas activas hay que persistir y restaurar salas o coordinar ventanas de despliegue.
 
 El ID de paquete debe tratarse como definitivo antes de publicar. Google Play no permite cambiar el ID de una aplicacion existente.
 
