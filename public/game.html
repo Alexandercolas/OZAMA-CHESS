@@ -124,6 +124,8 @@
       min-width: 0;
     }
 
+    .mobile-lobby-btn { display: none; }
+
     .heritage-stripes {
       display: inline-grid;
       grid-template-columns: 14px 4px 14px;
@@ -1105,6 +1107,14 @@
       html, body { overflow-x: hidden; }
       .app { grid-template-rows: auto 1fr; }
       .hd { padding: 10px 12px; gap: 10px; min-height: 52px; }
+      .mobile-lobby-btn {
+        display: inline-flex; align-items: center; justify-content: center;
+        flex: 0 0 36px; width: 36px; height: 36px;
+        border: 1px solid rgba(200,152,60,0.35); border-radius: 4px;
+        background: rgba(200,152,60,0.08); color: var(--gold);
+        font: 24px/1 var(--fb); cursor: pointer;
+      }
+      .mobile-lobby-btn:hover, .mobile-lobby-btn:focus-visible { border-color: var(--gold); }
       .hd-logo { font-size: 15px; letter-spacing: 4px; }
       .hd-sub, .hd-banner, .hd-turns, .watch-badge { display: none; }
       .body { grid-template-columns: 1fr; }
@@ -1177,6 +1187,7 @@
 
   <!-- HEADER -->
   <header class="hd oz-enter" style="--d:0">
+    <button class="mobile-lobby-btn" id="mobile-lobby-btn" type="button" title="Volver al lobby" aria-label="Volver al lobby">←</button>
     <div class="hd-logo">
       OZAMA CHESS
       <span class="hd-sub">Dominican Heritage Edition</span>
@@ -1718,6 +1729,10 @@
       if (activeGame && !window.confirm('La partida sigue activa. ¿Quieres volver al lobby?')) return;
       if(typeof clearOnlineSession==='function')clearOnlineSession();
       window.location.href='/lobby.html';
+    });
+
+    document.getElementById('mobile-lobby-btn')?.addEventListener('click',()=>{
+      document.getElementById('sidebar-lobby-btn')?.click();
     });
 
     window.OZAMA_HANDLE_NATIVE_BACK=()=>{

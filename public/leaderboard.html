@@ -322,6 +322,7 @@
       min-width: 0;
       gap: 12px;
     }
+    .player > div { min-width: 0; }
 
     .avatar {
       width: 42px;
@@ -368,7 +369,8 @@
     .player-title { color: var(--gold-2); font-weight: 700; }
 
     .player-name {
-      overflow: hidden;
+      min-width: 0;
+      max-width: 100%;
       color: var(--warm);
       font-size: 14px;
       font-weight: 800;
@@ -378,6 +380,7 @@
       align-items: center;
       gap: 6px;
     }
+    .player-name-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     .premium-tag {
       flex: 0 0 auto;
@@ -511,6 +514,12 @@
       .nav { gap: 12px; font-size: 10px; letter-spacing: 1.1px; }
       .page { width: min(100% - 24px, 1180px); padding-top: 36px; }
       .summary { grid-template-columns: 1fr; }
+      .rank-row { grid-template-columns: 34px minmax(0, 1fr) 62px; gap: 8px; padding: 12px 10px; }
+      .rank-row .player { gap: 8px; }
+      .rank-row .avatar { width: 36px; height: 36px; flex-basis: 36px; }
+      .rank-row .elo { font-size: 18px; }
+      .rank-row .player-country { overflow: hidden; }
+      .rank-row .player-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     }
   </style>
 </head>
@@ -657,7 +666,7 @@
             <div class="player">
               ${avatar(player)}
               <div>
-                <div class="player-name">${username}${player.premiumActive ? '<span class="premium-tag">PREMIUM</span>' : ''}</div>
+                <div class="player-name"><span class="player-name-text">${username}</span>${player.premiumActive ? '<span class="premium-tag">PREMIUM</span>' : ''}</div>
                 <div class="player-country">
                   <img class="flag" src="https://flagcdn.com/40x30/${code}.png" alt="${code.toUpperCase()}" onerror="this.style.visibility='hidden'">
                   <span>${code.toUpperCase()}</span>
@@ -749,7 +758,7 @@
           <div class="player">
             ${avatar(c)}
             <div>
-              <div class="player-name">${escapeHtml(c.username || 'Jugador')}</div>
+              <div class="player-name"><span class="player-name-text">${escapeHtml(c.username || 'Jugador')}</span></div>
               <div class="player-country">
                 <img class="flag" src="https://flagcdn.com/40x30/${code}.png" alt="${code.toUpperCase()}" onerror="this.style.visibility='hidden'">
                 <span>${code.toUpperCase()}</span>

@@ -4,6 +4,8 @@ require('dotenv').config({ quiet: true });
 
 const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
+const os = require('node:os');
+const path = require('node:path');
 const { setTimeout: delay } = require('node:timers/promises');
 const { chromium } = require('playwright');
 const mongoose = require('mongoose');
@@ -31,13 +33,48 @@ async function move(page, from, to, opponent) {
   await square(opponent, ...from).locator('.piece').waitFor({ state: 'detached', timeout: 10000 });
 }
 
+async function checkMobileLayout(page, label, selector, extraSelectors = []) {
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    const metrics = await page.evaluate((selectors) => {
+      return {
+        viewport: window.innerWidth,
+        documentWidth: document.documentElement.scrollWidth,
+        targets: selectors.map((keySelector) => {
+          const rect = document.querySelector(keySelector)?.getBoundingClientRect();
+          return { selector: keySelector, rect: rect ? { left: rect.left, right: rect.right, width: rect.width } : null };
+        }),
+      };
+    }, [selector, ...extraSelectors]);
+    assert.ok(metrics.documentWidth <= metrics.viewport + 1, `${label}: horizontal overflow ${JSON.stringify(metrics)}`);
+    for (const { selector: targetSelector, rect } of metrics.targets) {
+      assert.ok(rect, `${label}: missing ${targetSelector}`);
+      assert.ok(rect.width > 0 && rect.left >= -1 && rect.right <= metrics.viewport + 1,
+        `${label}: control clipped ${JSON.stringify({ targetSelector, metrics })}`);
+    }
+    if (label === 'leaderboard') {
+      const rows = await page.locator('.rank-row').evaluateAll((elements) => elements.map((row) => {
+        const name = row.querySelector('.player-name-text')?.getBoundingClientRect();
+        const elo = row.querySelector('.elo')?.getBoundingClientRect();
+        return { nameRight: name?.right, eloLeft: elo?.left };
+      }));
+      assert.ok(rows.length > 0, 'leaderboard: ranking rows did not load');
+      assert.ok(rows.every(({ nameRight, eloLeft }) => nameRight <= eloLeft - 1),
+        `leaderboard: name overlaps ELO at ${width}px: ${JSON.stringify(rows)}`);
+    }
+    const screenshot = path.join(os.tmpdir(), `ozama-mobile-${label}-${width}.png`);
+    await page.screenshot({ path: screenshot, fullPage: true });
+    console.log(`Movil ${label}: ${metrics.viewport}px, contenido ${metrics.documentWidth}px, captura ${screenshot}`);
+  }
+}
+
 async function waitForServer(proc) {
   const deadline = Date.now() + 30000;
   while (Date.now() < deadline) {
     if (proc.exitCode !== null) throw new Error(`Server exited: ${serverLines.slice(-8).join('\n')}`);
     try {
       const response = await fetch(`${baseUrl}/api/health/db`);
-      if (response.ok) return;
+      if (response.ok && (await response.json()).database === 'connected') return;
     } catch (_) {}
     await delay(400);
   }
@@ -118,11 +155,25 @@ async function main() {
     const pageA = await contextA.newPage();
     const pageB = await contextB.newPage();
 
+    await pageA.setViewportSize({ width: 390, height: 844 });
+
     await Promise.all([pageA.goto('/lobby.html'), pageB.goto('/lobby.html')]);
     await Promise.all([
       pageA.locator('#hd-username').getByText(userA.username).waitFor(),
       pageB.locator('#hd-username').getByText(userB.username).waitFor(),
     ]);
+    await checkMobileLayout(pageA, 'lobby', '#create-room-btn', ['#lang-switch', '#hd-avatar']);
+    await pageA.goto('/profile.html');
+    await pageA.locator('#main-content .profile-name').waitFor();
+    await checkMobileLayout(pageA, 'profile', '.profile-tabs');
+    await pageA.goto('/leaderboard.html');
+    await pageA.waitForFunction(() => {
+      const value = document.querySelector('#summary-players')?.textContent?.trim();
+      return Boolean(value && value !== '--');
+    });
+    await checkMobileLayout(pageA, 'leaderboard', '.page');
+    await pageA.goto('/lobby.html');
+    await pageA.locator('#hd-username').getByText(userA.username).waitFor();
     await pageA.locator('#create-time-control').selectOption('3+0');
     await pageA.locator('#create-room-btn').click();
     await pageA.locator('#room-code-display.show').waitFor();
@@ -133,9 +184,14 @@ async function main() {
     await Promise.all([pageA.waitForURL('**/game.html'), pageB.waitForURL('**/game.html')]);
     assert.equal(await pageA.evaluate(() => sessionStorage.getItem('ozama-color')), 'w');
     assert.equal(await pageB.evaluate(() => sessionStorage.getItem('ozama-color')), 'b');
+    await waitForPiece(pageA, 6, 5);
+    await checkMobileLayout(pageA, 'game', '#board', ['#mobile-lobby-btn', '#hd-pro-btn']);
+    await pageA.locator('#mobile-lobby-btn:visible').waitFor();
+    pageA.once('dialog', (dialog) => dialog.dismiss());
+    await pageA.locator('#mobile-lobby-btn').click();
+    assert.match(pageA.url(), /game\.html/, 'Cancelar la salida conserva la partida');
     console.log(`Sala ${roomCode}: dos sesiones independientes entraron desde el lobby.`);
 
-    await waitForPiece(pageA, 6, 5);
     await waitForPiece(pageB, 1, 4);
     await move(pageA, [6, 5], [5, 5], pageB); // f3
     await move(pageB, [1, 4], [3, 4], pageA); // ...e5

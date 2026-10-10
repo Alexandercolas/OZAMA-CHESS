@@ -108,7 +108,7 @@ Recorrido real de Ajedrez en dos navegadores (requiere Chrome y `MONGODB_URI` en
 npm run test:e2e:chess
 ```
 
-Crea una base temporal, juega un mate desde el lobby, comprueba la reconexion y el resultado en MongoDB, y elimina esa base al terminar. Puede usarse `OZAMA_E2E_BROWSER=chromium` si se instalo el navegador de Playwright en lugar de Chrome.
+Crea una base temporal, comprueba Lobby, Perfil, Ranking y partida a 320 y 390 px (con capturas temporales), juega un mate, comprueba la reconexion y el resultado en MongoDB, y elimina esa base al terminar. Puede usarse `OZAMA_E2E_BROWSER=chromium` si se instalo el navegador de Playwright en lugar de Chrome.
 
 Recorrido real de Damas en dos navegadores, con una base temporal aislada:
 
