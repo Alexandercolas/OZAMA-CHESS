@@ -690,7 +690,7 @@
     let currentHistoryPage = 1;
     let historyBusy = false;
     let historyInitialized = false;
-    let currentGame = 'chess';
+    let currentGame = new URLSearchParams(window.location.search).get('game') === 'damas' ? 'damas' : 'chess';
     let currentResultFilter = 'all';
     // Precargado desde ?opponent=NOMBRE (Fase 6, "Sistema Social" --
     // enlace "Historial" en player.html), ademas del filtro manual que

@@ -72,17 +72,6 @@
       gap: 20px;
     }
 
-    .dev-banner {
-      border: 1px solid rgba(200,152,60,0.3);
-      background: rgba(200,152,60,0.07);
-      padding: 10px 16px;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 1px;
-      color: var(--dim);
-      text-align: center;
-    }
-
     .back-link {
       display: inline-flex;
       align-items: center;
@@ -743,12 +732,19 @@
       text-transform: uppercase;
       color: var(--dim);
     }
+    .damas-history { border-top: 1px solid rgba(200,152,60,0.2); padding-top: 16px; }
+    .damas-history-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .damas-history-head a { color: var(--gold-2); font-size: 12px; }
+    .damas-history-list { margin-top: 8px; }
+    .damas-history-row { display: grid; grid-template-columns: minmax(0,1fr) auto auto; gap: 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid rgba(200,152,60,0.12); font-size: 12px; }
+    .damas-history-row span:first-child { min-width: 0; }
+    .damas-history-date, .damas-history-empty { color: var(--dim); }
+    .damas-history-empty { padding: 12px 0; font-size: 12px; }
+    @media (max-width: 480px) { .damas-history-row { grid-template-columns: minmax(0,1fr) auto; } .damas-history-date { grid-column: 1 / -1; } }
   </style>
 </head>
 <body>
   <div class="page">
-    <div class="dev-banner">Juega online sin registrarte, o inicia sesion para llevar tus estadisticas.</div>
-
     <a class="back-link" href="/lobby.html">&larr; Volver al lobby</a>
 
     <div class="title">Ozama Damas</div>
@@ -773,7 +769,8 @@
         <div class="capture-tally" id="capture-tally"></div>
 
         <div class="controls stacked" id="board-controls">
-          <button class="btn-primary" type="button" id="newgame-btn" onclick="newGame()">Nueva partida</button>
+          <button class="btn-primary" type="button" id="startgame-btn" onclick="startLocalGame()">Iniciar partida</button>
+          <button class="btn-primary hidden" type="button" id="newgame-btn" onclick="requestNewGame()">Nueva partida</button>
           <button class="btn-resign hidden" type="button" id="resign-btn" onclick="confirmResign()">Rendirse</button>
           <button class="btn-mode hidden" type="button" id="draw-offer-btn" onclick="damasOfferDraw()">Tablas</button>
           <button class="btn-mode" type="button" id="theme-toggle-btn" title="Cambiar tema de tablero (Zona Colonial, Mármol, y más con Premium)" onclick="cycleBoardThemeDamas()">🎨 Zona Colonial</button>
@@ -788,16 +785,16 @@
 
         <div class="side-label">Modo</div>
         <div class="controls mode-row">
-          <button class="btn-mode" type="button" id="mode-local" onclick="setMode('local')">J1 vs J2</button>
-          <button class="btn-mode" type="button" id="mode-bot" onclick="setMode('bot')">Vs Bot</button>
-          <button class="btn-mode" type="button" id="mode-online" onclick="setMode('online')">Online</button>
+          <button class="btn-mode" type="button" id="mode-local" onclick="requestMode('local')">J1 vs J2</button>
+          <button class="btn-mode" type="button" id="mode-bot" onclick="requestMode('bot')">Vs Bot</button>
+          <button class="btn-mode" type="button" id="mode-online" onclick="requestMode('online')">Online</button>
         </div>
 
         <div class="controls stacked hidden" id="bot-panel">
-          <button class="btn-mode" type="button" id="diff-easy" onclick="setBotDifficulty('easy')">Aprendiz</button>
-          <button class="btn-mode" type="button" id="diff-medium" onclick="setBotDifficulty('medium')">Centinela</button>
-          <button class="btn-mode" type="button" id="diff-hard" onclick="setBotDifficulty('hard')">Maestro</button>
-          <button class="btn-mode" type="button" id="diff-master" onclick="setBotDifficulty('master')">Alcázar</button>
+          <button class="btn-mode" type="button" id="diff-easy" onclick="requestBotDifficulty('easy')">Aprendiz</button>
+          <button class="btn-mode" type="button" id="diff-medium" onclick="requestBotDifficulty('medium')">Centinela</button>
+          <button class="btn-mode" type="button" id="diff-hard" onclick="requestBotDifficulty('hard')">Maestro</button>
+          <button class="btn-mode" type="button" id="diff-master" onclick="requestBotDifficulty('master')">Alcázar</button>
         </div>
       </aside>
 
@@ -919,6 +916,13 @@
         <div class="stats-grid" id="stats-grid"></div>
       </div>
     </div>
+    <section class="damas-history" aria-labelledby="damas-history-title">
+      <div class="damas-history-head">
+        <h2 class="oz-card-title" id="damas-history-title">Partidas recientes en este dispositivo</h2>
+        <a id="damas-account-history" href="/history.html?game=damas">Historial de cuenta</a>
+      </div>
+      <div class="damas-history-list" id="damas-history-list"></div>
+    </section>
   </div>
 
   <div class="overlay hidden" id="gameover-overlay">
@@ -1186,6 +1190,7 @@
     // pagina) solo para guardar un dato que ya se puede derivar.
     let reviewIndex = null;
     let mode = 'local'; // 'local' | 'bot' | 'online' | 'spectate'
+    let localGameStarted = false;
     let spectateCode = null; // codigo de sala que se esta mirando (mode === 'spectate')
     let botThinking = false;
 
@@ -1258,7 +1263,7 @@
       // conoce Damas dominicana. No aplica mientras se revisa una
       // jugada pasada (esa posicion ya no admite jugar).
       const mustMoveSet = new Set();
-      if (!reviewing && !gameOver) {
+      if (!reviewing && !gameOver && (mode === 'online' || mode === 'spectate' || localGameStarted)) {
         for (const entry of E.getAllLegalMoves(board, turn)) {
           if (entry.sequences[0]?.[0]?.capturedR !== -1) mustMoveSet.add(`${entry.r},${entry.c}`);
         }
@@ -1332,6 +1337,7 @@
       document.getElementById('turn-dot').className = `turn-dot ${turn}`;
       document.getElementById('turn-text').textContent = gameOver
         ? 'Partida terminada'
+        : (mode === 'local' || mode === 'bot') && !localGameStarted ? 'Partida lista'
         : `Turno: ${turn === E.COLOR.WHITE ? 'Blancas' : 'Negras'}`;
 
       if (gameOver) showGameOverOverlay(); else hideGameOverOverlay();
@@ -1554,6 +1560,53 @@
     }
 
     const STATS_KEY = 'ozama-damas-stats';
+    const DAMAS_HISTORY_KEY = 'ozama-damas-local-history';
+
+    function loadLocalHistory() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(DAMAS_HISTORY_KEY) || '[]');
+        return Array.isArray(saved) ? saved.filter((entry) => entry && typeof entry === 'object').slice(0, 30) : [];
+      } catch (_) { return []; }
+    }
+
+    function renderLocalHistory() {
+      const list = document.getElementById('damas-history-list');
+      if (!list) return;
+      const entries = loadLocalHistory().slice(0, 8);
+      list.replaceChildren();
+      if (!entries.length) {
+        const empty = document.createElement('div');
+        empty.className = 'damas-history-empty';
+        empty.textContent = 'Aun no hay partidas terminadas en este dispositivo.';
+        list.appendChild(empty);
+      }
+      for (const entry of entries) {
+        const row = document.createElement('div');
+        row.className = 'damas-history-row';
+        const modeLabel = { local: 'J1 vs J2', bot: 'Vs Bot', online: 'Online' }[entry.mode] || 'Damas';
+        const result = entry.reason === 'draw' || entry.reason === 'no-progress' ? 'Tablas'
+          : entry.mode === 'local' ? (entry.winner === 'w' ? 'Blancas ganan' : entry.winner === 'b' ? 'Negras ganan' : 'Terminada')
+          : entry.winner === null ? 'Terminada' : entry.won ? 'Victoria' : 'Derrota';
+        const label = document.createElement('span'); label.textContent = modeLabel;
+        const outcome = document.createElement('strong'); outcome.textContent = result;
+        const date = document.createElement('span'); date.className = 'damas-history-date';
+        const endedAt = new Date(entry.endedAt);
+        date.textContent = Number.isNaN(endedAt.getTime()) ? '' : endedAt.toLocaleString('es-DO', { dateStyle: 'short', timeStyle: 'short' });
+        row.append(label, outcome, date);
+        list.appendChild(row);
+      }
+      document.getElementById('damas-account-history').classList.toggle('hidden', !readStoredUser());
+    }
+
+    function saveLocalHistory(won) {
+      if (mode === 'spectate') return;
+      try {
+        const entries = loadLocalHistory();
+        entries.unshift({ mode, winner: gameOver.winner, reason: gameOver.reason, won, endedAt: new Date().toISOString() });
+        localStorage.setItem(DAMAS_HISTORY_KEY, JSON.stringify(entries.slice(0, 30)));
+      } catch (_) {}
+      renderLocalHistory();
+    }
 
     function loadStats() {
       try {
@@ -1593,6 +1646,7 @@
       if (isFirstShow) {
         statsRecordedForThisGame = true;
         if (iWon !== null) recordResult(iWon);
+        saveLocalHistory(iWon);
         if (iWon === true) playWinSound();
         else if (iWon === false) playLoseSound();
         else playMoveSound();
@@ -1662,6 +1716,7 @@
       // Ajedrez. Va ANTES del guard de gameOver: revisar despues de
       // que la partida termino es justamente el caso de uso principal.
       if (mode === 'spectate') return; // solo mirar -- el servidor tampoco aceptaria una jugada sin color asignado
+      if ((mode === 'local' || mode === 'bot') && !localGameStarted) return;
       if (reviewIndex !== null) { goToMoveIndex(null); return; }
       if (gameOver || botThinking) return;
       if (mode === 'bot' && turn === BOT_COLOR) return;
@@ -2256,9 +2311,11 @@
     // adaptado a los IDs propios de Damas para no pisar los overlays
     // de Ajedrez (ambos archivos pueden compartir sesion de navegador).
     let _damasConfirmHandler = null;
-    function damasConfirm(title, message, onConfirm) {
+    function damasConfirm(title, message, onConfirm, acceptLabel = 'Confirmar', cancelLabel = 'Cancelar') {
       document.getElementById('damas-confirm-title').textContent = title;
       document.getElementById('damas-confirm-message').textContent = message;
+      document.getElementById('damas-confirm-accept-btn').textContent = acceptLabel;
+      document.getElementById('damas-confirm-cancel-btn').textContent = cancelLabel;
       _damasConfirmHandler = onConfirm;
       document.getElementById('damas-confirm-overlay').classList.remove('hidden');
     }
@@ -2281,6 +2338,84 @@
         resignOnline
       );
     }
+
+    let confirmedPageExit = false;
+    function hasActiveDamasGame() {
+      return !gameOver && (mode === 'online' ? onlineStatus === 'playing'
+        : (mode === 'local' || mode === 'bot') && localGameStarted);
+    }
+
+    function confirmLeaveBoard(action) {
+      if (!hasActiveDamasGame()) { action(); return; }
+      damasConfirm(
+        '¿SALIR DE LA PARTIDA?',
+        'Ya empezaste esta partida. Si sales ahora, no podras continuarla; en online contara como derrota.',
+        () => {
+          if (mode !== 'online') { action(); return; }
+          const activeSocket = socket;
+          let done = false;
+          let timeoutId;
+          const finish = () => {
+            if (done) return;
+            done = true;
+            clearTimeout(timeoutId);
+            activeSocket?.off('damas:game-over', finish);
+            clearOnlineSession();
+            onlineStatus = 'idle';
+            onlineRoomCode = null;
+            onlineColor = null;
+            action();
+          };
+          activeSocket?.once('damas:game-over', finish);
+          resignOnline();
+          timeoutId = setTimeout(() => {
+            activeSocket?.disconnect();
+            if (socket === activeSocket) socket = null;
+            finish();
+          }, 2000);
+        },
+        'Salir', 'Seguir jugando'
+      );
+    }
+
+    function requestNewGame() { confirmLeaveBoard(newGame); }
+    function requestMode(newMode) {
+      if (newMode !== mode) confirmLeaveBoard(() => setMode(newMode));
+    }
+    function requestBotDifficulty(level) {
+      if (level === botDifficulty) return;
+      if (mode === 'bot') confirmLeaveBoard(() => setBotDifficulty(level));
+      else setBotDifficulty(level);
+    }
+
+    document.addEventListener('click', (event) => {
+      const link = event.target.closest('a[href]');
+      if (!link || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || link.target === '_blank' || link.hasAttribute('download')) return;
+      if (new URL(link.href).origin !== window.location.origin || !hasActiveDamasGame()) return;
+      event.preventDefault();
+      confirmLeaveBoard(() => {
+        confirmedPageExit = true;
+        window.location.assign(link.href);
+      });
+    });
+    window.addEventListener('beforeunload', (event) => {
+      if (!hasActiveDamasGame() || confirmedPageExit) return;
+      event.preventDefault();
+      event.returnValue = '';
+    });
+    window.OZAMA_HANDLE_NATIVE_BACK = ({ canGoBack } = {}) => {
+      if (!document.getElementById('damas-confirm-overlay').classList.contains('hidden')) {
+        document.getElementById('damas-confirm-cancel-btn').click();
+        return true;
+      }
+      if (!hasActiveDamasGame()) return false;
+      confirmLeaveBoard(() => {
+        confirmedPageExit = true;
+        if (canGoBack) window.history.back();
+        else window.location.assign('/lobby.html');
+      });
+      return true;
+    };
 
     // ── Overlay de desconexion (cuenta regresiva) ────────────────────
     // El servidor le da 30s exactos al rival para reconectar
@@ -2370,6 +2505,7 @@
     // que el jugador elija desde cero sino un enlace que ya trae el
     // codigo de una partida en curso.
     function enterSpectateMode(code) {
+      DAMAS_CLOCK.stop();
       mode = 'spectate';
       ['local', 'bot', 'online'].forEach((m) => {
         document.getElementById(`mode-${m}`).classList.remove('active');
@@ -2380,6 +2516,7 @@
       document.getElementById('resign-btn').classList.add('hidden');
       document.getElementById('draw-offer-btn').classList.add('hidden');
       document.getElementById('newgame-btn').classList.add('hidden');
+      document.getElementById('startgame-btn').classList.add('hidden');
       document.getElementById('spectate-badge').classList.remove('hidden');
       document.getElementById('status-line').textContent = 'Conectando para ver la partida...';
       ensureSocket();
@@ -2467,6 +2604,7 @@
 
     function setMode(newMode) {
       leaveSpectateMode();
+      DAMAS_CLOCK.stop();
       mode = newMode;
       ['local', 'bot', 'online'].forEach((m) => {
         document.getElementById(`mode-${m}`).classList.toggle('active', m === newMode);
@@ -2474,6 +2612,8 @@
       document.getElementById('bot-panel').classList.toggle('hidden', newMode !== 'bot');
 
       if (newMode === 'online') {
+        if (onlineStatus === 'idle') DAMAS_CLOCK.set(600000, 600000);
+        document.getElementById('startgame-btn').classList.add('hidden');
         ensureSocket();
         const user = readStoredUser();
         const nameInput = document.getElementById('guest-name-input');
@@ -2509,10 +2649,23 @@
         document.getElementById('newgame-btn').classList.remove('hidden');
         newGame();
       }
+      renderLocalHistory();
+    }
+
+    function startLocalGame() {
+      if (mode !== 'local' && mode !== 'bot') return;
+      if (localGameStarted) return;
+      localGameStarted = true;
+      document.getElementById('startgame-btn').classList.add('hidden');
+      document.getElementById('newgame-btn').classList.remove('hidden');
+      DAMAS_CLOCK.start(E.COLOR.WHITE);
+      render();
     }
 
     function newGame() {
       if (mode === 'online') return; // una sala online no se reinicia unilateralmente
+      localGameStarted = false;
+      DAMAS_CLOCK.stop();
       board = E.createInitialBoard();
       turn = E.COLOR.WHITE;
       selected = null;
@@ -2530,7 +2683,8 @@
       // del cliente (igual que Ajedrez) -- 10+0 por defecto, todavia
       // sin selector de ritmo para estos modos.
       DAMAS_CLOCK.set(600000, 600000);
-      DAMAS_CLOCK.start(E.COLOR.WHITE);
+      document.getElementById('startgame-btn').classList.remove('hidden');
+      document.getElementById('newgame-btn').classList.add('hidden');
       render();
     }
 
@@ -2578,6 +2732,7 @@
 
     document.getElementById('diff-medium').classList.add('active');
     renderStats();
+    renderLocalHistory();
     renderDamasQuickChatRow();
     const watchCode = new URLSearchParams(window.location.search).get('watch');
     if (watchCode) enterSpectateMode(watchCode.trim().toUpperCase());

@@ -520,12 +520,19 @@ function startClock(code) {
   const room = rooms.get(code);
   if (!room) return;
   stopClock(room);
+  let ticksSinceSave = 0;
   room.clockInterval = setInterval(async () => {
     const turn = room.game?.turn;
     if (!turn) return;
     if (turn === 'w') room.clockW = Math.max(0, room.clockW - 1000);
     else              room.clockB = Math.max(0, room.clockB - 1000);
     io.to(code).emit('clock-tick', { w: room.clockW, b: room.clockB });
+    if (++ticksSinceSave >= 10) {
+      ticksSinceSave = 0;
+      Room.updateOne({ roomCode: code, status: 'playing' }, {
+        $set: { clockW: room.clockW, clockB: room.clockB, lastActivityAt: new Date() },
+      }).catch((err) => console.warn(`[DB] No se pudo guardar el reloj de ${code}:`, err.message));
+    }
     const ranOut = turn === 'w' ? room.clockW === 0 : room.clockB === 0;
     if (ranOut) {
       stopClock(room);
@@ -1150,8 +1157,8 @@ async function getOrRestoreRoom(roomCode) {
     moves,
     timeControl: saved.timeControl || DEFAULT_TIME_CONTROL_KEY,
     incrementMs: incrementMsFor(saved.timeControl || DEFAULT_TIME_CONTROL_KEY),
-    clockW: saved.clockW || DEFAULT_TIME_MS,
-    clockB: saved.clockB || DEFAULT_TIME_MS,
+    clockW: saved.clockW ?? DEFAULT_TIME_MS,
+    clockB: saved.clockB ?? DEFAULT_TIME_MS,
     clockInterval: null,
   };
   if (saved.tournamentMeta?.eventId) {
@@ -1946,10 +1953,8 @@ io.on('connection', (socket) => {
       moves: room.moves || [],
     });
     socket.to(cleanRoomCode).emit('opponent-reconnected', { playerName: socket.data.playerName });
-    // Si ambos jugadores están en sala, reanudar reloj
-if (room.white && room.black && !room.clockInterval) {
-  startClock(cleanRoomCode);
-}
+    if (room.white && room.black && !room.clockInterval) startClock(cleanRoomCode);
+    else if (room.status === 'playing' && (!room.white || !room.black)) startCloseTimer(cleanRoomCode);
     console.log(`[R] ${assignedColor.toUpperCase()} reconectado a sala ${cleanRoomCode}`);
   });
 
@@ -3384,38 +3389,45 @@ connectDatabase()
     process.exit(1);
   });
 
-// Apagado ordenado (Fase 27): Render manda SIGTERM antes de cada
-// deploy/reinicio -- sin manejarlo, Node mata el proceso de una vez,
-// cerrando todos los sockets de golpe (corte TCP, no un disconnect
-// limpio) y pudiendo cortar una escritura a Mongo a medio hacer. El
-// estado de las salas vive en memoria (`rooms`/`damasRooms`, nunca en
-// Mongo mientras la partida esta en curso), asi que un reinicio
-// SIEMPRE pierde las partidas activas -- un apagado ordenado no
-// resuelve eso. Lo que SI resuelve: que cada cliente conectado reciba
-// un evento 'disconnect' real de Socket.IO (dispara el overlay de
-// "reconectando" que ya existe desde la Fase 14, en vez de que el
-// socket quede colgado hasta que el navegador detecte el corte por su
-// cuenta) y que Mongoose cierre la conexion sin dejar una escritura
-// suelta a medio hacer.
+// Socket.IO notifica el corte a los clientes. Ajedrez conserva su
+// posicion en Room; antes de cerrar Mongo persistimos tambien el reloj
+// actual. Damas todavia mantiene sus salas solo en memoria.
 let shuttingDown = false;
-function gracefulShutdown(signal) {
+async function gracefulShutdown(signal) {
   if (shuttingDown) return;
   shuttingDown = true;
   console.log(`[Server] ${signal} recibido, cerrando de forma ordenada...`);
-  // io.close() ya cierra el http.Server subyacente (se lo pasamos en
-  // new Server(server, ...)) -- llamar tambien a server.close() por
-  // separado cierra el mismo handle dos veces y en Windows eso hace
-  // que el proceso truene con un assertion failure de libuv.
-  io.close(async () => {
+  const forcedExit = setTimeout(() => process.exit(1), 8000);
+  forcedExit.unref();
+  console.log(`[Server] Salas de ajedrez en memoria: ${rooms.size}`);
+  for (const room of rooms.values()) stopClock(room);
+  try {
+    const saves = await Promise.allSettled([...rooms.entries()]
+      .filter(([, room]) => room.status === 'playing')
+      .map(([code, room]) => Room.updateOne({ roomCode: code, status: 'playing' }, {
+        $set: { clockW: room.clockW, clockB: room.clockB, lastActivityAt: new Date() },
+      })));
+    for (const save of saves) {
+      if (save.status === 'rejected') console.warn('[Server] No se pudo guardar un reloj antes del cierre:', save.reason);
+    }
+    console.log(`[Server] Relojes guardados: ${saves.length}`);
+    const socketClosed = new Promise((resolve) => io.close(resolve));
+    server.closeAllConnections?.();
+    await Promise.race([socketClosed, new Promise((resolve) => setTimeout(resolve, 3000))]);
+    console.log('[Server] Conexiones HTTP/Socket.IO cerradas.');
+    console.log('[Server] Cerrando Mongo...');
     try { await mongoose.connection.close(); } catch (_) { /* ya se estaba cerrando */ }
     console.log('[Server] Apagado completo.');
     process.exit(0);
-  });
-  // Salvaguarda: si algo se queda colgado (una request lenta, un
-  // socket que no termina de cerrar), no dejar el proceso vivo para
-  // siempre -- Render igual lo mataria con SIGKILL pasado su propio
-  // margen, mejor cerrar nosotros primero.
-  setTimeout(() => process.exit(1), 8000).unref();
+  } catch (err) {
+    console.error('[Server] Error durante el apagado:', err);
+    process.exit(1);
+  }
 }
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+if (process.env.NODE_ENV === 'test') {
+  process.on('message', (message) => {
+    if (message?.type === 'ozama:test-shutdown') gracefulShutdown('TEST');
+  });
+}

@@ -4,6 +4,8 @@ require('dotenv').config({ quiet: true });
 
 const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
+const os = require('node:os');
+const path = require('node:path');
 const { setTimeout: delay } = require('node:timers/promises');
 const { chromium } = require('playwright');
 const mongoose = require('mongoose');
@@ -103,7 +105,28 @@ async function main() {
     const pageB = await contextB.newPage();
 
     await Promise.all([pageA.goto('/damas.html'), pageB.goto('/damas.html')]);
-    await Promise.all([pageA.locator('#mode-online').click(), pageB.locator('#mode-online').click()]);
+    assert.equal((await pageA.locator('#turn-text').textContent()).trim(), 'Partida lista');
+    assert.equal((await pageA.locator('#damas-clock-w-time').textContent()).trim(), '10:00');
+    await delay(1200);
+    assert.equal((await pageA.locator('#damas-clock-w-time').textContent()).trim(), '10:00');
+    await square(pageA, 5, 0).click();
+    assert.equal(await pageA.locator('#board .square.selected').count(), 0, 'Board must be idle before start');
+    await pageA.locator('#mode-bot').click();
+    assert.equal((await pageA.locator('#damas-clock-w-time').textContent()).trim(), '10:00');
+    await pageA.locator('#startgame-btn').click();
+    await pageA.locator('#newgame-btn:not(.hidden)').waitFor();
+    await square(pageA, 5, 0).click();
+    assert.equal(await pageA.locator('#board .square.selected').count(), 1, 'Board must accept moves after start');
+    await pageA.locator('#newgame-btn').click();
+    await pageA.locator('#damas-confirm-overlay:not(.hidden)').waitFor();
+    await pageA.locator('#damas-confirm-cancel-btn').click();
+    assert.equal(await pageA.locator('#board .square.selected').count(), 1, 'Cancel must preserve the game');
+    await pageA.locator('#mode-online').click();
+    await pageA.locator('#damas-confirm-overlay:not(.hidden)').waitFor();
+    await pageA.locator('#damas-confirm-accept-btn').click();
+    assert.equal((await pageA.locator('#damas-clock-w-time').textContent()).trim(), '10:00');
+    console.log('Reloj quieto al entrar y al elegir Bot; Iniciar habilita el tablero.');
+    await pageB.locator('#mode-online').click();
     await pageA.getByRole('button', { name: 'Crear sala' }).click();
     await pageA.locator('#online-waiting:not(.hidden)').waitFor();
     const roomCode = (await pageA.locator('#room-code-display').textContent()).trim();
@@ -138,6 +161,10 @@ async function main() {
     assert.equal(JSON.parse(await pageA.evaluate(() => sessionStorage.getItem('ozama-damas-online-session'))).code, roomCode);
     console.log('Movimiento recibido y recarga de blancas: tablero y asiento recuperados.');
 
+    await pageB.locator('.back-link').click();
+    await pageB.locator('#damas-confirm-overlay:not(.hidden)').waitFor();
+    await pageB.locator('#damas-confirm-cancel-btn').click();
+    assert.equal(await pageB.locator('#board-wrap').isVisible(), true);
     await pageB.locator('#resign-btn').click();
     await pageB.locator('#damas-confirm-overlay:not(.hidden)').waitFor();
     await pageB.locator('#damas-confirm-accept-btn').click();
@@ -147,6 +174,12 @@ async function main() {
     ]);
     assert.equal((await pageA.locator('#gameover-title').textContent()).trim(), 'GANASTE');
     assert.equal((await pageB.locator('#gameover-title').textContent()).trim(), 'PERDISTE');
+    const localHistory = await pageA.evaluate(() => JSON.parse(localStorage.getItem('ozama-damas-local-history') || '[]'));
+    assert.equal(localHistory[0]?.mode, 'online');
+    assert.equal(localHistory[0]?.won, true);
+    await pageA.reload();
+    assert.match((await pageA.locator('#damas-history-list').textContent()), /Online.*Victoria/s);
+    console.log('Resultado online guardado y visible tras recargar Damas.');
 
     await withTestDatabase(async (connection) => {
       const Match = connection.model('DamasMatch', DamasMatch.schema);
@@ -163,6 +196,69 @@ async function main() {
       assert.equal(match.blackPlayer.name, userB.username);
     });
     console.log('Fin visible en ambos navegadores; DamasMatch white_win/resign confirmado en Mongo.');
+    await pageA.goto('/history.html?game=damas');
+    await pageA.getByRole('button', { name: 'Damas' }).waitFor();
+    assert.match((await pageA.locator('#main-content').textContent()), new RegExp(userB.username));
+    console.log('Historial de cuenta abre Damas y muestra el rival registrado.');
+
+    await pageA.goto('/damas.html');
+    await pageA.locator('#mode-online').click();
+    await pageB.goto('/damas.html');
+    await pageB.locator('#mode-online').click();
+    await pageA.getByRole('button', { name: 'Crear sala' }).click();
+    await pageA.locator('#online-waiting:not(.hidden)').waitFor();
+    const exitRoomCode = (await pageA.locator('#room-code-display').textContent()).trim();
+    await pageB.locator('#join-code-input').fill(exitRoomCode);
+    await pageB.getByRole('button', { name: 'Unirse' }).click();
+    await pageB.locator('#board-wrap:not(.hidden)').waitFor();
+    await pageB.locator('.back-link').click();
+    await pageB.locator('#damas-confirm-overlay:not(.hidden)').waitFor();
+    assert.equal((await pageB.locator('#damas-confirm-accept-btn').textContent()).trim(), 'Salir');
+    await pageB.locator('#damas-confirm-accept-btn').click();
+    await pageB.waitForURL('**/lobby.html');
+    await pageA.locator('#gameover-overlay:not(.hidden)').waitFor();
+    await withTestDatabase(async (connection) => {
+      const Match = connection.model('DamasMatch', DamasMatch.schema);
+      let match;
+      for (let attempt = 0; attempt < 20 && !match; attempt++) {
+        match = await Match.findOne({ roomCode: exitRoomCode }).lean();
+        if (!match) await delay(250);
+      }
+      assert.equal(match?.reason, 'resign', 'Confirmed online exit must be saved as resignation');
+    });
+    console.log('Salir desde online confirma, rinde y navega con resultado guardado.');
+    const localContext = await browser.newContext({ baseURL: baseUrl });
+    const localPage = await localContext.newPage();
+    await localPage.clock.install();
+    await localPage.goto('/damas.html');
+    await localPage.locator('#startgame-btn').click();
+    await localPage.clock.runFor(600_000);
+    await localPage.locator('#gameover-overlay:not(.hidden)').waitFor();
+    assert.match((await localPage.locator('#damas-history-list').textContent()), /J1 vs J2.*Negras ganan/s);
+    await localPage.reload();
+    assert.match((await localPage.locator('#damas-history-list').textContent()), /J1 vs J2.*Negras ganan/s);
+    await localPage.setViewportSize({ width: 390, height: 844 });
+    const mobileWidth = await localPage.evaluate(() => ({ viewport: innerWidth, content: document.documentElement.scrollWidth }));
+    assert.ok(mobileWidth.content <= mobileWidth.viewport + 1, `Damas mobile overflow: ${JSON.stringify(mobileWidth)}`);
+    const mobileScreenshot = path.join(os.tmpdir(), 'ozama-damas-history-mobile.png');
+    await localPage.screenshot({ path: mobileScreenshot, fullPage: true });
+    console.log(`Damas movil: ${mobileWidth.viewport}px, contenido ${mobileWidth.content}px, captura ${mobileScreenshot}`);
+    console.log('Partida local terminada por tiempo persiste en este dispositivo.');
+    await localPage.locator('#startgame-btn').click();
+    const unloadDialog = localPage.waitForEvent('dialog');
+    const reloadAttempt = localPage.reload().catch(() => null);
+    const dialog = await unloadDialog;
+    assert.equal(dialog.type(), 'beforeunload');
+    await dialog.dismiss();
+    await reloadAttempt;
+    assert.equal(await localPage.locator('#startgame-btn').isVisible(), false);
+    console.log('Recarga cancelada: el navegador conserva la partida iniciada.');
+    assert.equal(await localPage.evaluate(() => window.OZAMA_HANDLE_NATIVE_BACK({ canGoBack: false })), true);
+    await localPage.locator('#damas-confirm-overlay:not(.hidden)').waitFor();
+    await localPage.locator('#damas-confirm-cancel-btn').click();
+    assert.equal(await localPage.locator('#startgame-btn').isVisible(), false);
+    console.log('Atrás nativo muestra aviso y permite seguir jugando.');
+    await localContext.close();
     console.log('DAMAS_BROWSER_FLOW_OK');
   } finally {
     await browser?.close();
