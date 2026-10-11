@@ -1162,11 +1162,26 @@ router.put('/password', requireAuth, async (req, res) => {
 router.get('/friends', requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.user._id)
-      .populate('friends', 'username country avatar avatarImage elo stats lastSeenAt')
+      .populate('friends', 'username country avatar avatarImage elo damasElo stats isActive')
       .select('friends')
       .lean();
 
-    res.json({ friends: user?.friends || [] });
+    const friends = (user?.friends || [])
+      .filter((friend) => friend?.isActive)
+      .map((friend) => ({
+        username: friend.username,
+        country: friend.country,
+        avatar: friend.avatar,
+        avatarImage: friend.avatarImage,
+        elo: friend.elo,
+        damasElo: friend.damasElo,
+        stats: {
+          wins: friend.stats?.wins || 0,
+          losses: friend.stats?.losses || 0,
+          draws: friend.stats?.draws || 0,
+        },
+      }));
+    res.json({ friends });
   } catch (err) {
     serverError(res, 'Friends list', err);
   }
@@ -1477,13 +1492,31 @@ router.get('/:username', optionalAuth, async (req, res) => {
 
     if (!user || !user.isActive) return res.status(404).json({ error: 'Usuario no encontrado.' });
 
-    const json = user.toJSON();
-    json.premiumActive = isPremiumActive(user);
-    json.rank = rankTier(user.elo);
-    json.damasRank = rankTier(user.damasElo);
-    json.level = levelFromXp(user.xp);
-    json.globalTitle = resolveGlobalTitle(user, levelFromXp);
-    json.achievementsUnlocked = (user.achievements || []).length;
+    const publicStats = (stats) => ({
+      wins: stats?.wins || 0,
+      losses: stats?.losses || 0,
+      draws: stats?.draws || 0,
+      streak: stats?.streak || 0,
+    });
+    const json = {
+      username: user.username,
+      country: user.country,
+      avatar: user.avatar,
+      avatarImage: user.avatarImage,
+      bio: user.bio,
+      elo: user.elo,
+      damasElo: user.damasElo,
+      stats: publicStats(user.stats),
+      damasStats: publicStats(user.damasStats),
+      createdAt: user.createdAt,
+      equippedFrame: user.equippedFrame,
+      premiumActive: isPremiumActive(user),
+      rank: rankTier(user.elo),
+      damasRank: rankTier(user.damasElo),
+      level: levelFromXp(user.xp),
+      globalTitle: resolveGlobalTitle(user, levelFromXp),
+      achievementsUnlocked: (user.achievements || []).length,
+    };
     // Insignias para la tarjeta de jugador (Fase C del roadmap PRO
     // 2.0) -- los logros en si no son informacion privada (son para
     // mostrar), asi que se resuelven nombre/icono contra el catalogo y
@@ -1495,10 +1528,6 @@ router.get('/:username', optionalAuth, async (req, res) => {
       .map((a) => ACHIEVEMENT_MAP.get(a.key))
       .filter(Boolean)
       .map((a) => ({ key: a.key, name: a.name, icon: a.icon }));
-    delete json.plan;
-    delete json.premiumUntil;
-    delete json.achievements;
-
     const isBlocked = req.user ? (req.user.blockedUsers || []).some((id) => String(id) === String(user._id)) : false;
     const isFriend = req.user ? (req.user.friends || []).some((id) => String(id) === String(user._id)) : false;
 
@@ -1507,6 +1536,7 @@ router.get('/:username', optionalAuth, async (req, res) => {
       isSelf: req.user ? String(req.user._id) === String(user._id) : false,
       isBlocked,
       isFriend,
+      viewerUsername: req.user?.username || null,
     });
   } catch (err) {
     serverError(res, 'Public profile', err);

@@ -10,6 +10,8 @@
     "test:dynamic-security": "node scripts/dynamic-security-check.js",
     "test:e2e:chess": "node scripts/e2e-chess-browser.js",
     "test:e2e:damas": "node scripts/e2e-damas-browser.js",
+    "test:e2e:friends": "node scripts/e2e-friend-profiles.js",
+    "test:e2e:sidebar": "node scripts/e2e-lobby-sidebar.js",
     "test:e2e:password": "node scripts/e2e-password-browser.js",
     "test:e2e:updates": "node scripts/e2e-app-updates-browser.js",
     "test:restart:chess": "node scripts/verify-chess-restart.js",

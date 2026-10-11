@@ -201,6 +201,8 @@ npm start
 
 Si Render esta conectado a GitHub, cada push a `main` dispara un nuevo deploy automaticamente.
 
+Antes y despues de publicar cambios, sigue [Operacion y despliegue](docs/OPERATIONS.md). Las salas activas de ajedrez y Damas se restauran desde Mongo tras un reinicio, pero los jugadores deben reconectar; el deploy no es invisible para una partida en curso.
+
 ## Google Search
 
 La portada y el ranking son las paginas publicas indexables. Login, lobby, partida, perfil y admin usan `noindex` para evitar que informacion operativa aparezca en resultados.

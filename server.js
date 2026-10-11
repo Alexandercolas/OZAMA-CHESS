@@ -230,6 +230,11 @@ const rooms = new Map();
 const damasRooms = new Map();
 const damasRestoreInFlight = new Map();
 
+function logGameStorageFailure(game, operation, error) {
+  const errorType = error instanceof Error ? error.name : 'UnknownError';
+  console.error(`[GAME_STORAGE_FAILURE] game=${game} operation=${operation} error=${errorType}`);
+}
+
 function damasRoomState(room) {
   return {
     status: room.status,
@@ -251,12 +256,17 @@ function damasRoomState(room) {
 
 async function saveDamasRoom(code, room, create = false) {
   const state = damasRoomState(room);
-  if (create) {
-    await DamasRoom.create({ roomCode: code, ...state });
-    return;
+  try {
+    if (create) {
+      await DamasRoom.create({ roomCode: code, ...state });
+      return;
+    }
+    const saved = await DamasRoom.updateOne({ roomCode: code }, { $set: state });
+    if (!saved.matchedCount) throw new Error(`Sala de Damas ${code} no existe en Mongo`);
+  } catch (error) {
+    logGameStorageFailure('damas', create ? 'create_room' : 'save_room', error);
+    throw error;
   }
-  const saved = await DamasRoom.updateOne({ roomCode: code }, { $set: state });
-  if (!saved.matchedCount) throw new Error(`Sala de Damas ${code} no existe en Mongo`);
 }
 
 async function getOrRestoreDamasRoom(code) {
@@ -265,12 +275,21 @@ async function getOrRestoreDamasRoom(code) {
   if (damasRestoreInFlight.has(code)) return damasRestoreInFlight.get(code);
   const restoring = (async () => {
     const saved = await DamasRoom.findOne({ roomCode: code, status: 'playing' })
-      .select('+tokens.w +tokens.b').lean().catch(() => null);
+      .select('+tokens.w +tokens.b').lean().catch((error) => {
+        logGameStorageFailure('damas', 'restore_room', error);
+        throw error;
+      });
     if (!saved || !Array.isArray(saved.board) || saved.board.length !== 8
       || !saved.board.every((row) => Array.isArray(row) && row.length === 8)) return null;
-    const finished = await DamasMatch.exists({ roomCode: code, startedAt: saved.startedAt });
+    const finished = await DamasMatch.exists({ roomCode: code, startedAt: saved.startedAt }).catch((error) => {
+      logGameStorageFailure('damas', 'restore_match_check', error);
+      throw error;
+    });
     if (finished) {
-      await DamasRoom.updateOne({ roomCode: code }, { $set: { status: 'finished', lastActivityAt: new Date() } });
+      await DamasRoom.updateOne({ roomCode: code }, { $set: { status: 'finished', lastActivityAt: new Date() } }).catch((error) => {
+        logGameStorageFailure('damas', 'close_stale_room', error);
+        throw error;
+      });
       return null;
     }
     const room = {
@@ -410,7 +429,7 @@ function damasStartClock(code) {
       ticksSinceSave = 0;
       DamasRoom.updateOne({ roomCode: code, status: 'playing' }, {
         $set: { clockW: room.clockW, clockB: room.clockB, lastActivityAt: new Date() },
-      }).catch((err) => console.warn(`[DAMAS] No se pudo guardar el reloj de ${code}:`, err.message));
+      }).catch((error) => logGameStorageFailure('damas', 'save_clock', error));
     }
     const ranOut = turn === 'w' ? room.clockW === 0 : room.clockB === 0;
     if (ranOut) {
@@ -445,7 +464,7 @@ function finishDamasGame(room, code, result) {
 async function finishDamasGameInternal(room, code, { winner, reason }) {
   await DamasRoom.updateOne({ roomCode: code }, {
     $set: { status: room.status === 'closed' ? 'closed' : 'finished', lastActivityAt: new Date() },
-  }).catch((err) => console.warn('[DAMAS] No se pudo cerrar la sala persistida:', err.message));
+  }).catch((error) => logGameStorageFailure('damas', 'finish_room', error));
   const wInfo = room.playerInfo?.w;
   const bInfo = room.playerInfo?.b;
   if (!wInfo || !bInfo || !wInfo.userId || !bInfo.userId) return;
@@ -539,7 +558,7 @@ async function finishDamasGameInternal(room, code, { winner, reason }) {
       await handleTournamentMatchFinished(room.tournamentMeta, winner, room);
     }
   } catch (err) {
-    console.warn('[DAMAS] No se pudo guardar el resultado:', err.message);
+    logGameStorageFailure('damas', 'save_result', err);
   }
 }
 
@@ -1219,7 +1238,10 @@ async function getOrRestoreRoom(roomCode) {
   if (existing) return existing;
 
   const saved = await Room.findOne({ roomCode: code, status: { $in: ['waiting', 'playing'] } })
-    .select('+tokens.w +tokens.b').lean().catch(() => null);
+    .select('+tokens.w +tokens.b').lean().catch((error) => {
+      logGameStorageFailure('chess', 'restore_room', error);
+      return null;
+    });
   if (!saved) return null;
 
   // El proceso se reinicio (o esta sala nunca vivio en memoria en este
@@ -1227,7 +1249,10 @@ async function getOrRestoreRoom(roomCode) {
   // sale del Match ya guardado en Mongo, no hay otra copia.
   let moves = [];
   if (saved.match) {
-    const match = await Match.findById(saved.match).select('moves').lean().catch(() => null);
+    const match = await Match.findById(saved.match).select('moves').lean().catch((error) => {
+      logGameStorageFailure('chess', 'restore_moves', error);
+      return null;
+    });
     if (Array.isArray(match?.moves)) {
       moves = match.moves.map((m) => ({ from: m.from, to: m.to, promotion: m.promotion || null }));
     }
@@ -3318,11 +3343,20 @@ io.on('connection', (socket) => {
     const data = parseSocketPayload(damasSchemas.rejoin, payload, 'damas:rejoin-failed');
     if (!data) return;
     const { room: code, color, token } = data;
-    if (!damasRooms.has(code)) {
-      const tokenExists = await DamasRoom.exists({ roomCode: code, status: 'playing', [`tokens.${color}`]: token });
-      if (!tokenExists) { socket.emit('damas:rejoin-failed'); return; }
+    let room;
+    try {
+      if (!damasRooms.has(code)) {
+        const tokenExists = await DamasRoom.exists({ roomCode: code, status: 'playing', [`tokens.${color}`]: token }).catch((error) => {
+          logGameStorageFailure('damas', 'rejoin_token_check', error);
+          throw error;
+        });
+        if (!tokenExists) { socket.emit('damas:rejoin-failed'); return; }
+      }
+      room = await getOrRestoreDamasRoom(code);
+    } catch (_) {
+      socket.emit('damas:rejoin-failed');
+      return;
     }
-    const room = await getOrRestoreDamasRoom(code);
     if (!room || room.status !== 'playing' || room.tokens?.[color] !== token) {
       socket.emit('damas:rejoin-failed'); return;
     }
@@ -3338,7 +3372,8 @@ io.on('connection', (socket) => {
     socket.data.damasColor = color;
     if (color === 'w') room.white = socket.id; else room.black = socket.id;
 
-    await DamasRoom.updateOne({ roomCode: code }, { $set: { lastActivityAt: new Date() } }).catch(() => {});
+    await DamasRoom.updateOne({ roomCode: code }, { $set: { lastActivityAt: new Date() } })
+      .catch((error) => logGameStorageFailure('damas', 'rejoin_activity', error));
 
     socket.emit('damas:game-start', { code, color, board: room.board, turn: room.turn, playerInfo: room.playerInfo, roomToken: token, clockW: room.clockW, clockB: room.clockB, timeControl: room.timeControl });
     socket.to(code).emit('damas:opponent-reconnected');
@@ -3603,7 +3638,7 @@ async function gracefulShutdown(signal) {
         $set: { clockW: room.clockW, clockB: room.clockB, lastActivityAt: new Date() },
       })));
     for (const save of damasSaves) {
-      if (save.status === 'rejected') console.warn('[Server] No se pudo guardar un reloj de Damas:', save.reason);
+      if (save.status === 'rejected') logGameStorageFailure('damas', 'shutdown_clock', save.reason);
     }
     console.log(`[Server] Relojes de Damas guardados: ${damasSaves.length}`);
     const socketClosed = new Promise((resolve) => io.close(resolve));

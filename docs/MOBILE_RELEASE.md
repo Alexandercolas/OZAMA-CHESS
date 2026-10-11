@@ -14,7 +14,7 @@ Esta guia describe el camino desde el repositorio actual hasta una publicacion r
 
 Los cambios web llegan a las instalaciones actuales al volver a abrir o actualizar la pantalla; el binario, plugins, permisos e iconos NO cambian asi. Capacitor documenta `server.url` para live reload y no para produccion: antes de publicar en tienda hay que decidir una arquitectura de frontend empaquetado y distribuir cambios nativos mediante una version firmada. Un APK debug ya instalado no se convierte automaticamente en una instalacion de Google Play.
 
-El refresco del cliente evita recargar una partida por una nueva version web, pero un deploy de Render reinicia el proceso. Las salas online actuales viven en memoria y se pierden en ese reinicio; antes de prometer actualizaciones sin interrupcion para partidas activas hay que persistir y restaurar salas o coordinar ventanas de despliegue.
+El refresco del cliente evita recargar una partida por una nueva version web, pero un deploy de Render reinicia el proceso. Ajedrez y Damas guardan las salas activas en Mongo y pueden restaurarlas cuando los jugadores reconectan. Los sockets si se cortan; un corte brusco puede perder parte del tiempo transcurrido desde el ultimo guardado del reloj. Sigue la guia de [operacion y despliegue](OPERATIONS.md) y no prometas una transicion invisible para partidas activas.
 
 El ID de paquete debe tratarse como definitivo antes de publicar. Google Play no permite cambiar el ID de una aplicacion existente.
 
@@ -120,7 +120,8 @@ iOS no se puede compilar ni firmar desde Windows. El paso nativo requiere:
 ## Operacion Antes Del Lanzamiento
 
 - Configurar Google Search Console y enviar `sitemap.xml`.
-- Configurar backups y alertas en MongoDB Atlas.
+- Confirmar backups de Atlas y probar una restauracion en una base aislada.
+- Configurar alertas para fallos de almacenamiento y reconexion; los logs por si solos no notifican.
 - Agregar monitoreo de errores antes de una campana grande.
 - Revisar logs sin guardar contrasenas, JWT ni codigos de recuperacion.
 - Considerar un servidor sin suspension automatica cuando el trafico lo justifique.

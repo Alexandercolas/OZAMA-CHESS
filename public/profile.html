@@ -572,13 +572,12 @@
     .friends-input:focus { border-color: var(--gold); }
     .friends-list { display: grid; gap: 8px; }
     .friend-row {
-      display: flex;
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr) auto;
       align-items: center;
       gap: 10px;
-      padding: 10px;
-      border: 1px solid rgba(200,152,60,0.08);
-      border-radius: 10px;
-      background: rgba(255,255,255,0.02);
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(200,152,60,0.12);
     }
     .friend-avatar {
       width: 34px;
@@ -597,6 +596,11 @@
     .friend-main { flex: 1; min-width: 0; }
     .friend-name { font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .friend-meta { font-size: 11px; color: var(--dim); margin-top: 2px; }
+    .friend-profile-link { color: inherit; text-decoration: none; }
+    .friend-profile-link:hover .friend-name, .friend-profile-link:focus-visible .friend-name { color: var(--gold); }
+    .friend-actions { display: flex; align-items: center; gap: 6px; }
+    .friend-remove { width: 32px; height: 32px; flex: 0 0 32px; border: 1px solid rgba(200,152,60,0.15); border-radius: 4px; background: transparent; color: var(--dim); cursor: pointer; font-size: 18px; line-height: 1; }
+    .friend-remove:hover { color: #E39494; border-color: #E39494; }
 
     .account-panel {
       margin-bottom: 28px;
@@ -710,6 +714,9 @@
       .photo-upload, .btn-save, .edit-select { width: 100%; }
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
       .friends-form { flex-direction: column; }
+      .friend-row { grid-template-columns: 34px minmax(0, 1fr); }
+      .friend-actions { grid-column: 2; flex-wrap: wrap; }
+      .friend-actions .page-btn { flex: 1; text-align: center; }
       .danger-form { grid-template-columns: 1fr; }
       .match-row { gap: 10px; padding: 12px; }
       .match-result-badge { width: 34px; height: 34px; font-size: 15px; border-radius: 8px; }
@@ -1343,6 +1350,7 @@
       list.innerHTML = friends.map((friend) => {
         const name = escapeHtml(friend.username || 'Jugador');
         const initial = escapeHtml((friend.username || '?')[0].toUpperCase());
+        const profileUrl = `/player.html?u=${encodeURIComponent(friend.username || '')}`;
         const img = friend.avatarImage
           ? `<img src="${escapeHtml(friend.avatarImage)}" alt="">`
           : initial;
@@ -1350,12 +1358,15 @@
         return `
           <div class="friend-row">
             <div class="friend-avatar ${avatarClass(friend.avatar)}">${img}</div>
-            <div class="friend-main">
+            <a class="friend-main friend-profile-link" href="${profileUrl}" aria-label="Ver perfil de ${name}">
               <div class="friend-name">${getFlag(friend.country)} ${name}</div>
-              <div class="friend-meta">ELO ${friend.elo || 1200} · ${games} partidas</div>
+              <div class="friend-meta">Ajedrez ${friend.elo ?? 1200} · Damas ${friend.damasElo ?? 1200} · ${games} partidas</div>
+            </a>
+            <div class="friend-actions">
+              <a class="page-btn" href="${profileUrl}">Ver perfil</a>
+              <a class="page-btn" href="/lobby.html?challenge=${encodeURIComponent(friend.username || '')}">Desafiar</a>
+              <button class="friend-remove" onclick="removeFriend('${name}')" title="Quitar de amigos" aria-label="Quitar a ${name} de amigos">&times;</button>
             </div>
-            <a class="page-btn" href="/lobby.html?challenge=${encodeURIComponent(friend.username || '')}">Desafiar</a>
-            <button class="page-btn" onclick="removeFriend('${name}')">Quitar</button>
           </div>
         `;
       }).join('');
