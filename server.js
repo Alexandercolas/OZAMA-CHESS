@@ -20,6 +20,7 @@ const { protectCookieWrites, socketToken } = require('./middleware/session');
 const connectDatabase = require('./config/database');
 const Match           = require('./models/Match');
 const DamasMatch      = require('./models/DamasMatch');
+const DamasRoom       = require('./models/DamasRoom');
 const Room            = require('./models/Room');
 const User            = require('./models/User');
 const Event           = require('./models/Event');
@@ -227,6 +228,74 @@ const rooms = new Map();
 // Salas de Damas: namespace completamente separado de `rooms` (ajedrez).
 // Ningun handler de ajedrez lee ni escribe este Map, y viceversa.
 const damasRooms = new Map();
+const damasRestoreInFlight = new Map();
+
+function damasRoomState(room) {
+  return {
+    status: room.status,
+    board: room.board,
+    turn: room.turn,
+    playerInfo: room.playerInfo,
+    tokens: { w: room.tokens.w, b: room.tokens.b },
+    clockW: room.clockW,
+    clockB: room.clockB,
+    timeControl: room.timeControl,
+    startedAt: room.startedAt,
+    noProgressPlies: room.noProgressPlies || 0,
+    hadPromotion: room.hadPromotion || null,
+    hadMultiCapture: room.hadMultiCapture || null,
+    tournamentMeta: room.tournamentMeta || null,
+    lastActivityAt: new Date(),
+  };
+}
+
+async function saveDamasRoom(code, room, create = false) {
+  const state = damasRoomState(room);
+  if (create) {
+    await DamasRoom.create({ roomCode: code, ...state });
+    return;
+  }
+  const saved = await DamasRoom.updateOne({ roomCode: code }, { $set: state });
+  if (!saved.matchedCount) throw new Error(`Sala de Damas ${code} no existe en Mongo`);
+}
+
+async function getOrRestoreDamasRoom(code) {
+  const existing = damasRooms.get(code);
+  if (existing) return existing;
+  if (damasRestoreInFlight.has(code)) return damasRestoreInFlight.get(code);
+  const restoring = (async () => {
+    const saved = await DamasRoom.findOne({ roomCode: code, status: 'playing' })
+      .select('+tokens.w +tokens.b').lean().catch(() => null);
+    if (!saved || !Array.isArray(saved.board) || saved.board.length !== 8
+      || !saved.board.every((row) => Array.isArray(row) && row.length === 8)) return null;
+    const finished = await DamasMatch.exists({ roomCode: code, startedAt: saved.startedAt });
+    if (finished) {
+      await DamasRoom.updateOne({ roomCode: code }, { $set: { status: 'finished', lastActivityAt: new Date() } });
+      return null;
+    }
+    const room = {
+      white: null, black: null,
+      board: saved.board, turn: saved.turn, status: 'playing',
+      playerInfo: saved.playerInfo,
+      tokens: saved.tokens,
+      closeTimer: null, clockInterval: null,
+      createdAt: new Date(saved.createdAt).getTime(),
+      startedAt: saved.startedAt,
+      timeControl: saved.timeControl,
+      incrementMs: incrementMsFor(saved.timeControl),
+      clockW: saved.clockW, clockB: saved.clockB,
+      noProgressPlies: saved.noProgressPlies || 0,
+      hadPromotion: saved.hadPromotion || null,
+      hadMultiCapture: saved.hadMultiCapture || null,
+      tournamentMeta: saved.tournamentMeta || null,
+    };
+    damasRooms.set(code, room);
+    return room;
+  })();
+  damasRestoreInFlight.set(code, restoring);
+  try { return await restoring; }
+  finally { damasRestoreInFlight.delete(code); }
+}
 const onlinePlayers = new Map();
 const pendingChallenges = new Map();
 // Version de Damas de lo mismo -- lista aparte porque son perfiles/ELO
@@ -293,6 +362,7 @@ function damasStartCloseTimer(code) {
   damasCancelCloseTimer(room);
   damasStopClock(room); // igual que Ajedrez: el reloj se pausa mientras el rival tiene su grace period para reconectar
   room.closeTimer = setTimeout(async () => {
+    if (room._saveInFlight) await room._saveInFlight.catch(() => {});
     if (room.status === 'playing') {
       // Cuando SOLO uno se fue, survivorColor es su color y gana por
       // abandono. Cuando los DOS se fueron (encontrado en vivo
@@ -328,12 +398,20 @@ function damasStartClock(code) {
   const room = damasRooms.get(code);
   if (!room) return;
   damasStopClock(room);
+  let ticksSinceSave = 0;
   room.clockInterval = setInterval(async () => {
     const turn = room.turn;
     if (!turn) return;
+    if (room._savingMove) return;
     if (turn === 'w') room.clockW = Math.max(0, room.clockW - 1000);
     else              room.clockB = Math.max(0, room.clockB - 1000);
     io.to(code).emit('damas:clock-tick', { w: room.clockW, b: room.clockB });
+    if (++ticksSinceSave >= 10) {
+      ticksSinceSave = 0;
+      DamasRoom.updateOne({ roomCode: code, status: 'playing' }, {
+        $set: { clockW: room.clockW, clockB: room.clockB, lastActivityAt: new Date() },
+      }).catch((err) => console.warn(`[DAMAS] No se pudo guardar el reloj de ${code}:`, err.message));
+    }
     const ranOut = turn === 'w' ? room.clockW === 0 : room.clockB === 0;
     if (ranOut) {
       damasStopClock(room);
@@ -354,7 +432,20 @@ function damasStartClock(code) {
 // que Ajedrez. Un rival que se desconecta con el otro todavia en la
 // sala NO es 'abandoned': es una derrota real para quien se fue (ver
 // forfeitWin mas abajo).
-async function finishDamasGame(room, code, { winner, reason }) {
+function finishDamasGame(room, code, result) {
+  if (room._finishInFlight) return room._finishInFlight;
+  const finishing = finishDamasGameInternal(room, code, result);
+  room._finishInFlight = finishing;
+  finishing.finally(() => {
+    if (room._finishInFlight === finishing) room._finishInFlight = null;
+  }).catch(() => {});
+  return finishing;
+}
+
+async function finishDamasGameInternal(room, code, { winner, reason }) {
+  await DamasRoom.updateOne({ roomCode: code }, {
+    $set: { status: room.status === 'closed' ? 'closed' : 'finished', lastActivityAt: new Date() },
+  }).catch((err) => console.warn('[DAMAS] No se pudo cerrar la sala persistida:', err.message));
   const wInfo = room.playerInfo?.w;
   const bInfo = room.playerInfo?.b;
   if (!wInfo || !bInfo || !wInfo.userId || !bInfo.userId) return;
@@ -951,6 +1042,7 @@ function adminActiveDamasRooms() {
 async function adminCloseDamasRoom(code, reason) {
   const room = damasRooms.get(code);
   if (!room) return null;
+  if (room._saveInFlight) await room._saveInFlight.catch(() => {});
   const snapshot = adminDamasRoomSnapshot(code, room);
   const wasPlaying = room.status === 'playing';
 
@@ -969,6 +1061,7 @@ async function adminCloseDamasRoom(code, reason) {
   }
 
   if (wasPlaying) await finishDamasGame(room, code, { winner: null, reason: 'admin-closed' });
+  else await DamasRoom.updateOne({ roomCode: code }, { $set: { status: 'closed', lastActivityAt: new Date() } }).catch(() => {});
   damasRooms.delete(code);
   console.warn(`[Admin] Sala de Damas ${code} cerrada manualmente`);
   return snapshot;
@@ -2600,6 +2693,14 @@ io.on('connection', (socket) => {
       clockW: initialMs, clockB: initialMs, clockInterval: null,
     });
     const room = damasRooms.get(code);
+    try { await saveDamasRoom(code, room, true); }
+    catch (err) {
+      damasRooms.delete(code);
+      console.warn('[DAMAS] No se pudo guardar partida rapida:', err.message);
+      wSocket.emit('damas:room-error', 'No se pudo iniciar la partida. Intenta de nuevo.');
+      bSocket.emit('damas:room-error', 'No se pudo iniciar la partida. Intenta de nuevo.');
+      return;
+    }
 
     wSocket.join(code); wSocket.data.damasRoomCode = code; wSocket.data.damasColor = 'w';
     bSocket.join(code); bSocket.data.damasRoomCode = code; bSocket.data.damasColor = 'b';
@@ -2741,6 +2842,18 @@ io.on('connection', (socket) => {
     room.tokens.b = createRoomToken();
     room.status = 'playing';
     room.startedAt = new Date();
+
+    try { await saveDamasRoom(code, room, true); }
+    catch (err) {
+      console.warn('[DAMAS] No se pudo guardar sala:', err.message);
+      room.black = null;
+      room.playerInfo.b = null;
+      room.tokens.b = null;
+      room.status = 'waiting';
+      room.startedAt = null;
+      socket.emit('damas:room-error', 'No se pudo iniciar la partida. Intenta de nuevo.');
+      return;
+    }
 
     socket.join(code);
     socket.data.damasRoomCode = code;
@@ -2889,11 +3002,20 @@ io.on('connection', (socket) => {
       clockW: initialMs, clockB: initialMs, clockInterval: null,
     });
 
+    const newRoom = damasRooms.get(code);
+    try { await saveDamasRoom(code, newRoom, true); }
+    catch (err) {
+      damasRooms.delete(code);
+      console.warn('[DAMAS] No se pudo guardar desafio:', err.message);
+      wSock.emit('damas:room-error', 'No se pudo iniciar la partida. Intenta de nuevo.');
+      bSock.emit('damas:room-error', 'No se pudo iniciar la partida. Intenta de nuevo.');
+      return;
+    }
+
     wSock.join(code); bSock.join(code);
     wSock.data.damasRoomCode = code; wSock.data.damasColor = 'w';
     bSock.data.damasRoomCode = code; bSock.data.damasColor = 'b';
 
-    const newRoom = damasRooms.get(code);
     const startPayload = { code, board: newRoom.board, turn: newRoom.turn, playerInfo: newRoom.playerInfo, clockW: newRoom.clockW, clockB: newRoom.clockB, timeControl: newRoom.timeControl };
     wSock.emit('damas:game-start', { ...startPayload, color: 'w', roomToken: newRoom.tokens.w });
     bSock.emit('damas:game-start', { ...startPayload, color: 'b', roomToken: newRoom.tokens.b });
@@ -2924,6 +3046,7 @@ io.on('connection', (socket) => {
     const room = damasRooms.get(code);
     if (!room) { socket.emit('damas:move-rejected', { message: 'La sala ya no existe.' }); return; }
     if (room.status !== 'playing') { socket.emit('damas:move-rejected', { message: 'La partida no esta activa.' }); return; }
+    if (room._savingMove) { socket.emit('damas:move-rejected', { message: 'Procesando jugada anterior.' }); return; }
 
     const myColor = socket.data.damasColor;
     const assignedSocket = myColor === 'w' ? room.white : room.black;
@@ -2944,6 +3067,15 @@ io.on('connection', (socket) => {
       socket.emit('damas:move-rejected', { message: 'Jugada ilegal.' }); return;
     }
 
+    const previous = {
+      board: room.board, turn: room.turn, status: room.status,
+      clockW: room.clockW, clockB: room.clockB,
+      hadPromotion: room.hadPromotion ? { ...room.hadPromotion } : null,
+      hadMultiCapture: room.hadMultiCapture ? { ...room.hadMultiCapture } : null,
+      noProgressPlies: room.noProgressPlies,
+    };
+    damasStopClock(room);
+    room._savingMove = true;
     const result = OzamaCheckers.applyMove(room.board, fromR, fromC, matched);
     room.board = result.board;
     room.turn = OzamaCheckers.otherColor(room.turn);
@@ -2974,6 +3106,21 @@ io.on('connection', (socket) => {
     }
     if (status.over) { room.status = 'finished'; damasStopClock(room); }
 
+    const saving = saveDamasRoom(code, room);
+    room._saveInFlight = saving;
+    try {
+      await saving;
+    } catch (err) {
+      Object.assign(room, previous);
+      console.warn(`[DAMAS] No se pudo guardar jugada en ${code}:`, err.message);
+      socket.emit('damas:move-rejected', { message: 'No se pudo guardar la jugada. Intenta de nuevo.' });
+      return;
+    } finally {
+      room._savingMove = false;
+      room._saveInFlight = null;
+      if (room.status === 'playing' && room.white && room.black) damasStartClock(code);
+    }
+
     io.to(code).emit('damas:board-update', {
       board: room.board,
       turn: room.turn,
@@ -2994,6 +3141,7 @@ io.on('connection', (socket) => {
     const { room: code } = data;
     const room = damasRooms.get(code);
     if (!room) return;
+    if (room._saveInFlight) await room._saveInFlight.catch(() => {});
     const myColor = socket.data.damasColor;
     if (!myColor || room.status !== 'playing') return;
     damasCancelCloseTimer(room);
@@ -3066,7 +3214,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('damas:rematch-accept', (payload = {}) => {
+  socket.on('damas:rematch-accept', async (payload = {}) => {
     const data = parseSocketPayload(damasSchemas.roomOnly, payload);
     if (!data) return;
     const { room: code } = data;
@@ -3075,6 +3223,14 @@ io.on('connection', (socket) => {
     room.rematchReady = room.rematchReady || new Set();
     room.rematchReady.add(socket.id);
     if (room.rematchReady.size >= 2) {
+      if (room._finishInFlight) await room._finishInFlight;
+      const previous = {
+        board: room.board, turn: room.turn, status: room.status,
+        tokens: room.tokens, startedAt: room.startedAt,
+        clockW: room.clockW, clockB: room.clockB,
+        hadPromotion: room.hadPromotion, hadMultiCapture: room.hadMultiCapture,
+        noProgressPlies: room.noProgressPlies,
+      };
       room.board = OzamaCheckers.createInitialBoard();
       room.turn = OzamaCheckers.COLOR.WHITE;
       room.status = 'playing';
@@ -3090,6 +3246,13 @@ io.on('connection', (socket) => {
       const rematchInitialMs = initialMsFor(room.timeControl);
       room.clockW = rematchInitialMs;
       room.clockB = rematchInitialMs;
+      try { await saveDamasRoom(code, room); }
+      catch (err) {
+        Object.assign(room, previous);
+        console.warn('[DAMAS] No se pudo guardar revancha:', err.message);
+        io.to(code).emit('damas:room-error', 'No se pudo iniciar la revancha. Intenta de nuevo.');
+        return;
+      }
       if (room.white) io.to(room.white).emit('damas:rematch-start', { roomToken: room.tokens.w, board: room.board, turn: room.turn, clockW: room.clockW, clockB: room.clockB, timeControl: room.timeControl });
       if (room.black) io.to(room.black).emit('damas:rematch-start', { roomToken: room.tokens.b, board: room.board, turn: room.turn, clockW: room.clockW, clockB: room.clockB, timeControl: room.timeControl });
       damasStartClock(code);
@@ -3134,6 +3297,7 @@ io.on('connection', (socket) => {
     if (!data) return;
     const { room: code } = data;
     const room = damasRooms.get(code);
+    if (room?._saveInFlight) await room._saveInFlight.catch(() => {});
     if (!room || room.status !== 'playing' || !room.drawOfferBy) return;
     if (!isAuthorizedDamasSocket(room, socket, code)) return;
     if (room.drawOfferBy === socket.id) return;
@@ -3148,16 +3312,25 @@ io.on('connection', (socket) => {
 
   // Reconectar a una partida de Damas en curso tras perder el socket
   // (recargar la pagina, WiFi, la app pasando a segundo plano). El
-  // token de sala es lo unico que hace falta -- no requiere sesion,
-  // igual que el resto de Damas, para que un invitado tambien pueda
-  // recuperar su partida.
+  // Invitados usan el token de sala; una cuenta registrada necesita
+  // ademas la misma identidad que ocupaba ese color.
   socket.on('damas:rejoin', async (payload = {}) => {
     const data = parseSocketPayload(damasSchemas.rejoin, payload, 'damas:rejoin-failed');
     if (!data) return;
     const { room: code, color, token } = data;
-    const room = damasRooms.get(code);
-    if (!room || room.status !== 'playing') { socket.emit('damas:rejoin-failed'); return; }
-    if (!room.tokens?.[color] || room.tokens[color] !== token) { socket.emit('damas:rejoin-failed'); return; }
+    if (!damasRooms.has(code)) {
+      const tokenExists = await DamasRoom.exists({ roomCode: code, status: 'playing', [`tokens.${color}`]: token });
+      if (!tokenExists) { socket.emit('damas:rejoin-failed'); return; }
+    }
+    const room = await getOrRestoreDamasRoom(code);
+    if (!room || room.status !== 'playing' || room.tokens?.[color] !== token) {
+      socket.emit('damas:rejoin-failed'); return;
+    }
+    const assignedUserId = room.playerInfo?.[color]?.userId;
+    if (assignedUserId && !sameId(assignedUserId, socket.data.userId)) {
+      console.warn(`[SECURITY] Damas rejoin rejected room=${code} color=${color} reason=wrong_account`);
+      socket.emit('damas:rejoin-failed'); return;
+    }
 
     damasCancelCloseTimer(room);
     socket.join(code);
@@ -3165,12 +3338,15 @@ io.on('connection', (socket) => {
     socket.data.damasColor = color;
     if (color === 'w') room.white = socket.id; else room.black = socket.id;
 
+    await DamasRoom.updateOne({ roomCode: code }, { $set: { lastActivityAt: new Date() } }).catch(() => {});
+
     socket.emit('damas:game-start', { code, color, board: room.board, turn: room.turn, playerInfo: room.playerInfo, roomToken: token, clockW: room.clockW, clockB: room.clockB, timeControl: room.timeControl });
     socket.to(code).emit('damas:opponent-reconnected');
     // El reloj se habia pausado en damasStartCloseTimer() cuando este
     // jugador se desconecto -- si el rival tambien esta presente,
     // retoma la cuenta regresiva desde donde quedo (nunca se reinicia).
     if (room.white && room.black) damasStartClock(code);
+    else damasStartCloseTimer(code);
     console.log(`[DAMAS] Reconexion en sala ${code} (${color})`);
   });
 
@@ -3185,12 +3361,13 @@ io.on('connection', (socket) => {
     if (!data) return;
     if (!(await consumeDamasLimit('damasSpectate', 'damas:spectate-error'))) return;
     const { room: code } = data;
-    const room = damasRooms.get(code);
+    const room = await getOrRestoreDamasRoom(code);
     if (!room || room.status !== 'playing') {
       socket.emit('damas:spectate-error', 'Esta partida no esta disponible para ver en vivo.');
       return;
     }
     socket.join(code);
+    if (!room.white && !room.black) damasStartCloseTimer(code);
     socket.emit('damas:spectate-start', {
       code,
       board: room.board,
@@ -3242,7 +3419,7 @@ io.on('connection', (socket) => {
     const myColor = isP1 ? 'w' : 'b';
 
     let roomCode = match.roomCode || null;
-    let room = roomCode ? damasRooms.get(roomCode) : null;
+    let room = roomCode ? await getOrRestoreDamasRoom(roomCode) : null;
 
     if (!room) {
       let code;
@@ -3279,6 +3456,13 @@ io.on('connection', (socket) => {
         tournamentMeta: { eventId: String(event._id), round, matchIndex },
       };
 
+      try { await saveDamasRoom(code, candidateRoom, true); }
+      catch (err) {
+        console.warn('[Tournament] No se pudo guardar sala de Damas:', err.message);
+        socket.emit('tournament:error', 'No se pudo preparar el partido. Intenta de nuevo.');
+        return;
+      }
+
       // Reclamo atomico del roomCode -- si los dos jugadores llaman
       // este handler casi al mismo tiempo, sin esto cada uno podria
       // ver roomCode=null y crear su PROPIA sala (confirmado con un
@@ -3304,11 +3488,12 @@ io.on('connection', (socket) => {
         damasRooms.set(code, room);
         console.log(`[Tournament] Sala de Damas ${code} creada — ${event.title} ronda ${round + 1} (${p1Info.name} vs ${p2Info.name})`);
       } else {
+        await DamasRoom.deleteOne({ roomCode: code }).catch(() => {});
         // Perdi la carrera: otro socket ya reclamo el partido. Releo
         // cual sala quedo y me sumo a esa en vez de la mia.
         const fresh = await Event.findById(event._id).select('bracket.rounds').lean();
         roomCode = fresh?.bracket?.rounds?.[round]?.matches?.[matchIndex]?.roomCode || null;
-        room = roomCode ? damasRooms.get(roomCode) : null;
+        room = roomCode ? await getOrRestoreDamasRoom(roomCode) : null;
         if (!room) { socket.emit('tournament:error', 'No se pudo entrar al partido, intenta de nuevo.'); return; }
       }
     }
@@ -3389,9 +3574,8 @@ connectDatabase()
     process.exit(1);
   });
 
-// Socket.IO notifica el corte a los clientes. Ajedrez conserva su
-// posicion en Room; antes de cerrar Mongo persistimos tambien el reloj
-// actual. Damas todavia mantiene sus salas solo en memoria.
+// Socket.IO notifica el corte a los clientes. Ambos juegos conservan
+// posicion y reloj en Mongo para restaurarlos tras el reinicio.
 let shuttingDown = false;
 async function gracefulShutdown(signal) {
   if (shuttingDown) return;
@@ -3401,7 +3585,9 @@ async function gracefulShutdown(signal) {
   forcedExit.unref();
   console.log(`[Server] Salas de ajedrez en memoria: ${rooms.size}`);
   for (const room of rooms.values()) stopClock(room);
+  for (const room of damasRooms.values()) damasStopClock(room);
   try {
+    await Promise.allSettled([...damasRooms.values()].map((room) => room._saveInFlight).filter(Boolean));
     const saves = await Promise.allSettled([...rooms.entries()]
       .filter(([, room]) => room.status === 'playing')
       .map(([code, room]) => Room.updateOne({ roomCode: code, status: 'playing' }, {
@@ -3411,6 +3597,15 @@ async function gracefulShutdown(signal) {
       if (save.status === 'rejected') console.warn('[Server] No se pudo guardar un reloj antes del cierre:', save.reason);
     }
     console.log(`[Server] Relojes guardados: ${saves.length}`);
+    const damasSaves = await Promise.allSettled([...damasRooms.entries()]
+      .filter(([, room]) => room.status === 'playing')
+      .map(([code, room]) => DamasRoom.updateOne({ roomCode: code, status: 'playing' }, {
+        $set: { clockW: room.clockW, clockB: room.clockB, lastActivityAt: new Date() },
+      })));
+    for (const save of damasSaves) {
+      if (save.status === 'rejected') console.warn('[Server] No se pudo guardar un reloj de Damas:', save.reason);
+    }
+    console.log(`[Server] Relojes de Damas guardados: ${damasSaves.length}`);
     const socketClosed = new Promise((resolve) => io.close(resolve));
     server.closeAllConnections?.();
     await Promise.race([socketClosed, new Promise((resolve) => setTimeout(resolve, 3000))]);

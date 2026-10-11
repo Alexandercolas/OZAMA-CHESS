@@ -37,7 +37,7 @@ const DamasMatchSchema = new mongoose.Schema(
       // movimientos de Ajedrez (game.halfMoveClock/'fifty_move' en
       // server.js) y una partida entre dos reyes podia, en teoria,
       // durar para siempre sin que ninguno de los dos ofreciera tablas.
-      enum: ['no-pieces', 'no-moves', 'resign', 'opponent-left', 'admin-closed', 'draw', 'no-progress'],
+      enum: ['no-pieces', 'no-moves', 'resign', 'opponent-left', 'admin-closed', 'draw', 'no-progress', 'timeout'],
       required: true,
     },
 
@@ -69,5 +69,6 @@ DamasMatchSchema.index({ 'blackPlayer.userId': 1, createdAt: -1 });
 // Paridad con Match: mismo filtro/orden en leaderboard/climbers e historial.
 DamasMatchSchema.index({ result: 1 });
 DamasMatchSchema.index({ endedAt: -1 });
+DamasMatchSchema.index({ roomCode: 1, startedAt: 1 });
 
 module.exports = mongoose.model('DamasMatch', DamasMatchSchema);
