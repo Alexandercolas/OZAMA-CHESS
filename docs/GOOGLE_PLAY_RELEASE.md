@@ -9,7 +9,7 @@ Documento de trabajo para preparar la primera prueba cerrada. Los textos describ
 - Version inicial: `1.0` (`versionCode 1`)
 - Categoria sugerida: Juegos, Juegos de mesa
 - Idioma principal: Espanol (Republica Dominicana)
-- Correo de soporte: `axccolas@gmail.com`
+- Correo de soporte: `ciguardinc@gmail.com`
 - Web: `https://ozama-chess.onrender.com/`
 - Privacidad: `https://ozama-chess.onrender.com/privacy.html`
 - Soporte: `https://ozama-chess.onrender.com/support.html`
