@@ -2,6 +2,7 @@
 
 (() => {
   const offerPaths = new Set(['/', '/index.html', '/login.html', '/lobby.html']);
+  const isLanding = location.pathname === '/' || location.pathname === '/index.html';
   const isNative = Boolean(window.OZAMA_RUNTIME?.native);
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches
     || window.navigator.standalone === true;
@@ -232,6 +233,7 @@
 
   function showInstallCard() {
     if (installCard || isNative || isStandalone || wasDismissed() || !offerPaths.has(location.pathname)) return;
+    if (isLanding && window.scrollY < Math.min(240, window.innerHeight / 3)) return;
 
     addInstallStyles();
     installCard = document.createElement('aside');
@@ -279,6 +281,8 @@
   });
 
   window.addEventListener('appinstalled', () => closeInstallCard({ remember: false }));
+
+  if (isLanding) window.addEventListener('scroll', showInstallCard, { passive: true });
 
   window.addEventListener('DOMContentLoaded', () => {
     if (isMobile) showInstallCard();

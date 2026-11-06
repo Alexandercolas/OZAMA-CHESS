@@ -1,0 +1,69 @@
+/* Quiet surfaces and readable controls; scoped to the lobby. */
+:root { --gold2: var(--gold-2); --dim: rgba(233,228,218,.7); --lobby-line: rgba(233,228,218,.14); }
+body::before { background: none; }
+.hd, .sb { background: var(--s1); border-color: var(--lobby-line); }
+.hd::after, .sb::before, .sb-item::before, .card::before, .card::after,
+.card-corner-tr, .card-corner-bl, .card-top-line, .challenge-section::before,
+.challenge-section::after, .lobby-title-div { display: none; }
+.hd-sub { font-size: 10px; letter-spacing: 1px; }
+.hd-user-name, .hd-user-elo { font-size: 12px; }
+.hd-pro-btn, .hd-pro-btn:hover, .hd-pro-btn.is-pro { box-shadow: none; }
+.sb-item { padding-top: 12px; padding-bottom: 12px; }
+.sb-item.on { background: var(--s2); }
+.sb-name { font-size: 12px; letter-spacing: 0; text-transform: none; }
+.sb-desc { font-size: 11px; letter-spacing: 0; line-height: 1.4; opacity: 1; }
+.sb-item.on::after { box-shadow: none; background: var(--gold); }
+.lobby-title { text-align: left; margin-bottom: 28px; }
+.lobby-title h1 { color: var(--text); font-size: 38px; letter-spacing: 1px; text-shadow: none; }
+.lobby-title p { font-size: 13px; color: var(--dim); letter-spacing: .4px; text-transform: none; line-height: 1.6; margin-top: 10px; }
+.cards-row { gap: 16px; margin-bottom: 24px; }
+.card, .social-card, .friends-module, .challenge-section, .players-section {
+  border-color: var(--lobby-line); background: var(--s1); box-shadow: none; border-radius: var(--radius-md);
+}
+.card { padding: 14px; gap: 10px; }
+.card:hover, .card:focus-within { transform: none; box-shadow: none; border-color: var(--gold); }
+.card-featured { border-color: var(--gold); background: var(--s2); }
+.card-head, .card-head-main { flex-direction: row; }
+.card-head { flex-wrap: wrap; }
+.card-title { font-size: 18px; letter-spacing: 0; text-transform: none; color: var(--text); text-shadow: none; white-space: normal; text-align: left; }
+.card-icon, .challenge-icon { filter: none; text-shadow: none; }
+.card:hover .card-icon svg { transform: none; }
+.card-desc { font-size: 13px; line-height: 1.6; letter-spacing: 0; white-space: normal; text-align: left; }
+.elo-chip { font-size: 11px; border-color: var(--lobby-line); background: transparent; }
+.card-input, .challenge-input { min-height: 44px; font-size: 14px; box-shadow: none; border-color: var(--lobby-line); border-radius: var(--radius-md); }
+.card-input:focus { box-shadow: none; border-color: var(--gold); }
+.card-input::placeholder { font-size: 13px; letter-spacing: 0; text-transform: none; color: var(--dim); }
+.btn-primary, .challenge-btn, .btn-accept, .btn-decline { min-height: 44px; font-size: 13px; letter-spacing: .2px; text-transform: none; border-radius: var(--radius-md); }
+.card:not(.card-featured) .btn-primary, .social-card .btn-primary { background: var(--s3); color: var(--text); border: 1px solid var(--lobby-line); box-shadow: none; }
+.card:not(.card-featured) .btn-primary:hover, .social-card .btn-primary:hover { border-color: var(--gold); background: var(--s2); }
+.card-status, .waiting-text, .challenge-status { font-size: 12px; letter-spacing: 0; text-transform: none; line-height: 1.5; }
+.friends-module-title, .social-title, .challenge-title, .players-section-title { font-family: var(--fb); font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none; color: var(--text); }
+.friends-module-title { text-align: left; }
+.social-card { padding: 16px; gap: 10px; }
+.challenge-desc, .players-empty, .tb-meta, .eb-meta { font-family: var(--fb); font-size: 13px; line-height: 1.6; color: var(--dim); letter-spacing: 0; }
+.player-chip-name { font-size: 12px; letter-spacing: 0; text-transform: none; }
+.player-chip-elo, .player-chip-friend { font-size: 11px; }
+.player-chip { min-height: 40px; }
+.players-section-title::after { background: var(--lobby-line); }
+.online-dot { box-shadow: none; }
+.modal-title { letter-spacing: .5px; }
+.modal-sub { font-size: 14px; line-height: 1.6; letter-spacing: 0; }
+@media (min-width: 900px) {
+  .card { text-align: left; }
+  .card .btn-primary { margin-top: auto; }
+  .card-head { min-height: 44px; }
+  .friends-module .social-card { padding: 0 20px; }
+  .friends-module .social-card:first-child { padding-left: 0; border-color: var(--lobby-line); }
+  .friends-module .social-card:last-child { padding-right: 0; }
+}
+@media (max-width: 899px) {
+  .cards-row { gap: 12px; }
+  .card { padding: 14px; gap: 10px; }
+  .card-title { font-size: 17px; }
+  .bot-controls { flex-direction: column; }
+  .bot-controls .btn-primary { width: 100%; }
+  .lobby-title h1 { font-size: 32px; letter-spacing: 1px; }
+  .sb-item { max-width: none; min-height: 44px; }
+  .sb-name { font-size: 12px; letter-spacing: 0; }
+}
+@media (max-width: 380px) { .cards-row, .social-row { grid-template-columns: 1fr; } }

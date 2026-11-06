@@ -199,9 +199,9 @@ app.use('/api/damas-puzzles', damasPuzzlesRoutes);
 app.use('/api/openings', openingsRoutes);
 
 app.get('/api/health/db', (_req, res) => {
-  res.json({
-    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
-  });
+  const connected = mongoose.connection.readyState === 1;
+  res.set('Cache-Control', 'no-store');
+  res.status(connected ? 200 : 503).json({ database: connected ? 'connected' : 'disconnected' });
 });
 
 const appBuildVersion = String(process.env.OZAMA_APP_VERSION || process.env.RENDER_GIT_COMMIT || require('./package.json').version).trim().slice(0, 64);

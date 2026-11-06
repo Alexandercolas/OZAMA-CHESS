@@ -307,45 +307,20 @@
 
     .hero {
       position: relative;
-      min-height: 100svh;
+      min-height: min(740px, 92svh);
       display: grid;
       grid-template-columns: minmax(0, 0.86fr) minmax(360px, 0.7fr);
-      grid-template-rows: 1fr auto;
       align-items: center;
       gap: clamp(20px, 4vw, 56px);
-      padding: 118px clamp(22px, 5vw, 76px) 36px;
+      padding: 96px clamp(22px, 5vw, 76px) 20px;
       overflow: hidden;
       isolation: isolate;
       border-bottom: 1px solid rgba(200,152,60,0.16);
       background:
-        linear-gradient(90deg, rgba(5,4,3,0.97), rgba(5,4,3,0.84) 40%, rgba(5,4,3,0.34) 68%, rgba(5,4,3,0.70)),
-        linear-gradient(180deg, rgba(5,4,3,0.38), rgba(5,4,3,0.48) 52%, rgba(5,4,3,0.88) 72%, rgba(5,4,3,0.98)),
-        url('/assets/brand/ozama-hero-brutal.jpg') center center / cover no-repeat;
-    }
-
-    .hero-watermark {
-      position: absolute;
-      right: clamp(24px, 4vw, 64px);
-      top: 60%;
-      max-width: min(40vw, 460px);
-      font-family: var(--title);
-      font-weight: 700;
-      font-size: clamp(28px, 3.6vw, 52px);
-      line-height: 1.12;
-      color: var(--gold-2);
-      opacity: 0;
-      letter-spacing: 0.1em;
-      pointer-events: none;
-      z-index: 0;
-      text-align: right;
-      text-transform: uppercase;
-      animation: watermarkEnter 1.3s var(--ease-out) 0.45s forwards;
-      will-change: opacity, transform;
-    }
-
-    @keyframes watermarkEnter {
-      from { opacity: 0; transform: translateY(-50%) translateX(10px); }
-      to { opacity: 0.09; transform: translateY(-50%) translateX(0); }
+        linear-gradient(90deg, rgba(5,4,3,0.98), rgba(5,4,3,0.84) 44%, rgba(5,4,3,0.12) 78%),
+        linear-gradient(180deg, rgba(5,4,3,0.14), rgba(5,4,3,0.68)),
+        url('/assets/pieces/blender/gold/knight.png') right 8% center / auto 78% no-repeat,
+        #050403;
     }
 
     .hero::before {
@@ -414,7 +389,7 @@
     .hero h1 span { display: block; }
 
     .hero-subtitle {
-      margin-top: 22px;
+      margin-top: 16px;
       font-family: var(--title);
       font-size: clamp(15px, 1.7vw, 22px);
       font-weight: 700;
@@ -425,7 +400,7 @@
 
     .hero-text {
       max-width: 620px;
-      margin-top: 24px;
+      margin-top: 14px;
       color: rgba(238,229,213,0.68);
       font-size: 16px;
       line-height: 1.85;
@@ -444,7 +419,7 @@
       letter-spacing: 2.4px;
       text-transform: uppercase;
       color: var(--muted);
-      margin: 36px 0 14px;
+      margin: 24px 0 14px;
     }
     .game-select { display: flex; gap: 14px; flex-wrap: wrap; }
     .game-card {
@@ -471,13 +446,13 @@
     .game-card .g-icon { font-size: 34px; line-height: 1; }
     .game-card .g-name { font: 800 14px/1 var(--body); letter-spacing: 3px; text-transform: uppercase; color: var(--gold-2); }
     .game-card .g-tag { font-size: 11.5px; color: var(--muted); text-align: center; line-height: 1.5; }
-    .register-row { margin-top: 18px; }
+    .register-row { margin-top: 12px; }
 
     .hero-meta {
       display: flex;
       flex-wrap: wrap;
       gap: 22px;
-      margin-top: 34px;
+      margin-top: 18px;
       color: rgba(238,229,213,0.42);
       font-size: 11px;
       font-weight: 800;
@@ -498,57 +473,6 @@
       border: 1px solid var(--gold);
       transform: rotate(45deg);
       box-shadow: 0 0 12px rgba(200,152,60,0.32);
-    }
-
-    .hero-feature-strip {
-      grid-column: 1 / -1;
-      position: relative;
-      z-index: 2;
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      border: 1px solid rgba(200,152,60,0.28);
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.035), transparent 18%),
-        linear-gradient(145deg, rgba(20,17,12,0.94), rgba(5,4,3,0.92));
-      box-shadow:
-        inset 0 0 0 1px rgba(255,255,255,0.025),
-        0 22px 54px rgba(0,0,0,0.44);
-      backdrop-filter: blur(4px);
-    }
-
-    .hero-feature {
-      min-height: 132px;
-      padding: 24px 22px;
-      display: grid;
-      align-content: start;
-      justify-items: center;
-      text-align: center;
-      gap: 10px;
-      border-right: 1px solid rgba(200,152,60,0.16);
-    }
-
-    .hero-feature:last-child { border-right: none; }
-
-    .hero-feature svg {
-      width: 36px;
-      height: 36px;
-      color: var(--gold-2);
-      filter: drop-shadow(0 0 14px rgba(200,152,60,0.18));
-    }
-
-    .hero-feature strong {
-      font-family: var(--title);
-      color: var(--gold-2);
-      font-size: 13px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-    }
-
-    .hero-feature span {
-      max-width: 190px;
-      color: rgba(238,229,213,0.55);
-      font-size: 12px;
-      line-height: 1.55;
     }
 
     .oz-enter {
@@ -602,11 +526,6 @@
         transition: none;
       }
 
-      .hero-watermark {
-        opacity: 0.09;
-        transform: translateY(-50%);
-        animation: none;
-      }
     }
 
     .section {
@@ -1275,12 +1194,6 @@
       .hero {
         background-position: 62% center;
       }
-      .hero-watermark {
-        display: none;
-      }
-      .hero-feature-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .hero-feature:nth-child(2) { border-right: none; }
-      .hero-feature:nth-child(-n+2) { border-bottom: 1px solid rgba(200,152,60,0.16); }
       .feature-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .timeline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
@@ -1301,12 +1214,10 @@
       .hero {
         padding-top: 96px;
         background:
-          linear-gradient(90deg, rgba(5,4,3,0.96), rgba(5,4,3,0.74) 56%, rgba(5,4,3,0.56)),
-          linear-gradient(180deg, rgba(5,4,3,0.30), rgba(5,4,3,0.82)),
-          url('/assets/brand/ozama-hero-brutal.jpg') 62% -120px / auto calc(100% + 170px) no-repeat;
-      }
-      .hero-watermark {
-        display: none;
+          linear-gradient(90deg, rgba(5,4,3,0.92), rgba(5,4,3,0.76)),
+          linear-gradient(180deg, rgba(5,4,3,0.20), rgba(5,4,3,0.88)),
+          url('/assets/pieces/blender/gold/knight.png') right top / auto 520px no-repeat,
+          #050403;
       }
       .hero h1 { font-size: clamp(48px, 17vw, 76px); }
       .feature-story,
@@ -1338,11 +1249,14 @@
       }
       .hero-actions { flex-direction: column; align-items: stretch; }
       .btn-primary, .btn-secondary { width: 100%; }
-      .game-select { flex-direction: column; }
-      .hero-meta { gap: 12px; }
-      .hero-feature-strip { grid-template-columns: 1fr; }
-      .hero-feature { min-height: 116px; border-right: none; border-bottom: 1px solid rgba(200,152,60,0.16); }
-      .hero-feature:last-child { border-bottom: none; }
+      .hero-text, .hero-meta { display: none; }
+      .game-select { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .game-card { min-width: 0; padding: 18px 10px; }
+      .game-card .g-icon { font-size: 26px; }
+      .game-card .g-name { font-size: 12px; letter-spacing: 1px; }
+      .game-card .g-tag { font-size: 10px; }
+      .register-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .register-row .btn-primary, .register-row .btn-secondary { min-width: 0; padding: 0 6px; font-size: 10px; letter-spacing: 0.5px; text-align: center; }
     }
   </style>
 </head>
@@ -1370,7 +1284,6 @@
 
     <main>
       <section class="hero">
-        <div class="hero-watermark" aria-hidden="true">Dominican Heritage Edition</div>
         <div class="hero-copy">
           <div class="kicker oz-enter" style="--d:1" data-i18n="landing.kicker">Edicion Dominicana</div>
           <h1>
@@ -1397,6 +1310,7 @@
             </a>
           </div>
           <div class="register-row hero-actions oz-enter" style="--d:5.4">
+            <a class="btn-primary" href="/login.html?next=bot" id="cta-bot" data-i18n="landing.finalVsBot">VS OZAMA BOT</a>
             <a class="btn-secondary" href="/login.html" id="cta-register">Crear cuenta</a>
           </div>
 
@@ -1407,28 +1321,6 @@
           </div>
         </div>
 
-        <div class="hero-feature-strip scroll-reveal" aria-label="Funciones destacadas">
-          <div class="hero-feature">
-            <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M26 2 9 27h12l-3 19 21-29H26V2Zm-5 21h-5l7-10v8h7l-8 11 1-9h-2Z"/></svg>
-            <strong data-i18n="landing.featQuickTitle">Juego rápido</strong>
-            <span data-i18n="landing.featQuickText">Emparejamiento inmediato con jugadores de tu nivel.</span>
-          </div>
-          <div class="hero-feature">
-            <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M18 6h5v12h-5V6Zm7 0h5v12h-5V6ZM8 36l12-12-5-5 4-4 5 5 5-5 4 4-5 5 12 12-4 4-12-12-12 12-4-4Z"/></svg>
-            <strong data-i18n="landing.featDuelTitle">Duelos reales</strong>
-            <span data-i18n="landing.featDuelText">Compite en partidas con reloj, chat y salas privadas.</span>
-          </div>
-          <div class="hero-feature">
-            <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M8 36h32v5H8v-5Zm3-18 8 7 5-14 5 14 8-7-3 15H14l-3-15Zm13-8a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></svg>
-            <strong data-i18n="landing.featRankTitle">Ranking global</strong>
-            <span data-i18n="landing.featRankText">Sube tu ELO y deja tu marca en el salon.</span>
-          </div>
-          <div class="hero-feature">
-            <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="currentColor" d="M24 4 38 12v11c0 10-6 18-14 21C16 41 10 33 10 23V12L24 4Zm0 6-8 5v8c0 6 3 12 8 15 5-3 8-9 8-15v-8l-8-5Z"/></svg>
-            <strong data-i18n="landing.featSafeTitle">Seguro y justo</strong>
-            <span data-i18n="landing.featSafeText">Juega con cuenta protegida y resultados bien cuidados.</span>
-          </div>
-        </div>
       </section>
 
       <section class="section" id="caracteristicas">
@@ -1596,7 +1488,7 @@
           </p>
           <div class="hero-actions" style="justify-content:center">
             <a class="btn-primary" href="/login.html" id="final-play" data-i18n="landing.finalEnterLobby">Entrar al lobby</a>
-            <a class="btn-secondary" href="/login.html" id="final-bot" data-i18n="landing.finalVsBot">VS OZAMA BOT</a>
+            <a class="btn-secondary" href="/login.html?next=bot" id="final-bot" data-i18n="landing.finalVsBot">VS OZAMA BOT</a>
             <a class="btn-secondary" href="/login.html" id="final-login">Iniciar sesión</a>
           </div>
         </div>
@@ -1624,30 +1516,21 @@
     // Hay que sondear hasta que el objeto exista de verdad primero.
     while (!window.OZAMA_I18N) await new Promise((r) => setTimeout(r, 10));
     await window.OZAMA_I18N.ready;
-    // Entrance trigger and one-shot scroll reveal.
-    (function(){
-      try {
-        document.addEventListener('DOMContentLoaded', () => {
-          document.body.classList.add('is-loaded');
-
-          const revealTargets = document.querySelectorAll('.scroll-reveal');
-          if (!('IntersectionObserver' in window)) {
-            revealTargets.forEach(el => el.classList.add('is-visible'));
-            return;
+    document.body.classList.add('is-loaded');
+    const revealTargets = document.querySelectorAll('.scroll-reveal');
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((entries, observer) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
           }
-
-          const io = new IntersectionObserver((entries, obs) => {
-            entries.forEach(e => {
-              if (e.isIntersecting) {
-                e.target.classList.add('is-visible');
-                obs.unobserve(e.target);
-              }
-            });
-          }, { threshold: 0.12 });
-          revealTargets.forEach(el => io.observe(el));
         });
-      } catch (e) { /* fail silently */ }
-    })();
+      }, { threshold: 0.12 });
+      revealTargets.forEach((el) => io.observe(el));
+    } else {
+      revealTargets.forEach((el) => el.classList.add('is-visible'));
+    }
 
     const storedUser = (() => {
       try { return JSON.parse(localStorage.getItem('ozama-user') || 'null'); }
@@ -1666,6 +1549,7 @@
       const navProfile = document.getElementById('nav-profile');
       const navCta = document.getElementById('nav-cta');
       const ctaPlay = document.getElementById('cta-play');
+      const ctaBot = document.getElementById('cta-bot');
       const ctaRegister = document.getElementById('cta-register');
       const rankingRegister = document.getElementById('ranking-register');
       const finalPlay = document.getElementById('final-play');
@@ -1687,6 +1571,7 @@
         });
         if (navCta) { navCta.textContent = t('common.goToLobby', 'Ir al lobby'); navCta.href = '/lobby.html'; }
         if (ctaPlay) ctaPlay.href = '/lobby.html';
+        if (ctaBot) ctaBot.href = '/lobby.html#bot';
         if (ctaRegister) { ctaRegister.textContent = t('common.viewProfile', 'Ver perfil'); ctaRegister.href = '/profile.html'; }
         if (rankingRegister) { rankingRegister.textContent = t('landing.viewMyProfile', 'Ver mi perfil'); rankingRegister.href = '/profile.html'; }
         if (finalPlay) finalPlay.href = '/lobby.html';

@@ -549,6 +549,22 @@
       letter-spacing: 1px;
     }
 
+    .profile-editor {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 12px 18px;
+      align-items: center;
+      padding: 14px 18px;
+      margin-bottom: 20px;
+    }
+    .profile-editor .edit-label,
+    .profile-editor .avatar-picker,
+    .profile-editor .photo-tools { grid-column: 1 / -1; }
+    .profile-editor .edit-select { min-width: 0; }
+    @media (max-width: 600px) {
+      .profile-editor { grid-template-columns: 1fr; }
+    }
+
     .friends-panel {
       padding: 18px;
       margin-bottom: 28px;
@@ -1169,7 +1185,7 @@
       if (!premiumActive) {
         body.innerHTML = `
           <div class="adv-locked">
-            <div>Desbloquea tu color con mas victorias, duracion promedio de partida y tus aperturas mas jugadas.</div>
+            <div>Desbloquea tu color con más victorias, duración promedio de partida y tus aperturas más jugadas.</div>
             <a href="/settings.html#premium-panel">Activar OZAMA Premium →</a>
           </div>
         `;
@@ -1186,7 +1202,7 @@
         const data = await res.json();
 
         if (!data.totalGames) {
-          body.innerHTML = '<div class="empty-msg">Todavia no hay partidas terminadas para analizar.</div>';
+          body.innerHTML = '<div class="empty-msg">Todavía no hay partidas terminadas para analizar.</div>';
           return;
         }
 
@@ -1243,15 +1259,72 @@
               <div class="adv-color-detail">${data.asBlack.wins}V / ${data.asBlack.losses}D / ${data.asBlack.draws}T</div>
             </div>
           </div>
-          ${duration ? `<div class="adv-duration">Duracion promedio de partida: <strong>${duration}</strong></div>` : ''}
+          ${duration ? `<div class="adv-duration">Duración promedio de partida: <strong>${duration}</strong></div>` : ''}
           ${modalityHtml}
-          ${openingsHtml ? `<div class="adv-openings-title">Aperturas mas jugadas (con Blancas)</div>${openingsHtml}` : ''}
+          ${openingsHtml ? `<div class="adv-openings-title">Aperturas más jugadas (con Blancas)</div>${openingsHtml}` : ''}
           <div class="adv-openings-title">Cómo ganas tus partidas</div>
           ${winReasonsHtml}
         `;
       } catch (_) {
-        body.innerHTML = '<div class="empty-msg">No se pudieron cargar las estadisticas avanzadas.</div>';
+        body.innerHTML = '<div class="empty-msg">No se pudieron cargar las estadísticas avanzadas.</div>';
       }
+    }
+
+    function bindProfileEditor(user) {
+      let selectedAvatar = Number(user.avatar) || 0;
+      let avatarImage = user.avatarImage || '';
+      const picker = document.getElementById('avatar-picker');
+      const photoInput = document.getElementById('profile-photo-input');
+      const status = document.getElementById('photo-status');
+      const saveButton = document.getElementById('profile-save-btn');
+      const saveMsg = document.getElementById('profile-save-msg');
+
+      picker?.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-avatar]');
+        if (!button) return;
+        selectedAvatar = Number(button.dataset.avatar) || 0;
+        picker.querySelectorAll('[data-avatar]').forEach((item) => item.classList.toggle('active', item === button));
+      });
+
+      photoInput?.addEventListener('change', () => {
+        const file = photoInput.files?.[0];
+        if (!file) return;
+        if (file.size > 320 * 1024) {
+          if (status) status.textContent = 'La foto supera 320 KB';
+          photoInput.value = '';
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+          avatarImage = String(reader.result || '');
+          if (status) status.textContent = 'Foto lista para guardar';
+        };
+        reader.readAsDataURL(file);
+      });
+
+      saveButton?.addEventListener('click', async () => {
+        saveButton.disabled = true;
+        try {
+          const response = await fetch('/api/user/me', {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${_token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              avatar: selectedAvatar,
+              avatarImage,
+              country: document.getElementById('profile-country')?.value || user.country || 'DO',
+            }),
+          });
+          if (!response.ok) throw new Error();
+          const data = await response.json();
+          localStorage.setItem('ozama-user', JSON.stringify(data.user));
+          renderProfile(data.user);
+          if (saveMsg) saveMsg.style.display = 'inline';
+        } catch (_) {
+          if (status) status.textContent = 'No se pudieron guardar los cambios';
+        } finally {
+          saveButton.disabled = false;
+        }
+      });
     }
 
     function renderProfile(user) {
@@ -1288,6 +1361,23 @@
 
         <div class="container">
 
+          <section class="profile-editor oz-card oz-enter" aria-label="Editar perfil">
+            <div class="edit-label">Personalizar perfil</div>
+            <div class="avatar-picker" id="avatar-picker">
+              ${[0,1,2,3,4,5].map((n) => `<button class="avatar-choice ${n === avatar ? 'active' : ''} avatar-${n}" type="button" data-avatar="${n}" aria-label="Avatar ${n + 1}">${initial}</button>`).join('')}
+            </div>
+            <div class="photo-tools">
+              <label class="photo-upload">Cambiar foto<input id="profile-photo-input" type="file" accept="image/png,image/jpeg,image/webp"></label>
+              <span class="photo-status" id="photo-status"></span>
+              <span class="photo-hint">PNG, JPG o WEBP. Máximo 320 KB.</span>
+            </div>
+            <select class="edit-select" id="profile-country" aria-label="País">
+              ${['DO','US','ES','MX','CO','AR','CL','PE','VE','OTHER'].map((code) => `<option value="${code}" ${code === (user.country || 'DO') ? 'selected' : ''}>${code}</option>`).join('')}
+            </select>
+            <button class="btn-save btn-primary" id="profile-save-btn" type="button">Guardar cambios</button>
+            <span class="save-msg" id="profile-save-msg">Guardado</span>
+          </section>
+
           <div class="game-toggle oz-enter" style="--d:0">
             <button class="game-toggle-btn ${currentGame === 'chess' ? 'is-active' : ''}" data-game="chess" onclick="switchGame('chess')">Ajedrez</button>
             <button class="game-toggle-btn ${currentGame === 'damas' ? 'is-active' : ''}" data-game="damas" onclick="switchGame('damas')">Damas</button>
@@ -1314,7 +1404,7 @@
 
                   <div class="adv-stats-panel oz-card oz-enter" id="adv-stats-panel" style="--d:3">
                     <div class="adv-stats-title">
-                      <div class="section-title">Estadisticas avanzadas</div>
+                      <div class="section-title">Estadísticas avanzadas</div>
                       <span class="adv-pro-tag">PREMIUM</span>
                     </div>
                     <div id="adv-stats-body"><div class="empty-msg">Cargando...</div></div>
@@ -1338,13 +1428,14 @@
 
         </div>
       `;
+      bindProfileEditor(user);
     }
 
     function renderFriends(friends = []) {
       const list = document.getElementById('friends-list');
       if (!list) return;
       if (!friends.length) {
-        list.innerHTML = '<div class="empty-msg">Todavia no has agregado amigos.</div>';
+        list.innerHTML = '<div class="empty-msg">Todavía no has agregado amigos.</div>';
         return;
       }
       list.innerHTML = friends.map((friend) => {

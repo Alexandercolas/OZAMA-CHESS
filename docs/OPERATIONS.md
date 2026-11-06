@@ -12,7 +12,7 @@ Esta guia cubre la instancia unica de Node.js/Socket.IO que usa OZAMA CHESS hoy.
 ## Despues del deploy
 
 1. Confirma en Render que el deploy termino correctamente y anota el commit desplegado.
-2. Consulta `/api/health/db`: exige `database: "connected"` en el JSON. Esta ruta puede responder HTTP 200 incluso si la base esta desconectada; no uses solo el codigo HTTP como senal de salud.
+2. Consulta `/api/health/db`: exige HTTP 200 y `database: "connected"`. Si Mongo esta desconectado, responde HTTP 503 y `database: "disconnected"`.
 3. Consulta `/api/app-version` y comprueba que la version corresponde al deploy esperado.
 4. Revisa los logs del arranque y busca `[GAME_STORAGE_FAILURE]`. Una linea como `game=damas operation=restore_room error=MongoServerSelectionError` indica un fallo real de almacenamiento, no un intento de reconexion con token invalido. Estas lineas no contienen JWT, tokens de sala ni datos de usuarios.
 5. Confirma una reconexion real de ajedrez y Damas en un entorno controlado. Si ocurre un error en produccion, evita crear cuentas o partidas de prueba alli.
@@ -29,5 +29,6 @@ Esta guia cubre la instancia unica de Node.js/Socket.IO que usa OZAMA CHESS hoy.
 
 - Los relojes se guardan periodicamente y durante un apagado ordenado. Un corte brusco puede perder los segundos transcurridos desde el ultimo guardado.
 - La recuperacion de salas esta preparada para un proceso de servidor. Escalar a varias instancias requiere coordinar eventos de Socket.IO y el acceso concurrente a las salas; no basta con agregar instancias en Render.
-- El prefijo `[GAME_STORAGE_FAILURE]` facilita buscar fallos, pero **no envia alertas**. Configura y verifica una alerta en el servicio de logs/monitorizacion antes de depender de ella.
+- Configura en Render el HTTP Health Check Path `/api/health/db` y las notificaciones por correo para fallos del servicio. Comprueba en el panel que ambas opciones esten activas; el codigo por si solo no configura Render.
+- Este chequeo detecta caidas del proceso y desconexion de Mongo, no todos los fallos de escritura. El prefijo `[GAME_STORAGE_FAILURE]` facilita buscar errores concretos, pero **no envia correos** por si mismo. Una alerta para ese patron requiere un proveedor de logs con reglas de alerta.
 - La configuracion de backups y su restauracion en Atlas es una tarea operativa manual; este repositorio no puede confirmar el estado real del cluster de produccion.

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8"/>
@@ -656,32 +656,22 @@
     }
     .social-card .btn-primary { padding: 7px 12px; }
 
-    /* ================================================================
-       DESKTOP (900px+): composicion "premium" para las 3 acciones
-       principales -- de tira horizontal (553x102px medido en 1920px,
-       ratio 5.4:1) a modulo equilibrado (~340-360px de ancho, icono
-       centrado, mas aire). Mobile/tablet no tocan ninguna de estas
-       reglas -- son puramente aditivas dentro del media query.
-       ================================================================ */
+    /* Escritorio: misma jerarquia, sin tarjetas gigantes. */
     @media (min-width: 900px) {
       .card {
-        padding: 26px 22px 22px;
-        gap: 14px;
-        text-align: center;
+        padding: 14px 14px 12px;
+        gap: 8px;
+        text-align: left;
       }
-      .card-head { flex-direction: column; gap: 10px; }
-      .card-head-main { flex-direction: column; gap: 8px; }
-      .card-icon { font-size: 26px; }
-      .card-icon svg { width: 24px; height: 24px; }
-      .card-title { font-size: 13.5px; letter-spacing: 1.5px; white-space: normal; }
-      .card-desc { font-size: 10.5px; white-space: normal; text-align: center; }
-      .elo-chip { align-self: center; }
-      .card .btn-primary { margin-top: 10px; }
-      /* Bot: selector y boton pasan de fila a columna -- con mas alto
-         disponible, apilados se lee mas prolijo que apretados en una
-         sola linea angosta. */
-      .bot-controls { flex-direction: column; gap: 8px; }
-      .bot-controls .btn-primary { width: 100%; }
+      .card-head { flex-direction: row; gap: 8px; }
+      .card-head-main { flex-direction: row; gap: 8px; }
+      .card-icon svg { width: 18px; height: 18px; }
+      .card-title { font-size: 12px; letter-spacing: 1px; white-space: nowrap; }
+      .card-desc { font-size: 9.5px; white-space: nowrap; text-align: left; }
+      .elo-chip { align-self: auto; }
+      .card .btn-primary { margin-top: auto; }
+      .bot-controls { flex-direction: row; gap: 6px; }
+      .bot-controls .btn-primary { width: auto; }
     }
 
     /* Primary button -- comodo al tacto (min ~30px de alto real con el
@@ -1184,6 +1174,7 @@
       .modal-buttons { flex-direction: column; }
     }
   </style>
+  <link rel="stylesheet" href="/css/lobby-refinement.css">
 </head>
 <body class="auth-checking">
 
