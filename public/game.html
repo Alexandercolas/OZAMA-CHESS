@@ -1249,7 +1249,7 @@
         </a>
         <a class="sb-item" href="/leaderboard.html">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 4h10v3h3v4c0 3-2 5-5 5h-1v2h3v2H7v-2h3v-2H9c-3 0-5-2-5-5V7h3V4Zm2 2v8h6V6H9Zm8 3v4c1-.4 2-1.2 2-2V9h-2ZM5 9v2c0 .8 1 1.6 2 2V9H5Z"/></svg></span>
-          <div class="sb-txt"><span class="sb-name">Ranking</span><span class="sb-desc">Hall of Fame</span></div>
+          <div class="sb-txt"><span class="sb-name">Ranking</span><span class="sb-desc">Tabla de posiciones</span></div>
         </a>
         <a class="sb-item" href="/settings.html">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m12 2 2 3 4-.5 1.5 3.5-3 2 1 4-3 2-3-2-3 2-3-2 1-4-3-2L6 4.5 10 5l2-3Zm0 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"/></svg></span>
@@ -1274,23 +1274,23 @@
 
       <!-- COLUMNA CENTRAL: banner + tablero + botones -->
       <div class="bc oz-enter" style="--d:1">
-        <div class="bc-banner" id="bc-banner">PARTIDA EN CURSO</div>
+        <div class="bc-banner" id="bc-banner" aria-live="polite">PARTIDA EN CURSO</div>
 
         <!-- Barras compat ocultas -->
         <div class="player-bar" id="player-bar-black">
           <span class="player-avatar" id="avatar-black">B</span>
           <span class="player-flag"   id="flag-black"></span>
-          <span class="player-name"   id="name-black">Black</span>
+          <span class="player-name"   id="name-black">Negras</span>
           <span class="player-elo"    id="elo-black"></span>
           <span class="player-clock"  id="clock-black">10:00</span>
         </div>
 
-        <div id="board" class="board"></div>
+        <div id="board" class="board" role="grid" aria-label="Tablero de ajedrez"></div>
 
         <div class="player-bar" id="player-bar-white">
           <span class="player-avatar" id="avatar-white">W</span>
           <span class="player-flag"   id="flag-white"></span>
-          <span class="player-name"   id="name-white">White</span>
+          <span class="player-name"   id="name-white">Blancas</span>
           <span class="player-elo"    id="elo-white"></span>
           <span class="player-clock"  id="clock-white">10:00</span>
         </div>
@@ -1316,11 +1316,11 @@
           <button class="bc-btn sound-btn" id="sound-toggle-btn" onclick="toggleSound()">
             Sonido on
           </button>
-          <button class="bc-btn premium-theme-btn" id="theme-toggle-btn" title="Cambiar tema de tablero (Zona Colonial, Mármol, y más con Premium)" style="display:none;" onclick="cycleBoardTheme()">
-            🎨 Zona Colonial
+          <button class="bc-btn premium-theme-btn" id="theme-toggle-btn" title="Cambiar tema de tablero (Zona Colonial, Mármol y más con Premium)" style="display:none;" onclick="cycleBoardTheme()">
+            Tema del tablero
           </button>
-          <button class="bc-btn" id="local-autoflip-btn" title="Girar el tablero para el jugador de turno (util pasando el celular)" style="display:none;">
-            🔄 Auto-voltear
+          <button class="bc-btn" id="local-autoflip-btn" title="Girar el tablero para el jugador de turno (útil al pasar el celular)" style="display:none;">
+            Voltear tablero
           </button>
         </div>
       </div>
@@ -1332,14 +1332,14 @@
           <button class="move-nav-btn" id="move-prev-btn"  title="Jugada anterior" aria-label="Jugada anterior" disabled>◀</button>
           <button class="move-nav-btn live-btn" id="move-live-btn" title="Volver a la jugada actual">● EN VIVO</button>
           <button class="move-nav-btn" id="move-next-btn"  title="Jugada siguiente" aria-label="Jugada siguiente" disabled>▶</button>
-          <button class="move-nav-btn" id="move-last-btn"  title="Ultima jugada" aria-label="Ultima jugada" disabled>⏭</button>
+          <button class="move-nav-btn" id="move-last-btn"  title="Última jugada" aria-label="Última jugada" disabled>⏭</button>
         </div>
         <div class="move-list" id="move-list">
-          <div class="move-empty">Sin jugadas todavia</div>
+          <div class="move-empty">Sin jugadas todavía</div>
         </div>
         <div class="move-analysis-summary" id="move-analysis-summary" style="display:none;"></div>
-        <button class="move-pgn-btn" id="move-analyze-btn" title="Analizar partida (Premium)" style="display:none;" onclick="analyzeGameForBlunders()">🔍 Analizar partida</button>
-        <button class="move-pgn-btn" id="move-pgn-btn" title="Exportar PGN (Premium)" style="display:none;">⬇ Descargar PGN</button>
+        <button class="move-pgn-btn" id="move-analyze-btn" title="Analizar partida (Premium)" style="display:none;" onclick="analyzeGameForBlunders()">Analizar partida</button>
+        <button class="move-pgn-btn" id="move-pgn-btn" title="Exportar PGN (Premium)" style="display:none;">Descargar PGN</button>
       </div>
 
       <!-- CHAT (debajo del tablero en desktop ancho) -->
@@ -1348,7 +1348,7 @@
           <span class="chat-ttl chat-title">Chat</span>
           <button class="chat-toggle" onclick="toggleChat()" id="chat-toggle-btn">−</button>
         </div>
-        <div class="chat-messages" id="chat-messages">
+        <div class="chat-messages" id="chat-messages" aria-live="polite" aria-label="Mensajes del chat">
           <div class="chat-system">Partida iniciada. ¡Buena suerte!</div>
         </div>
         <div class="chat-quick-row" id="chat-quick-row"></div>
@@ -1430,8 +1430,8 @@
 <div id="game-over-overlay" class="overlay hidden">
   <div class="overlay-card">
     <div id="game-over-icon" style="font-family:'Cormorant Garamond',serif;font-size:42px;margin-bottom:8px;color:#C8983C;letter-spacing:4px;">OC</div>
-    <h2 id="game-over-title">CHECKMATE</h2>
-    <p  id="game-over-subtitle">White wins!</p>
+    <h2 id="game-over-title">JAQUE MATE</h2>
+    <p  id="game-over-subtitle">Las blancas ganan.</p>
     <button id="play-again-btn" class="control-btn">Jugar de nuevo</button>
     <div id="online-end-buttons" class="hidden" style="display:flex;flex-direction:column;gap:8px;width:100%;margin-top:10px;">
       <button id="rematch-btn"  class="control-btn">Revancha</button>
