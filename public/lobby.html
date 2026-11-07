@@ -1038,8 +1038,8 @@
       .mobile-menu-btn {
         display: inline-flex;
         position: fixed;
-        right: 14px;
-        bottom: calc(14px + env(safe-area-inset-bottom));
+        left: 14px;
+        top: calc(14px + env(safe-area-inset-top));
         z-index: 120;
         align-items: center;
         justify-content: center;
@@ -1066,10 +1066,10 @@
       .app.mobile-menu-open .sb {
         display: block;
         position: fixed;
-        top: auto;
-        left: auto;
-        right: 14px;
-        bottom: calc(68px + env(safe-area-inset-bottom));
+        top: calc(68px + env(safe-area-inset-top));
+        left: 14px;
+        right: auto;
+        bottom: auto;
         width: min(286px, calc(100vw - 28px));
         max-height: min(66vh, 460px);
         height: auto;
@@ -1088,7 +1088,7 @@
       .sb-desc { display: block; }
 
       .main {
-        padding: 24px 16px calc(94px + env(safe-area-inset-bottom));
+        padding: 24px 16px 36px;
         width: 100%;
         max-width: 100vw;
         overflow-x: hidden;
