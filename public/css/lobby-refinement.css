@@ -49,12 +49,53 @@ body::before { background: none; }
 .modal-title { letter-spacing: .5px; }
 .modal-sub { font-size: 14px; line-height: 1.6; letter-spacing: 0; }
 @media (min-width: 900px) {
+  .main { padding: 24px 32px 40px; }
+  .lobby-content { max-width: 1040px; }
+  .lobby-title { margin-bottom: 22px; }
+  .lobby-title h1 { font-size: 34px; }
+  .lobby-title p { font-size: 12px; margin-top: 7px; }
+  .cards-row { gap: 14px; margin-bottom: 18px; }
+  .card {
+    align-self: start;
+    padding: 14px 15px 13px;
+    gap: 8px;
+  }
+  .card-head { min-height: 0; }
+  .card-desc { line-height: 1.4; }
+  .card-input { min-height: 40px; padding: 7px 10px; }
+  .btn-primary, .challenge-btn { min-height: 40px; }
+  .friends-module { padding: 14px 18px; margin-bottom: 18px; }
+  .friends-module-title { margin-bottom: 10px; }
+  .social-card { gap: 8px; }
+  .social-card .card-input { min-height: 40px; }
   .card { text-align: left; }
   .card .btn-primary { margin-top: auto; }
-  .card-head { min-height: 44px; }
   .friends-module .social-card { padding: 0 20px; }
   .friends-module .social-card:first-child { padding-left: 0; border-color: var(--lobby-line); }
   .friends-module .social-card:last-child { padding-right: 0; }
+  .tournament-banner, .event-banner {
+    min-height: 58px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+  }
+  .tb-icon, .eb-icon { font-size: 20px; }
+  .tb-name, .eb-name { font-size: 12px; }
+  .tb-meta, .eb-meta { font-size: 11px; margin-top: 1px; }
+  .tb-cta { font-size: 9px; }
+  .challenge-section {
+    min-height: 78px;
+    padding: 14px 18px;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .challenge-icon svg { width: 26px; height: 26px; }
+  .challenge-title { font-size: 14px; }
+  .challenge-desc { font-size: 11px; margin-top: 2px; }
+  .challenge-input { min-height: 40px; padding: 8px 12px; }
+  .challenge-btn { padding: 8px 16px; }
+  .players-section { padding: 14px 18px; }
+  .players-section-title { font-size: 13px; margin-bottom: 9px; }
+  .players-empty { font-size: 12px; }
 }
 @media (max-width: 899px) {
   .cards-row { gap: 12px; }
