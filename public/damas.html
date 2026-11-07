@@ -96,7 +96,7 @@
       min-width: 0;
     }
     .game-side { grid-area: side; display: grid; gap: 16px; }
-    .game-main { grid-area: main; display: grid; gap: 14px; justify-items: center; min-width: 0; }
+    .game-main { grid-area: main; display: grid; gap: 14px; justify-items: center; min-width: 0; width: 100%; }
 
     .side-label {
       font-size: 10px;
@@ -143,8 +143,9 @@
 
     @media (min-width: 760px) {
       .game-shell {
-        grid-template-columns: 200px 1fr;
+        grid-template-columns: 200px minmax(0, 1fr);
         grid-template-areas: "side main";
+        width: 100%;
       }
       .game-side { position: sticky; top: 24px; }
     }
