@@ -637,6 +637,36 @@
     }
     .card-input::placeholder { color: var(--ghost); letter-spacing: 1px; text-transform: uppercase; font-size: 9px; }
 
+    /* Selector propio de dificultad: evita que el menu nativo del
+       navegador rompa la paleta visual en PC y movil. El select real se
+       conserva oculto para que el flujo existente siga leyendo .value. */
+    .difficulty-select { position: relative; min-width: 0; flex: 1; }
+    .difficulty-select-trigger {
+      width: 100%; min-height: 40px; padding: 7px 12px;
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      background: rgba(7,6,5,0.74); border: 1px solid var(--lobby-line);
+      color: var(--text); font: 600 13px var(--fb); cursor: pointer;
+      border-radius: var(--radius-md); text-align: left;
+    }
+    .difficulty-select-trigger:hover,
+    .difficulty-select.open .difficulty-select-trigger,
+    .difficulty-select-trigger:focus-visible { border-color: var(--gold); outline: none; }
+    .difficulty-select-trigger svg { width: 16px; height: 16px; flex: 0 0 auto; transition: transform 160ms ease; }
+    .difficulty-select.open .difficulty-select-trigger svg { transform: rotate(180deg); }
+    .difficulty-menu {
+      display: none; position: absolute; z-index: 40; top: calc(100% + 6px); left: 0; right: 0;
+      padding: 5px; background: #17130d; border: 1px solid rgba(200,152,60,0.5);
+      border-radius: var(--radius-md); box-shadow: 0 16px 30px rgba(0,0,0,0.48);
+    }
+    .difficulty-select.open .difficulty-menu { display: grid; gap: 2px; }
+    .difficulty-option {
+      width: 100%; padding: 9px 10px; border: 0; border-radius: 5px;
+      background: transparent; color: var(--dim); font: 600 12px var(--fb);
+      text-align: left; cursor: pointer;
+    }
+    .difficulty-option:hover, .difficulty-option[aria-selected="true"] { background: rgba(200,152,60,0.16); color: var(--gold-2); }
+    .difficulty-native { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
     /* ── Social card (Crear Sala / Unirse): variante mas angosta de
        .card -- mismo lenguaje (fondo, borde, corners) pero sin icono
        grande ni descripcion, para leerse como formulario corto y no
@@ -1406,12 +1436,24 @@
           </div>
           <div class="card-desc" data-i18n="lobby.botDesc">Practica contra la IA</div>
           <div class="bot-controls">
-            <select class="card-input" id="bot-difficulty" aria-label="Dificultad del bot" data-i18n-aria-label="lobby.botDifficulty">
+            <div class="difficulty-select" id="difficulty-select">
+              <button class="difficulty-select-trigger" id="difficulty-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="difficulty-menu">
+                <span id="difficulty-select-label">Centinela</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+              <div class="difficulty-menu" id="difficulty-menu" role="listbox" aria-label="Dificultad del bot" data-i18n-aria-label="lobby.botDifficulty">
+                <button class="difficulty-option" type="button" role="option" data-value="easy" aria-selected="false" data-i18n="lobby.diffEasy">Aprendiz</button>
+                <button class="difficulty-option" type="button" role="option" data-value="medium" aria-selected="true" data-i18n="lobby.diffMedium">Centinela</button>
+                <button class="difficulty-option" type="button" role="option" data-value="hard" aria-selected="false" data-i18n="lobby.diffHard">Maestro</button>
+                <button class="difficulty-option" type="button" role="option" data-value="master" aria-selected="false" data-i18n="lobby.diffMaster">Alcázar</button>
+              </div>
+              <select class="card-input difficulty-native" id="bot-difficulty" aria-label="Dificultad del bot" data-i18n-aria-label="lobby.botDifficulty">
               <option value="easy" data-i18n="lobby.diffEasy">Aprendiz</option>
               <option value="medium" selected data-i18n="lobby.diffMedium">Centinela</option>
               <option value="hard" data-i18n="lobby.diffHard">Maestro</option>
               <option value="master" data-i18n="lobby.diffMaster">Alcázar</option>
-            </select>
+              </select>
+            </div>
             <button class="btn-primary" id="start-bot-btn" data-i18n="lobby.play">Jugar</button>
           </div>
           <div class="card-status" id="bot-status"></div>
@@ -1777,6 +1819,44 @@
     setStatus('bot-status', 'Preparando tablero…');
     window.location.href = '/game.html';
   });
+
+  // Selector visual de dificultad, sincronizado con el select real.
+  const difficultySelect = document.getElementById('bot-difficulty');
+  const difficultyPicker = document.getElementById('difficulty-select');
+  const difficultyTrigger = document.getElementById('difficulty-select-trigger');
+  const difficultyLabel = document.getElementById('difficulty-select-label');
+  const difficultyOptions = [...document.querySelectorAll('.difficulty-option')];
+  function syncDifficultyPicker() {
+    if (!difficultySelect || !difficultyLabel) return;
+    const current = difficultySelect.value || 'medium';
+    const option = [...difficultySelect.options].find((item) => item.value === current);
+    if (option) difficultyLabel.textContent = option.textContent;
+    difficultyOptions.forEach((item) => item.setAttribute('aria-selected', String(item.dataset.value === current)));
+  }
+  function closeDifficultyPicker() {
+    difficultyPicker?.classList.remove('open');
+    difficultyTrigger?.setAttribute('aria-expanded', 'false');
+  }
+  difficultyTrigger?.addEventListener('click', () => {
+    const open = difficultyPicker?.classList.toggle('open') || false;
+    difficultyTrigger.setAttribute('aria-expanded', String(open));
+  });
+  difficultyOptions.forEach((option) => option.addEventListener('click', () => {
+    if (!difficultySelect) return;
+    difficultySelect.value = option.dataset.value || 'medium';
+    difficultySelect.dispatchEvent(new Event('change', { bubbles: true }));
+    syncDifficultyPicker();
+    closeDifficultyPicker();
+    difficultyTrigger?.focus();
+  }));
+  document.addEventListener('click', (event) => {
+    if (difficultyPicker && !difficultyPicker.contains(event.target)) closeDifficultyPicker();
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeDifficultyPicker();
+  });
+  document.addEventListener('ozama:language-changed', syncDifficultyPicker);
+  syncDifficultyPicker();
 
   // ── J1 vs J2 (partida local, mismo dispositivo) ──
   document.getElementById('start-local-btn')?.addEventListener('click', () => {
