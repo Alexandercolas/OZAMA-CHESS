@@ -68,6 +68,7 @@
     .page {
       width: 100%;
       max-width: 880px;
+      min-width: 0;
       display: grid;
       gap: 20px;
     }
@@ -92,9 +93,10 @@
       grid-template-areas: "main" "side";
       gap: 24px;
       align-items: start;
+      min-width: 0;
     }
     .game-side { grid-area: side; display: grid; gap: 16px; }
-    .game-main { grid-area: main; display: grid; gap: 14px; justify-items: center; }
+    .game-main { grid-area: main; display: grid; gap: 14px; justify-items: center; min-width: 0; }
 
     .side-label {
       font-size: 10px;
@@ -762,6 +764,20 @@
     .damas-history-date, .damas-history-empty { color: var(--dim); }
     .damas-history-empty { padding: 12px 0; font-size: 12px; }
     @media (max-width: 480px) { .damas-history-row { grid-template-columns: minmax(0,1fr) auto; } .damas-history-date { grid-column: 1 / -1; } }
+    @media (max-width: 759px) {
+      :root { --sq: min(44px, calc((100vw - 24px) / 8)); }
+      body { align-items: flex-start; padding: max(14px, env(safe-area-inset-top)) 10px calc(24px + env(safe-area-inset-bottom)); overflow-x: hidden; }
+      .page { gap: 14px; max-width: 100%; }
+      .title { font-size: 22px; letter-spacing: 2px; }
+      .game-shell { gap: 14px; }
+      .game-main { width: 100%; gap: 10px; }
+      .game-side { width: 100%; gap: 10px; }
+      .board-wrap { width: 100%; overflow: visible; }
+      .board { flex: 0 0 auto; }
+      .controls.mode-row { gap: 4px; }
+      .controls.mode-row .btn-mode { font-size: 8px; padding: 8px 3px; }
+      .damas-chat-panel, .move-panel { margin-top: 6px; }
+    }
     @media (max-width: 420px) {
       .damas-players-bar { padding: 7px 6px; gap: 4px; }
       .damas-player-avatar { width: 26px; height: 26px; flex-basis: 26px; }
