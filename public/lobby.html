@@ -641,6 +641,8 @@
        navegador rompa la paleta visual en PC y movil. El select real se
        conserva oculto para que el flujo existente siga leyendo .value. */
     .difficulty-select { position: relative; min-width: 0; flex: 1; }
+    #card-bot { overflow: visible; }
+    .difficulty-select.open { z-index: 60; }
     .difficulty-select-trigger {
       width: 100%; min-height: 40px; padding: 7px 12px;
       display: flex; align-items: center; justify-content: space-between; gap: 10px;
