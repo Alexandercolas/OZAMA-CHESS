@@ -498,28 +498,65 @@
     .avatar-picker {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       flex-wrap: wrap;
     }
 
     .avatar-choice {
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
-      border: 1px solid rgba(200,152,60,0.25);
+      position: relative;
+      width: 72px;
+      height: 68px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      border: 1px solid rgba(200,152,60,0.18);
+      border-radius: 10px;
       color: white;
-      font-size: 11px;
-      font-weight: 900;
       cursor: pointer;
-      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+      overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s, filter 0.2s;
     }
+
+    .avatar-choice::before {
+      content: '';
+      position: absolute; inset: 0;
+      opacity: 0.42;
+      background: repeating-linear-gradient(135deg, transparent 0 8px, rgba(255,255,255,0.13) 9px, transparent 10px 18px);
+      pointer-events: none;
+    }
+    .avatar-choice::after {
+      content: '';
+      position: absolute; left: 9px; right: 9px; top: 8px;
+      height: 1px; background: rgba(255,255,255,0.48);
+      box-shadow: 0 48px 0 rgba(0,0,0,0.25);
+      pointer-events: none;
+    }
+    .avatar-choice .avatar-glyph,
+    .avatar-choice .avatar-name { position: relative; z-index: 1; }
+    .avatar-choice .avatar-glyph {
+      width: 29px; height: 29px; display: grid; place-items: center;
+      border: 1px solid rgba(255,255,255,0.45); border-radius: 50%;
+      background: rgba(0,0,0,0.18); color: #fff;
+      font-family: var(--ft); font-size: 13px; font-weight: 900;
+    }
+    .avatar-choice .avatar-name { color: rgba(255,255,255,0.84); font-size: 8px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; }
+    .avatar-choice.avatar-0 { background: linear-gradient(135deg, #18324d, #b8872e); }
+    .avatar-choice.avatar-1 { background: linear-gradient(135deg, #6c241f, #e07a2e); }
+    .avatar-choice.avatar-2 { background: linear-gradient(135deg, #174d3d, #9eaa3d); }
+    .avatar-choice.avatar-3 { background: linear-gradient(135deg, #3b225b, #b56b5d); }
+    .avatar-choice.avatar-4 { background: linear-gradient(135deg, #075b61, #d0a33d); }
+    .avatar-choice.avatar-5 { background: linear-gradient(135deg, #422817, #c47b28); }
 
     .avatar-choice:hover,
     .avatar-choice.active {
-      transform: translateY(-1px);
-      border-color: var(--gold);
-      box-shadow: 0 0 12px rgba(200,152,60,0.25);
+      transform: translateY(-2px);
+      border-color: var(--gold-2, var(--gold));
+      box-shadow: 0 8px 18px rgba(0,0,0,0.30), 0 0 0 2px rgba(200,152,60,0.18);
+      filter: saturate(1.12);
     }
+    .avatar-choice.active { box-shadow: 0 0 0 2px var(--gold), 0 10px 22px rgba(0,0,0,0.38); }
 
     .edit-select {
       flex: 1; min-width: 160px;
@@ -1390,6 +1427,10 @@
       currentUser = user;
       const currentStats = currentGame === 'damas' ? user.damasStats : user.stats;
       const avatar = Math.abs(Number(user.avatar) || 0) % 6;
+      const avatarPresets = [
+        ['Guardia', 'G'], ['Coral', 'C'], ['Selva', 'S'],
+        ['Eclipse', 'E'], ['Caribe', 'C'], ['Bronce', 'B'],
+      ];
       const initial = escapeHtml((user.username || '?')[0].toUpperCase());
       const username = escapeHtml(user.username || 'Jugador');
       const avatarImage = user.avatarImage || '';
@@ -1435,7 +1476,7 @@
               <div class="editor-intro">Elige la identidad visual que verán tus rivales en el lobby y durante la partida.</div>
             </div>
             <div class="avatar-picker" id="avatar-picker">
-              ${[0,1,2,3,4,5].map((n) => `<button class="avatar-choice ${n === avatar ? 'active' : ''} avatar-${n}" type="button" data-avatar="${n}" aria-label="Avatar ${n + 1}">${initial}</button>`).join('')}
+              ${avatarPresets.map(([label, mark], n) => `<button class="avatar-choice ${n === avatar ? 'active' : ''} avatar-${n}" type="button" data-avatar="${n}" aria-label="Avatar ${escapeHtml(label)}"><span class="avatar-glyph">${mark}</span><span class="avatar-name">${escapeHtml(label)}</span></button>`).join('')}
             </div>
             <div class="photo-tools">
               <label class="photo-upload">Cambiar foto<input id="profile-photo-input" type="file" accept="image/png,image/jpeg,image/webp"></label>
