@@ -280,11 +280,11 @@
 
     /* Edit pais */
     .edit-section {
-      padding: 28px;
+      padding: 24px 26px;
       margin-bottom: 28px;
       display: grid;
       grid-template-columns: minmax(205px, .72fr) minmax(0, 1.28fr);
-      gap: 24px 30px;
+      gap: 18px 28px;
       align-items: start;
       position: relative;
       overflow: hidden;
@@ -307,21 +307,22 @@
       text-transform: uppercase; flex-shrink: 0;
     }
 
-    .avatar-picker { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .avatar-picker { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
 
     .avatar-choice {
-      min-height: 82px;
-      padding: 10px 6px 8px;
-      border-radius: 10px;
+      min-height: 68px;
+      padding: 7px 4px 6px;
+      border-radius: 8px;
       border: 1px solid rgba(200,152,60,0.25);
       color: white;
       font-size: 11px; font-weight: 900;
       cursor: pointer;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
       transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s, filter 0.2s;
     }
-    .avatar-choice::before { content: ""; width: 30px; height: 30px; border-radius: 50%; border: 1px solid rgba(255,255,255,.46); background: rgba(255,255,255,.12); }
-    .avatar-choice::after { content: attr(data-label); font-size: 9px; letter-spacing: 1.2px; text-transform: uppercase; }
+    .avatar-choice::before { content: ""; width: 24px; height: 24px; border-radius: 50%; border: 1px solid rgba(255,255,255,.46); background: rgba(255,255,255,.12); }
+    .avatar-choice::after { content: attr(data-label); font-size: 8px; letter-spacing: .8px; text-transform: uppercase; }
+    .avatar-choice span { font-size: 10px; line-height: 1; margin-top: -20px; margin-bottom: 9px; }
 
     .avatar-choice:hover,
     .avatar-choice.active {
@@ -333,20 +334,20 @@
 
     .settings-editor-main { min-width: 0; }
     .settings-avatar-label { margin-bottom: 10px; }
-    .settings-fields { display: grid; grid-template-columns: minmax(150px, .72fr) minmax(0, 1.28fr); gap: 14px; margin-top: 18px; }
+    .settings-fields { display: grid; grid-template-columns: minmax(150px, .72fr) minmax(0, 1.28fr); gap: 12px; margin-top: 14px; }
     .field-block { display: grid; gap: 7px; min-width: 0; }
     .field-block.full { grid-column: 1 / -1; }
     .field-label { color: var(--dim); font-size: 10px; font-weight: 800; letter-spacing: 1.8px; text-transform: uppercase; }
-    .settings-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+    .settings-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
 
     .edit-select {
       flex: 1; min-width: 160px;
-      padding: 8px 12px;
+      padding: 7px 11px;
       background: var(--surface2);
       border: 1px solid rgba(200,152,60,0.2);
       border-radius: 8px; color: var(--text);
       font-family: var(--fb);
-      font-size: 14px; outline: none; cursor: pointer;
+      font-size: 13px; outline: none; cursor: pointer;
       appearance: none;
     }
     .edit-select:focus { border-color: var(--gold); }
@@ -659,6 +660,7 @@
       .settings-intro { margin-bottom: 20px; }
       .settings-intro-copy { max-width: none; }
       .avatar-picker, .photo-tools { width: 100%; }
+      .avatar-picker { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
       .settings-fields { grid-template-columns: 1fr; }
       .field-block.full { grid-column: auto; }
       .photo-upload, .btn-save, .edit-select { width: 100%; }
