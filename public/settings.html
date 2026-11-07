@@ -166,7 +166,7 @@
     }
 
     /* Stats grid */
-    .container { max-width: 800px; margin: 0 auto; padding: 28px 20px 0; }
+    .container { max-width: 1120px; margin: 0 auto; padding: 34px 24px 0; }
 
     .stats-grid {
       display: grid;
@@ -280,10 +280,26 @@
 
     /* Edit pais */
     .edit-section {
-      padding: 20px;
+      padding: 28px;
       margin-bottom: 28px;
-      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: minmax(205px, .72fr) minmax(0, 1.28fr);
+      gap: 24px 30px;
+      align-items: start;
+      position: relative;
+      overflow: hidden;
     }
+    .edit-section::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 3px;
+      background: linear-gradient(180deg, var(--gold), transparent 78%);
+    }
+    .settings-intro { padding: 4px 0; }
+    .settings-intro .section-title { margin-bottom: 10px; }
+    .settings-intro-copy { color: var(--dim); font-size: 12px; line-height: 1.65; max-width: 240px; }
+    .settings-kicker { color: var(--gold); font-size: 10px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 8px; }
 
     .edit-label {
       font-size: 11px; font-weight: 600;
@@ -291,31 +307,37 @@
       text-transform: uppercase; flex-shrink: 0;
     }
 
-    .avatar-picker {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
+    .avatar-picker { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 
     .avatar-choice {
-      width: 34px;
-      height: 34px;
-      border-radius: 50%;
+      min-height: 82px;
+      padding: 10px 6px 8px;
+      border-radius: 10px;
       border: 1px solid rgba(200,152,60,0.25);
       color: white;
-      font-size: 11px;
-      font-weight: 900;
+      font-size: 11px; font-weight: 900;
       cursor: pointer;
-      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s, filter 0.2s;
     }
+    .avatar-choice::before { content: ""; width: 30px; height: 30px; border-radius: 50%; border: 1px solid rgba(255,255,255,.46); background: rgba(255,255,255,.12); }
+    .avatar-choice::after { content: attr(data-label); font-size: 9px; letter-spacing: 1.2px; text-transform: uppercase; }
 
     .avatar-choice:hover,
     .avatar-choice.active {
-      transform: translateY(-1px);
+      transform: translateY(-2px);
       border-color: var(--gold);
-      box-shadow: 0 0 12px rgba(200,152,60,0.25);
+      box-shadow: 0 8px 18px rgba(0,0,0,.25), 0 0 14px rgba(200,152,60,0.25);
+      filter: saturate(1.12);
     }
+
+    .settings-editor-main { min-width: 0; }
+    .settings-avatar-label { margin-bottom: 10px; }
+    .settings-fields { display: grid; grid-template-columns: minmax(150px, .72fr) minmax(0, 1.28fr); gap: 14px; margin-top: 18px; }
+    .field-block { display: grid; gap: 7px; min-width: 0; }
+    .field-block.full { grid-column: 1 / -1; }
+    .field-label { color: var(--dim); font-size: 10px; font-weight: 800; letter-spacing: 1.8px; text-transform: uppercase; }
+    .settings-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
 
     .edit-select {
       flex: 1; min-width: 160px;
@@ -559,7 +581,7 @@
     .premium-panel { padding: 20px; margin-bottom: 28px; }
     /* Matriz Free vs Premium (Fase M, roadmap PRO 2.0) -- reemplaza la
        lista de bullets, que se habia quedado vieja (no mencionaba Mi
-       Analisis ni el Entrenador personal, agregados en esta sesion). */
+       Análisis ni el Entrenador personal, agregados en esta sesión). */
     .plan-matrix { width: 100%; border-collapse: collapse; margin: 14px 0 18px; font-size: 12px; }
     .plan-matrix th, .plan-matrix td { padding: 9px 8px; text-align: center; border-bottom: 1px solid rgba(200,152,60,0.1); }
     .plan-matrix th:first-child, .plan-matrix td:first-child { text-align: left; color: var(--text); }
@@ -632,9 +654,16 @@
       .topbar-logo-mark { width: 28px; height: 28px; }
       .topbar-nav { width: 100%; justify-content: center; gap: 14px; }
       .topbar-nav a { font-size: 10px; letter-spacing: 1.3px; }
-      .edit-section { align-items: stretch; flex-direction: column; }
+      .container { padding: 24px 14px 0; }
+      .edit-section { display: block; padding: 20px 16px; }
+      .settings-intro { margin-bottom: 20px; }
+      .settings-intro-copy { max-width: none; }
       .avatar-picker, .photo-tools { width: 100%; }
+      .settings-fields { grid-template-columns: 1fr; }
+      .field-block.full { grid-column: auto; }
       .photo-upload, .btn-save, .edit-select { width: 100%; }
+      .settings-actions { align-items: stretch; }
+      .settings-actions .btn-save { flex: 1 1 100%; }
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
       .friends-form { flex-direction: column; }
       .danger-form { grid-template-columns: 1fr; }
@@ -688,7 +717,7 @@
     <a href="/lobby.html" class="topbar-logo"><img class="topbar-logo-mark" src="/favicon.png?v=6" alt="">OZAMA CHESS</a>
     <div class="topbar-nav">
       <a href="/lobby.html">Lobby</a>
-      <a href="/login.html" id="nav-logout" onclick="logout(); return false;">Cerrar sesion</a>
+      <a href="/login.html" id="nav-logout" onclick="logout(); return false;">Cerrar sesión</a>
     </div>
   </nav>
 
@@ -721,7 +750,7 @@
         }
 
         // Notificacion (Fase 16) -- toast compartido en vez de alert().
-        // Si por algo el script no cargo todavia, cae de vuelta a
+        // Si por algo el script no cargó todavía, cae de vuelta a
         // alert() como red de seguridad, nunca se pierde el aviso.
         function notify(message, type = 'error') {
           if (typeof window.ozToast === 'function') window.ozToast(message, type);
@@ -754,7 +783,7 @@
         function resizeAvatarImage(file) {
           return new Promise((resolve, reject) => {
             if (!file || !/^image\/(png|jpeg|webp)$/.test(file.type)) {
-              reject(new Error('Formato no valido.'));
+              reject(new Error('Formato no válido.'));
               return;
             }
             if (file.size > 3 * 1024 * 1024) {
@@ -835,7 +864,7 @@
               <div style="font-family:var(--ft);font-size:34px;color:var(--gold);letter-spacing:4px;">OC</div>
               <h2>ACCESO REQUERIDO</h2>
               <p>Necesitas una cuenta para ver tu perfil.</p>
-              <a href="/login.html" class="btn-login btn-primary">Iniciar sesion</a>
+              <a href="/login.html" class="btn-login btn-primary">Iniciar sesión</a>
             </div>
           `;
         }
@@ -852,46 +881,50 @@
         : 'Plan Free activo. Premium llegara despues como experiencia de confort, sin ventajas competitivas.';
 
       document.getElementById('main-content').innerHTML = `
-        <div class="container" style="padding-top:28px;">
+        <div class="container">
                     <div class="edit-section oz-card oz-enter" id="ajustes" style="--d:5">
-                      <span class="edit-label">Avatar</span>
+                      <div class="settings-intro">
+                        <div class="settings-kicker">Identidad del jugador</div>
+                        <div class="section-title">Personalizar perfil</div>
+                        <p class="settings-intro-copy">Elige la imagen, el país y la frase que verán tus rivales en el lobby y durante la partida.</p>
+                      </div>
+                      <div class="settings-editor-main">
+                      <div class="edit-label settings-avatar-label">Avatar visual</div>
                       <input type="hidden" id="avatar-select" value="${avatar}">
                       <input type="hidden" id="avatar-image-value" value="${escapeHtml(avatarImage)}">
                       <div class="avatar-picker">
                         ${[0,1,2,3,4,5].map(i => `
-                          <button type="button" class="avatar-choice ${avatarClass(i)} ${!avatarImage && i === avatar ? 'active' : ''}" data-avatar="${i}" onclick="selectAvatar(${i})">${initial}</button>
+                          <button type="button" class="avatar-choice ${avatarClass(i)} ${!avatarImage && i === avatar ? 'active' : ''}" data-avatar="${i}" data-label="${['Guardia','Coral','Selva','Eclipse','Caribe','Bronce'][i]}" aria-label="Avatar ${['Guardia','Coral','Selva','Eclipse','Caribe','Bronce'][i]}" onclick="selectAvatar(${i})"><span>${['G','C','S','E','C','B'][i]}</span></button>
                         `).join('')}
                       </div>
-                      <span class="edit-label">Foto de perfil</span>
                       <div class="photo-tools">
-                        <label class="photo-upload">Subir foto
+                        <label class="photo-upload">Cambiar foto
                           <input type="file" accept="image/png,image/jpeg,image/webp" onchange="handleAvatarImage(event)">
                         </label>
-                        <button class="btn-save btn-danger secondary" onclick="clearAvatarImage()">Quitar foto</button>
+                        <button class="btn-save btn-danger secondary" type="button" onclick="clearAvatarImage()">Quitar foto</button>
                         <span class="photo-status" id="photo-status">${avatarImage ? 'Foto activa' : ''}</span>
-                        <div class="photo-hint">PNG, JPG o WebP. Se recorta en cuadrado y se guarda al tocar Guardar.</div>
+                        <div class="photo-hint">PNG, JPG o WebP. Se recorta en cuadrado al guardar.</div>
                       </div>
-                      <span class="edit-label">Pais</span>
-                      <select class="edit-select" id="country-select">
-                        <option value="DO" ${user.country==='DO' ? 'selected' : ''}>DO - Republica Dominicana</option>
+                      <div class="settings-fields">
+                      <label class="field-block"><span class="field-label">País</span><select class="edit-select" id="country-select">
+                        <option value="DO" ${user.country==='DO' ? 'selected' : ''}>DO - República Dominicana</option>
                         <option value="US" ${user.country==='US' ? 'selected' : ''}>US - Estados Unidos</option>
-                        <option value="ES" ${user.country==='ES' ? 'selected' : ''}>ES - Espana</option>
-                        <option value="MX" ${user.country==='MX' ? 'selected' : ''}>MX - Mexico</option>
+                        <option value="ES" ${user.country==='ES' ? 'selected' : ''}>ES - España</option>
+                        <option value="MX" ${user.country==='MX' ? 'selected' : ''}>MX - México</option>
                         <option value="CO" ${user.country==='CO' ? 'selected' : ''}>CO - Colombia</option>
                         <option value="VE" ${user.country==='VE' ? 'selected' : ''}>VE - Venezuela</option>
                         <option value="PR" ${user.country==='PR' ? 'selected' : ''}>PR - Puerto Rico</option>
                         <option value="CU" ${user.country==='CU' ? 'selected' : ''}>CU - Cuba</option>
-                        <option value="HT" ${user.country==='HT' ? 'selected' : ''}>HT - Haiti</option>
+                        <option value="HT" ${user.country==='HT' ? 'selected' : ''}>HT - Haití</option>
                         <option value="BR" ${user.country==='BR' ? 'selected' : ''}>BR - Brasil</option>
                         <option value="AR" ${user.country==='AR' ? 'selected' : ''}>AR - Argentina</option>
                         <option value="OTHER" ${user.country==='OTHER' ? 'selected' : ''}>Otro</option>
-                      </select>
-                      <span class="edit-label">Bio</span>
-                      <textarea class="edit-select" id="bio-input" maxlength="140" rows="2" placeholder="Una frase corta sobre ti (opcional)" oninput="updateBioCounter()" style="resize:vertical;font-family:var(--fb);">${escapeHtml(user.bio || '')}</textarea>
-                      <div class="photo-hint" id="bio-counter">${(user.bio || '').length} / 140</div>
-                      <button class="btn-save btn-primary" onclick="saveProfile()">Guardar</button>
-                      <span class="save-msg" id="save-msg">Guardado</span>
+                      </select></label>
+                      <label class="field-block"><span class="field-label">Bio</span><textarea class="edit-select" id="bio-input" maxlength="140" rows="2" placeholder="Una frase corta sobre ti (opcional)" oninput="updateBioCounter()" style="resize:vertical;font-family:var(--fb);">${escapeHtml(user.bio || '')}</textarea><span class="photo-hint" id="bio-counter">${(user.bio || '').length} / 140</span></label>
+                      </div>
+                      <div class="settings-actions"><button class="btn-save btn-primary" type="button" onclick="saveProfile()">Guardar cambios</button><span class="save-msg" id="save-msg">Guardado</span></div>
                       <div class="plan-note"><strong>Plan ${planLabel}</strong><br>${planNote}</div>
+                      </div>
                     </div>
 
                     <div class="personalization-panel oz-card oz-enter" id="personalization-panel" style="--d:5">
@@ -937,7 +970,7 @@
                         </tbody>
                       </table>
                       </div>
-                      <div class="plan-matrix-note">Todo lo demas -- jugar Ajedrez y Damas online, ranking, torneos, logros, amigos, puzzles diarios -- es igual para todos. Premium es solo cosmetico y de comodidad, nunca da ventaja dentro de la partida.</div>
+                      <div class="plan-matrix-note">Todo lo demás — jugar Ajedrez y Damas online, ranking, torneos, logros, amigos y puzzles diarios — es igual para todos. Premium es solo cosmético y de comodidad; nunca da ventaja dentro de la partida.</div>
                       <div id="premium-panel-body"><div class="loading" style="padding:12px 0;"><div class="spinner" style="width:22px;height:22px;"></div></div></div>
                     </div>
 
@@ -945,7 +978,7 @@
                       <div class="section-title">Cuenta y privacidad</div>
                       <div class="account-links">
                         <a href="/privacy.html">Privacidad</a>
-                        <a href="/terms.html">Terminos</a>
+                        <a href="/terms.html">Términos</a>
                         <a href="/support.html">Soporte</a>
                       </div>
                       ${user.authProviders?.password !== false ? `
@@ -967,7 +1000,7 @@
                       </details>` : ''}
                       <details class="danger-zone">
                         <summary>Eliminar cuenta</summary>
-                        <p class="danger-copy">Esta accion elimina tu acceso, perfil, foto y amistades. Los resultados competitivos pueden permanecer anonimizados y no se puede deshacer.</p>
+                        <p class="danger-copy">Esta acción elimina tu acceso, perfil, foto y amistades. Los resultados competitivos pueden permanecer anonimizados y no se puede deshacer.</p>
                         <div class="danger-form">
                           <input id="delete-password" type="password" autocomplete="current-password" maxlength="128" placeholder="Contrasena actual">
                           <input id="delete-confirm" type="text" maxlength="8" autocomplete="off" placeholder="Escribe ELIMINAR">
@@ -1013,7 +1046,7 @@
               <div style="color:var(--gold);font-weight:800;font-size:13px;letter-spacing:1px;">Premium activo</div>
               <div style="color:var(--dim);font-size:11px;margin-top:3px;">Se renueva/vence el ${escapeHtml(untilLabel)}</div>
             </div>
-            <button class="btn-cancel-premium" id="cancel-premium-btn" onclick="cancelPremium()">Cancelar suscripcion</button>
+            <button class="btn-cancel-premium" id="cancel-premium-btn" onclick="cancelPremium()">Cancelar suscripción</button>
           </div>
           <div class="premium-status-msg" id="premium-status-msg"></div>
         `;
@@ -1024,7 +1057,7 @@
         const res = await fetch('/api/billing/config', { cache: 'no-store' });
         const config = await res.json();
         if (!config?.enabled || !config?.clientId || !config?.planId) {
-          body.innerHTML = '<div class="premium-status-msg">Premium todavia no esta disponible para pago. Vuelve pronto.</div>';
+          body.innerHTML = '<div class="premium-status-msg">Premium todavía no está disponible para pago. Vuelve pronto.</div>';
           return;
         }
 
@@ -1040,7 +1073,7 @@
           style: { shape: 'pill', color: 'gold', layout: 'vertical', label: 'subscribe' },
           createSubscription: (_data, actions) => actions.subscription.create({ plan_id: config.planId }),
           onApprove: async (data) => {
-            if (statusMsg) statusMsg.textContent = 'Confirmando tu suscripcion...';
+            if (statusMsg) statusMsg.textContent = 'Confirmando tu suscripción...';
             try {
               const confirmRes = await fetch('/api/billing/confirm', {
                 method: 'POST',
@@ -1048,7 +1081,7 @@
                 body: JSON.stringify({ subscriptionID: data.subscriptionID }),
               });
               const confirmData = await confirmRes.json().catch(() => ({}));
-              if (!confirmRes.ok) throw new Error(confirmData.error || 'No se pudo confirmar la suscripcion.');
+              if (!confirmRes.ok) throw new Error(confirmData.error || 'No se pudo confirmar la suscripción.');
               if (statusMsg) statusMsg.textContent = 'Listo! Ya eres Premium.';
               const meRes = await fetch('/api/user/me', { headers: { Authorization: `Bearer ${_token}` }, cache: 'no-store' });
               const meData = await meRes.json();
@@ -1057,7 +1090,7 @@
               initPremiumPanel(meData.user);
               renderPersonalizationPanel(meData.user);
             } catch (err) {
-              if (statusMsg) statusMsg.textContent = err.message || 'No se pudo confirmar la suscripcion.';
+              if (statusMsg) statusMsg.textContent = err.message || 'No se pudo confirmar la suscripción.';
             }
           },
           onError: () => {
@@ -1072,7 +1105,7 @@
     async function cancelPremium() {
       const button = document.getElementById('cancel-premium-btn');
       const statusMsg = document.getElementById('premium-status-msg');
-      if (!confirm('Vas a cancelar tu suscripcion Premium. Sigues con los beneficios hasta que venza el periodo ya pago. Continuar?')) return;
+      if (!confirm('Vas a cancelar tu suscripción Premium. Sigues con los beneficios hasta que venza el periodo ya pagado. ¿Continuar?')) return;
       if (button) { button.disabled = true; button.textContent = 'Cancelando...'; }
       try {
         const res = await fetch('/api/billing/cancel', {
@@ -1081,11 +1114,11 @@
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || 'No se pudo cancelar.');
-        if (statusMsg) statusMsg.textContent = 'Suscripcion cancelada. Seguira activa hasta la fecha de vencimiento ya pagada.';
+        if (statusMsg) statusMsg.textContent = 'Suscripción cancelada. Seguirá activa hasta la fecha de vencimiento ya pagada.';
         if (button) button.remove();
       } catch (err) {
         if (statusMsg) statusMsg.textContent = err.message || 'No se pudo cancelar.';
-        if (button) { button.disabled = false; button.textContent = 'Cancelar suscripcion'; }
+        if (button) { button.disabled = false; button.textContent = 'Cancelar suscripción'; }
       }
     }
 
@@ -1245,7 +1278,7 @@
       }
     }
 
-    // ── Personalizacion (Fase 2): temas de tablero + sonido ──
+    // ── Personalización (Fase 2): temas de tablero + sonido ──
     // Todo pasa por OZAMA_PREFS (public/preferences.js) -- mismo
     // camino que usan game.html y damas.html, asi un cambio hecho aca
     // se ve reflejado la proxima vez que se entre a jugar.
