@@ -318,7 +318,7 @@
     /* board-col/side-col agrupan visualmente el tablero+chat y las
        tarjetas+VS en desktop ancho. En pantallas angostas se vuelven
        'contents' para no alterar el reflow por 'order' que ya existia. */
-    .board-col, .side-col { display: contents; }
+    .board-col, .side-col { display: contents; min-width: 0; }
     .vs-divider { display: none; }
 
     /* ── PLAYER PANELS ── */
@@ -498,6 +498,7 @@
       align-items: center;
       position: relative; z-index: 1;
       max-width: 100%;
+      min-width: 0;
     }
 
     /* Banner above board */
