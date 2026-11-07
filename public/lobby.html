@@ -101,6 +101,13 @@
       display: flex; align-items: baseline; gap: 8px;
       min-width: 0;
     }
+    .hd-mark {
+      width: 34px; height: 34px; flex: 0 0 34px;
+      object-fit: cover; border-radius: 50%;
+      border: 1px solid rgba(200,152,60,0.58);
+      box-shadow: 0 0 0 3px rgba(200,152,60,0.1), 0 4px 14px rgba(0,0,0,0.42);
+      align-self: center;
+    }
 
     .mobile-menu-btn { display: none; }
     .mobile-menu-backdrop { display: none; }
@@ -1238,6 +1245,7 @@
         letter-spacing: 2px;
         white-space: nowrap;
       }
+      .hd-mark { width: 30px; height: 30px; flex-basis: 30px; }
       .hd-user {
         width: 100%;
         display: grid;
@@ -1269,6 +1277,7 @@
     @media (max-width: 390px) {
       .hd { padding-left: 60px; }
       .hd-logo { font-size: 14px; letter-spacing: 1.5px; }
+      .hd-mark { width: 27px; height: 27px; flex-basis: 27px; }
       .hd-user { grid-template-columns: auto 34px auto minmax(0, 1fr) 36px; gap: 5px; }
       .hd-pro-btn { font-size: 0; width: 54px; padding: 7px 8px; justify-content: center; }
       .hd-pro-btn::after { content: 'PRO'; font-size: 9px; }
@@ -1287,7 +1296,8 @@
   <header class="hd">
     <button class="mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="mobile-navigation">☰</button>
     <div class="hd-logo">
-      ♟ OZAMA CHESS
+      <img class="hd-mark" src="/assets/brand/ozama-knight-icon.png" alt="Caballo de Ozama Chess" />
+      OZAMA CHESS
       <span class="hd-sub">Dominican Heritage Edition</span>
     </div>
     <div class="hd-user">
