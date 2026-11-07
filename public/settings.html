@@ -388,9 +388,20 @@
     .photo-tools {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 16px;
       flex-wrap: wrap;
     }
+    .photo-upload input {
+      width: 1px;
+      height: 1px;
+      inset: auto;
+      opacity: 0;
+      clip: rect(0 0 0 0);
+      clip-path: inset(50%);
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .photo-tools .btn-save.secondary { margin-left: 2px; }
     .photo-hint {
       width: 100%;
       color: var(--dim);
@@ -841,7 +852,7 @@
           if (input) input.value = '';
           selectAvatar(document.getElementById('avatar-select')?.value || 0);
           const photoStatus = document.getElementById('photo-status');
-          if (photoStatus) photoStatus.textContent = 'Foto quitada. Toca Guardar.';
+          if (photoStatus) photoStatus.textContent = 'Foto eliminada. Toca Guardar.';
         }
 
         async function logout() {
@@ -903,7 +914,7 @@
                         <label class="photo-upload">Cambiar foto
                           <input type="file" accept="image/png,image/jpeg,image/webp" onchange="handleAvatarImage(event)">
                         </label>
-                        <button class="btn-save btn-danger secondary" type="button" onclick="clearAvatarImage()">Quitar foto</button>
+                        <button class="btn-save btn-danger secondary" type="button" onclick="clearAvatarImage()">Eliminar foto</button>
                         <span class="photo-status" id="photo-status">${avatarImage ? 'Foto activa' : ''}</span>
                         <div class="photo-hint">PNG, JPG o WebP. Se recorta en cuadrado al guardar.</div>
                       </div>
