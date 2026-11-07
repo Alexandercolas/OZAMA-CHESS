@@ -82,20 +82,55 @@
 
     /* Hero del perfil */
     .profile-hero {
-      background: linear-gradient(160deg, var(--s2) 0%, var(--s1) 100%);
-      border-bottom: 1px solid rgba(200,152,60,0.16);
-      padding: 40px 24px 32px;
-      display: flex; flex-direction: column; align-items: center; gap: 16px;
+      position: relative;
+      isolation: isolate;
+      display: grid;
+      grid-template-columns: 132px minmax(0, 1fr) minmax(190px, 240px);
+      align-items: center;
+      gap: 24px;
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 34px clamp(20px, 5vw, 64px) 30px;
+      background:
+        radial-gradient(circle at 18% 50%, rgba(200,152,60,0.16), transparent 28%),
+        linear-gradient(135deg, var(--s2) 0%, var(--s1) 72%);
+      border: 1px solid rgba(200,152,60,0.18);
+      border-top: 0;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.22);
     }
+    .profile-hero::after {
+      content: '';
+      position: absolute; inset: 0; z-index: -1; pointer-events: none;
+      opacity: 0.28;
+      background: repeating-linear-gradient(90deg, transparent 0 92px, rgba(200,152,60,0.05) 93px, transparent 94px);
+    }
+    .hero-avatar-column { display: grid; place-items: center; }
+    .hero-identity { min-width: 0; }
+    .hero-kicker {
+      color: var(--gold); font-size: 10px; font-weight: 800;
+      letter-spacing: 3px; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .hero-status {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+      margin-top: 12px;
+    }
+    .hero-score {
+      padding: 16px 18px;
+      border-left: 1px solid rgba(200,152,60,0.22);
+      background: rgba(200,152,60,0.055);
+    }
+    .hero-score-label { color: var(--dim); font-size: 9px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
+    .hero-score-value { margin-top: 5px; color: var(--gold-2); font: 700 30px/1 var(--ft); letter-spacing: 1px; }
+    .hero-score-sub { margin-top: 6px; color: var(--dim); font-size: 11px; line-height: 1.4; }
 
     .avatar-ring {
-      width: 88px; height: 88px;
+      width: 116px; height: 116px;
       border-radius: 50%;
       background: linear-gradient(135deg, var(--gold), #8B6914);
       display: flex; align-items: center; justify-content: center;
       font-family: var(--ft);
-      font-size: 36px; font-weight: 900; color: var(--carbon);
-      box-shadow: 0 0 30px rgba(200,152,60,0.3);
+      font-size: 42px; font-weight: 900; color: var(--carbon);
+      box-shadow: 0 0 0 6px rgba(200,152,60,0.10), 0 0 34px rgba(200,152,60,0.32);
       flex-shrink: 0;
       overflow: hidden;
     }
@@ -132,7 +167,7 @@
 
     .profile-name {
       font-family: var(--ft);
-      font-size: 24px; font-weight: 700; color: var(--gold);
+      font-size: 30px; font-weight: 700; color: var(--gold-2);
       letter-spacing: 2px;
     }
 
@@ -143,7 +178,7 @@
 
     /* Bio (Fase 11, Personalizacion PRO -- PERFIL). */
     .profile-bio {
-      max-width: 320px; margin: 6px auto 0; text-align: center;
+      max-width: 520px; margin: 8px 0 0; text-align: left;
       font-size: 12.5px; color: var(--text); line-height: 1.4;
       font-style: italic;
     }
@@ -159,6 +194,7 @@
     }
 
     .elo-display {
+      display: inline-flex;
       background: rgba(200,152,60,0.1);
       border: 1px solid rgba(200,152,60,0.3);
       border-radius: 20px; padding: 6px 18px;
@@ -551,18 +587,34 @@
 
     .profile-editor {
       display: grid;
-      grid-template-columns: auto minmax(0, 1fr);
-      gap: 12px 18px;
+      grid-template-columns: minmax(180px, 0.65fr) minmax(0, 1.35fr);
+      gap: 18px 28px;
       align-items: center;
-      padding: 14px 18px;
+      padding: 20px 22px;
       margin-bottom: 20px;
+      border-color: rgba(200,152,60,0.24);
+      background: linear-gradient(135deg, rgba(200,152,60,0.08), var(--surface));
     }
-    .profile-editor .edit-label,
+    .profile-editor .edit-label { grid-column: 1; align-self: start; }
     .profile-editor .avatar-picker,
-    .profile-editor .photo-tools { grid-column: 1 / -1; }
+    .profile-editor .photo-tools,
+    .profile-editor .editor-fields { grid-column: 2; }
     .profile-editor .edit-select { min-width: 0; }
+    .editor-fields { display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+    .editor-intro { color: var(--dim); font-size: 12px; line-height: 1.5; margin-top: 6px; }
+    .profile-editor .photo-tools { margin-top: -4px; }
     @media (max-width: 600px) {
-      .profile-editor { grid-template-columns: 1fr; }
+      .profile-hero { grid-template-columns: 1fr; gap: 16px; padding: 28px 18px 24px; text-align: center; }
+      .hero-identity { display: grid; justify-items: center; }
+      .profile-meta, .hero-status { justify-content: center; }
+      .profile-bio { text-align: center; }
+      .hero-score { border-left: 0; border-top: 1px solid rgba(200,152,60,0.18); text-align: left; }
+      .profile-editor { grid-template-columns: 1fr; gap: 14px; padding: 18px; }
+      .profile-editor .edit-label,
+      .profile-editor .avatar-picker,
+      .profile-editor .photo-tools,
+      .profile-editor .editor-fields { grid-column: 1; }
+      .editor-fields { grid-template-columns: 1fr; }
     }
 
     .friends-panel {
@@ -943,6 +995,11 @@
       if (!currentUser) return;
       const eloEl = document.getElementById('hero-elo');
       if (eloEl) eloEl.textContent = `ELO ${heroEloValue(game, currentUser)}`;
+      const scoreEl = document.getElementById('hero-score-value');
+      const scoreSub = document.getElementById('hero-score-sub');
+      const gameStats = game === 'damas' ? currentUser.damasStats : currentUser.stats;
+      if (scoreEl) scoreEl.textContent = heroEloValue(game, currentUser);
+      if (scoreSub) scoreSub.textContent = `ELO de ${game === 'damas' ? 'Damas' : 'Ajedrez'} · ${gameStats?.wins || 0} victorias registradas`;
       const grid = document.getElementById('estadisticas');
       if (grid) grid.innerHTML = statCardsHtml(game, currentUser);
       loadAdvancedStats(game);
@@ -1331,6 +1388,7 @@
       user.stats = user.stats || { wins: 0, losses: 0, draws: 0 };
       user.damasStats = user.damasStats || { wins: 0, losses: 0, draws: 0 };
       currentUser = user;
+      const currentStats = currentGame === 'damas' ? user.damasStats : user.stats;
       const avatar = Math.abs(Number(user.avatar) || 0) % 6;
       const initial = escapeHtml((user.username || '?')[0].toUpperCase());
       const username = escapeHtml(user.username || 'Jugador');
@@ -1347,22 +1405,35 @@
       document.getElementById('main-content').innerHTML = `
         <!-- Hero -->
                 <div class="profile-hero oz-enter" id="perfil" style="--d:0">
-                  ${heroAvatar}
-                  <div class="profile-name">${username}</div>
-                  <div class="profile-meta">
-                    <span class="profile-country">${getFlag(user.country)}</span>
-                    <span>${user.country || 'DO'}</span>
+                  <div class="hero-avatar-column">${heroAvatar}</div>
+                  <div class="hero-identity">
+                    <div class="hero-kicker">Perfil competitivo</div>
+                    <div class="profile-name">${username}</div>
+                    <div class="profile-meta">
+                      <span class="profile-country">${getFlag(user.country)}</span>
+                      <span>${user.country || 'DO'}</span>
+                    </div>
+                    ${user.bio ? `<div class="profile-bio">"${escapeHtml(user.bio)}"</div>` : ''}
+                    <div class="hero-status">
+                      <div class="elo-display" id="hero-elo">ELO ${heroEloValue(currentGame, user)}</div>
+                      <div class="rank-badge" id="hero-rank"></div>
+                      <div class="plan-badge ${premiumActive ? 'premium' : ''}">${planLabel}</div>
+                    </div>
                   </div>
-                  ${user.bio ? `<div class="profile-bio">"${escapeHtml(user.bio)}"</div>` : ''}
-                  <div class="elo-display" id="hero-elo">ELO ${heroEloValue(currentGame, user)}</div>
-                  <div class="rank-badge" id="hero-rank"></div>
-                  <div class="plan-badge ${premiumActive ? 'premium' : ''}">${planLabel}</div>
+                  <div class="hero-score">
+                    <div class="hero-score-label">Rendimiento actual</div>
+                    <div class="hero-score-value" id="hero-score-value">${heroEloValue(currentGame, user)}</div>
+                    <div class="hero-score-sub" id="hero-score-sub">ELO de ${currentGame === 'damas' ? 'Damas' : 'Ajedrez'} · ${currentStats?.wins || 0} victorias registradas</div>
+                  </div>
                 </div>
 
         <div class="container">
 
           <section class="profile-editor oz-card oz-enter" aria-label="Editar perfil">
-            <div class="edit-label">Personalizar perfil</div>
+            <div class="edit-label">
+              <div class="section-title" style="margin-bottom:0;border-bottom:0;padding-bottom:0;">Personalizar perfil</div>
+              <div class="editor-intro">Elige la identidad visual que verán tus rivales en el lobby y durante la partida.</div>
+            </div>
             <div class="avatar-picker" id="avatar-picker">
               ${[0,1,2,3,4,5].map((n) => `<button class="avatar-choice ${n === avatar ? 'active' : ''} avatar-${n}" type="button" data-avatar="${n}" aria-label="Avatar ${n + 1}">${initial}</button>`).join('')}
             </div>
@@ -1371,11 +1442,13 @@
               <span class="photo-status" id="photo-status"></span>
               <span class="photo-hint">PNG, JPG o WEBP. Máximo 320 KB.</span>
             </div>
-            <select class="edit-select" id="profile-country" aria-label="País">
-              ${['DO','US','ES','MX','CO','AR','CL','PE','VE','OTHER'].map((code) => `<option value="${code}" ${code === (user.country || 'DO') ? 'selected' : ''}>${code}</option>`).join('')}
-            </select>
-            <button class="btn-save btn-primary" id="profile-save-btn" type="button">Guardar cambios</button>
-            <span class="save-msg" id="profile-save-msg">Guardado</span>
+            <div class="editor-fields">
+              <select class="edit-select" id="profile-country" aria-label="País">
+                ${['DO','US','ES','MX','CO','AR','CL','PE','VE','OTHER'].map((code) => `<option value="${code}" ${code === (user.country || 'DO') ? 'selected' : ''}>${code}</option>`).join('')}
+              </select>
+              <button class="btn-save btn-primary" id="profile-save-btn" type="button">Guardar cambios</button>
+              <span class="save-msg" id="profile-save-msg">Guardado</span>
+            </div>
           </section>
 
           <div class="game-toggle oz-enter" style="--d:0">
