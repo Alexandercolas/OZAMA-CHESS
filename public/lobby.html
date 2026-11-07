@@ -1097,7 +1097,7 @@
       .app.mobile-menu-open .sb {
         display: block;
         position: fixed;
-        top: calc(68px + env(safe-area-inset-top));
+        top: calc(76px + env(safe-area-inset-top));
         left: 14px;
         right: auto;
         bottom: auto;
@@ -1105,11 +1105,25 @@
         max-height: min(66vh, 460px);
         height: auto;
         z-index: 80;
-        border: 1px solid rgba(200,152,60,0.28);
-        border-radius: 8px;
-        background: rgba(13,11,8,0.98);
-        box-shadow: 0 24px 60px rgba(0,0,0,0.58);
+        border: 1px solid rgba(200,152,60,0.38);
+        border-radius: 10px;
+        background: linear-gradient(145deg, rgba(31,24,14,0.99), rgba(13,11,8,0.99));
+        box-shadow: 0 24px 60px rgba(0,0,0,0.62), 0 0 0 1px rgba(255,255,255,0.025) inset;
         overflow-y: auto;
+        animation: mobileMenuDrop 180ms ease-out both;
+      }
+      .app.mobile-menu-open .sb::before {
+        content: 'NAVEGACIÓN';
+        display: block;
+        padding: 13px 14px 9px;
+        color: var(--gold-2);
+        font: 800 9px var(--fb);
+        letter-spacing: 2px;
+        border-bottom: 1px solid rgba(200,152,60,0.14);
+      }
+      @keyframes mobileMenuDrop {
+        from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
       }
       .app.mobile-menu-open .mobile-menu-backdrop {
         display: block;
@@ -1121,11 +1135,13 @@
       }
       body.mobile-menu-lock { overflow: hidden; }
       .app.mobile-menu-open .sb::after { content: none; }
-      .sb-nav { flex-direction: column; padding: 10px; gap: 3px; }
+      .sb-nav { flex-direction: column; padding: 8px; gap: 3px; }
       .sb-div, .sb-foot { display: none; }
       .sb-item { width: 100%; max-width: none; border-left: 2px solid transparent; border-bottom: 0; padding: 11px 12px; }
       .sb-item.on { border-left-color: var(--gold); }
       .sb-desc { display: block; }
+      .app.mobile-menu-open .sb-item { border-radius: 6px; }
+      .app.mobile-menu-open .sb-item:hover { background: rgba(200,152,60,0.09); }
 
       .main {
         padding: 24px 16px 36px;
@@ -1207,6 +1223,7 @@
         left: 14px;
         top: 12px;
       }
+      .app.mobile-menu-open .sb { top: calc(124px + env(safe-area-inset-top)); }
       .hd-logo {
         width: 100%;
         justify-content: center;
