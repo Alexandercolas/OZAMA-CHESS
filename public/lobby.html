@@ -1056,6 +1056,10 @@
         box-shadow: 0 10px 24px rgba(0,0,0,0.42);
       }
 
+      .mobile-menu-backdrop {
+        display: none;
+      }
+
       .body {
         display: flex;
         flex-direction: column;
@@ -1080,6 +1084,15 @@
         box-shadow: 0 24px 60px rgba(0,0,0,0.58);
         overflow-y: auto;
       }
+      .app.mobile-menu-open .mobile-menu-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        z-index: 70;
+        background: rgba(0,0,0,0.46);
+        backdrop-filter: blur(2px);
+      }
+      body.mobile-menu-lock { overflow: hidden; }
       .app.mobile-menu-open .sb::after { content: none; }
       .sb-nav { flex-direction: column; padding: 10px; gap: 3px; }
       .sb-div, .sb-foot { display: none; }
@@ -1184,7 +1197,7 @@
 
   <!-- HEADER -->
   <header class="hd">
-    <button class="mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Abrir menú" aria-expanded="false">☰</button>
+    <button class="mobile-menu-btn" id="mobile-menu-btn" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="mobile-navigation">☰</button>
     <div class="hd-logo">
       ♟ OZAMA CHESS
       <span class="hd-sub">Dominican Heritage Edition</span>
@@ -1217,8 +1230,9 @@
   <div class="body">
 
     <!-- SIDEBAR -->
+    <div class="mobile-menu-backdrop" id="mobile-menu-backdrop" aria-hidden="true"></div>
     <aside class="sb oz-enter" style="--d:0">
-      <nav class="sb-nav">
+      <nav class="sb-nav" id="mobile-navigation" aria-label="Navegación principal">
         <a class="sb-item on" href="/lobby.html#jugar" data-lobby-section="jugar" aria-current="location">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 20h10v2H7v-2Zm2-3h6l1 2H8l1-2Zm2-7h2l2 7H9l2-7Zm1-8 5 4-5 4-5-4 5-4Z"/></svg></span>
           <div class="sb-txt"><span class="sb-name" data-i18n="lobby.navPlay">Jugar</span><span class="sb-desc" data-i18n="lobby.navPlayDesc">Partida rápida</span></div>
@@ -1951,21 +1965,37 @@
   }
 
   const mobileMenuButton = document.getElementById('mobile-menu-btn');
+  const mobileMenuBackdrop = document.getElementById('mobile-menu-backdrop');
+  const mobileMenuApp = document.querySelector('.app');
+  let mobileMenuLastFocus = null;
+  function closeMobileMenu({ restoreFocus = true } = {}) {
+    if (!mobileMenuApp?.classList.contains('mobile-menu-open')) return;
+    mobileMenuApp.classList.remove('mobile-menu-open');
+    document.body.classList.remove('mobile-menu-lock');
+    mobileMenuButton?.setAttribute('aria-expanded', 'false');
+    mobileMenuButton?.setAttribute('aria-label', 'Abrir menú');
+    if (mobileMenuButton) mobileMenuButton.textContent = '☰';
+    if (restoreFocus && mobileMenuLastFocus instanceof HTMLElement) mobileMenuLastFocus.focus();
+    mobileMenuLastFocus = null;
+  }
+  function openMobileMenu() {
+    if (!mobileMenuApp) return;
+    mobileMenuLastFocus = document.activeElement;
+    mobileMenuApp.classList.add('mobile-menu-open');
+    document.body.classList.add('mobile-menu-lock');
+    mobileMenuButton?.setAttribute('aria-expanded', 'true');
+    mobileMenuButton?.setAttribute('aria-label', 'Cerrar menú');
+    if (mobileMenuButton) mobileMenuButton.textContent = '×';
+  }
   mobileMenuButton?.addEventListener('click', () => {
-    const app = document.querySelector('.app');
-    const open = app?.classList.toggle('mobile-menu-open') || false;
-    mobileMenuButton.setAttribute('aria-expanded', String(open));
-    mobileMenuButton.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
-    mobileMenuButton.textContent = open ? '×' : '☰';
+    if (mobileMenuApp?.classList.contains('mobile-menu-open')) closeMobileMenu();
+    else openMobileMenu();
   });
-  document.querySelectorAll('.sb-item').forEach((item) => item.addEventListener('click', () => {
-    const app = document.querySelector('.app');
-    if (app?.classList.contains('mobile-menu-open')) {
-      app.classList.remove('mobile-menu-open');
-      mobileMenuButton?.setAttribute('aria-expanded', 'false');
-      if (mobileMenuButton) { mobileMenuButton.setAttribute('aria-label', 'Abrir menú'); mobileMenuButton.textContent = '☰'; }
-    }
-  }));
+  mobileMenuBackdrop?.addEventListener('click', () => closeMobileMenu());
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeMobileMenu();
+  });
+  document.querySelectorAll('.sb-item').forEach((item) => item.addEventListener('click', () => closeMobileMenu({ restoreFocus: false })));
 
   document.querySelectorAll('[data-lobby-section]').forEach((link) => {
     link.addEventListener('click', (event) => {
