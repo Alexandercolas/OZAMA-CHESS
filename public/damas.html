@@ -1943,7 +1943,11 @@
       ['easy', 'medium', 'hard', 'master'].forEach((l) => {
         document.getElementById(`diff-${l}`).classList.toggle('active', l === level);
       });
-      if (mode === 'bot') newGame();
+      if (mode === 'bot') {
+        newGame();
+        document.getElementById('board-wrap').classList.add('hidden');
+        document.getElementById('status-line').textContent = 'Dificultad seleccionada. Pulsa «Iniciar partida».';
+      }
     }
 
     // ── Modo online: sala real via Socket.IO, servidor autoritativo ──
@@ -2705,11 +2709,16 @@
       } else {
         hideDamasDisconnectOverlay();
         document.getElementById('online-panel').classList.add('hidden');
-        document.getElementById('board-wrap').classList.remove('hidden');
+        const waitingToStartBot = newMode === 'bot' && !localGameStarted;
+        document.getElementById('board-wrap').classList.toggle('hidden', waitingToStartBot);
         document.getElementById('resign-btn').classList.add('hidden');
         document.getElementById('draw-offer-btn').classList.add('hidden');
         document.getElementById('newgame-btn').classList.remove('hidden');
         newGame();
+        document.getElementById('startgame-btn').classList.toggle('hidden', waitingToStartBot ? false : localGameStarted);
+        document.getElementById('status-line').textContent = waitingToStartBot
+          ? 'Elige la dificultad y pulsa «Iniciar partida».'
+          : '';
       }
       renderLocalHistory();
     }
@@ -2723,6 +2732,8 @@
         w: { name: user?.username || 'Jugador 1', elo: user?.damasElo || 1200, avatarImage: user?.avatarImage || '' },
         b: { name: mode === 'bot' ? 'Ozama Bot' : 'Jugador 2', elo: mode === 'bot' ? 1200 : 1200, avatarImage: '' },
       });
+      document.getElementById('board-wrap').classList.remove('hidden');
+      document.getElementById('status-line').textContent = '';
       document.getElementById('startgame-btn').classList.add('hidden');
       document.getElementById('newgame-btn').classList.remove('hidden');
       DAMAS_CLOCK.start(E.COLOR.WHITE);
