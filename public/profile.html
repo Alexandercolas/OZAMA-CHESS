@@ -624,10 +624,10 @@
 
     .profile-editor {
       display: grid;
-      grid-template-columns: minmax(180px, 0.65fr) minmax(0, 1.35fr);
-      gap: 18px 28px;
+      grid-template-columns: minmax(230px, 0.72fr) minmax(0, 1.28fr);
+      gap: 20px 34px;
       align-items: center;
-      padding: 20px 22px;
+      padding: 22px 26px;
       margin-bottom: 20px;
       border-color: rgba(200,152,60,0.24);
       background: linear-gradient(135deg, rgba(200,152,60,0.08), var(--surface));
@@ -636,6 +636,13 @@
     .profile-editor .avatar-picker,
     .profile-editor .photo-tools,
     .profile-editor .editor-fields { grid-column: 2; }
+    .profile-editor .avatar-picker {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 8px;
+      width: 100%;
+    }
+    .profile-editor .avatar-choice { width: 100%; min-width: 0; }
     .profile-editor .edit-select { min-width: 0; }
     .editor-fields { display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
     .editor-intro { color: var(--dim); font-size: 12px; line-height: 1.5; margin-top: 6px; }
@@ -651,6 +658,7 @@
       .profile-editor .avatar-picker,
       .profile-editor .photo-tools,
       .profile-editor .editor-fields { grid-column: 1; }
+      .profile-editor .avatar-picker { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .editor-fields { grid-template-columns: 1fr; }
     }
 
