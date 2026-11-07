@@ -32,7 +32,10 @@
       /* Escala fluida en vez de un salto fijo en un solo breakpoint --
          se ajusta suave en cualquier ancho, de telefonos chicos a
          monitores grandes, sin tener un tablero fijo "de golpe". */
-      --sq: clamp(34px, calc((100vw - 64px) / 8), 64px);
+      /* El tablero debe respirar dentro del layout de escritorio. En
+         pantallas grandes no necesita crecer indefinidamente: 56px por
+         casilla mantiene buena lectura sin dominar toda la interfaz. */
+      --sq: clamp(34px, calc((100vw - 64px) / 8), 56px);
       --board-border: 3px;
       /* Mismos tonos "Zona Colonial" que Ajedrez -- Piedra Coralina /
          Teja Espanola -- para que ambos juegos se sientan de la misma
