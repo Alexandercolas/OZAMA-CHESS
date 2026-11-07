@@ -1765,6 +1765,7 @@
         again.textContent = mode === 'spectate' ? 'Cerrar' : 'Jugar de nuevo';
       }
       if (rematch) rematch.classList.toggle('hidden', !isOnlineFinish);
+      document.getElementById('resign-btn')?.classList.add('hidden');
       document.getElementById('gameover-overlay').classList.remove('hidden');
     }
 
@@ -2446,12 +2447,33 @@
     });
 
     function confirmResign() {
+      if ((mode === 'local' || mode === 'bot') && localGameStarted && !gameOver) {
+        damasConfirm(
+          '¿RENDIRSE?',
+          'La partida terminará y el rival será declarado ganador.',
+          resignLocalGame,
+          'Rendirse',
+          'Seguir jugando'
+        );
+        return;
+      }
       if (mode !== 'online' || !onlineRoomCode) return;
       damasConfirm(
         '¿ABANDONAR PARTIDA?',
         'Vas a perder esta partida. Esta accion no se puede deshacer.',
         resignOnline
       );
+    }
+
+    function resignLocalGame() {
+      if ((mode !== 'local' && mode !== 'bot') || !localGameStarted || gameOver) return;
+      selfResigned = true;
+      DAMAS_CLOCK.stop();
+      botThinking = false;
+      selected = null;
+      legalHere = [];
+      gameOver = { over: true, winner: E.COLOR.BLACK, reason: 'resign' };
+      render();
     }
 
     let confirmedPageExit = false;
@@ -2791,7 +2813,8 @@
       document.getElementById('board-wrap').classList.remove('hidden');
       document.getElementById('status-line').textContent = '';
       document.getElementById('startgame-btn').classList.add('hidden');
-      document.getElementById('newgame-btn').classList.remove('hidden');
+      document.getElementById('newgame-btn').classList.add('hidden');
+      document.getElementById('resign-btn').classList.remove('hidden');
       DAMAS_CLOCK.start(E.COLOR.WHITE);
       render();
     }
@@ -2819,6 +2842,7 @@
       DAMAS_CLOCK.set(600000, 600000);
       document.getElementById('startgame-btn').classList.remove('hidden');
       document.getElementById('newgame-btn').classList.add('hidden');
+      document.getElementById('resign-btn').classList.add('hidden');
       render();
     }
 
