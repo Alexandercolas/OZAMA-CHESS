@@ -1074,7 +1074,7 @@
         display: inline-flex;
         position: fixed;
         left: 14px;
-        top: calc(14px + env(safe-area-inset-top));
+        top: calc(54px + env(safe-area-inset-top));
         z-index: 120;
         align-items: center;
         justify-content: center;
@@ -1101,19 +1101,19 @@
       .app.mobile-menu-open .sb {
         display: block;
         position: fixed;
-        top: 0;
+        top: calc(76px + env(safe-area-inset-top));
         left: 0;
         right: auto;
         bottom: 0;
-        width: min(88vw, 380px);
-        max-height: none;
-        height: 100dvh;
+        width: min(82vw, 360px);
+        max-height: min(52vh, 430px);
+        height: auto;
         z-index: 80;
         border: 1px solid rgba(200,152,60,0.28);
         border-left: 0;
         border-radius: 0 16px 16px 0;
-        background: var(--s1);
-        box-shadow: 18px 0 60px rgba(0,0,0,0.58), 0 1px 0 rgba(255,255,255,0.03) inset;
+        background: #080705;
+        box-shadow: 18px 0 60px rgba(0,0,0,0.72), 0 1px 0 rgba(255,255,255,0.025) inset;
         overflow-y: auto;
         animation: mobileMenuSlide 220ms cubic-bezier(.2,.75,.25,1) both;
       }
@@ -1140,10 +1140,6 @@
       }
       body.mobile-menu-lock { overflow: hidden; }
       .app.mobile-menu-open .sb::after { content: none; }
-      .sb-mobile-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; padding: 14px 16px 4px; }
-      .sb-mobile-action { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 9px 10px; border: 1px solid rgba(200,152,60,0.2); border-radius: 7px; background: rgba(0,0,0,0.18); color: var(--text); text-decoration: none; font: 700 11px var(--fb); }
-      .sb-mobile-action:hover { border-color: var(--gold); background: rgba(200,152,60,0.08); }
-      .sb-mobile-action-icon { color: var(--gold); font-size: 17px; line-height: 1; }
       .sb-nav { display: flex; flex-direction: column; padding: 10px 16px 18px; gap: 4px; }
       .sb-div, .sb-foot { display: none; }
       .sb-item { width: 100%; max-width: none; border-left: 2px solid transparent; border-bottom: 0; padding: 11px 12px; }
@@ -1233,7 +1229,8 @@
         left: 14px;
         top: 12px;
       }
-      .app.mobile-menu-open .sb { width: min(91vw, 380px); }
+      .mobile-menu-btn { top: calc(54px + env(safe-area-inset-top)); }
+      .app.mobile-menu-open .sb { top: calc(116px + env(safe-area-inset-top)); width: min(84vw, 360px); }
       .hd-logo {
         width: 100%;
         justify-content: center;
@@ -1323,13 +1320,6 @@
     <!-- SIDEBAR -->
     <div class="mobile-menu-backdrop" id="mobile-menu-backdrop" aria-hidden="true"></div>
     <aside class="sb oz-enter" style="--d:0">
-      <div class="sb-mobile-actions" aria-label="Acciones rápidas">
-        <a class="sb-mobile-action" href="/lobby.html#jugar" data-mobile-target="card-quick"><span class="sb-mobile-action-icon">⚡</span><span data-i18n="lobby.navPlay">Jugar</span></a>
-        <a class="sb-mobile-action" href="/lobby.html#bot" data-mobile-target="card-bot"><span class="sb-mobile-action-icon">♛</span><span data-i18n="lobby.navBot">Bot</span></a>
-        <a class="sb-mobile-action" href="/lobby.html#jugar" data-mobile-target="card-local"><span class="sb-mobile-action-icon">♟</span><span>J1 vs J2</span></a>
-        <a class="sb-mobile-action" href="/lobby.html#salas" data-mobile-target="card-create"><span class="sb-mobile-action-icon">＋</span><span data-i18n="lobby.createRoom">Crear sala</span></a>
-        <a class="sb-mobile-action" href="/lobby.html#salas" data-mobile-target="card-join"><span class="sb-mobile-action-icon">↪</span><span data-i18n="lobby.join">Unirse</span></a>
-      </div>
       <nav class="sb-nav" id="mobile-navigation" aria-label="Navegación principal">
         <a class="sb-item on" href="/lobby.html#jugar" data-lobby-section="jugar" aria-current="location">
           <span class="sb-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 20h10v2H7v-2Zm2-3h6l1 2H8l1-2Zm2-7h2l2 7H9l2-7Zm1-8 5 4-5 4-5-4 5-4Z"/></svg></span>
@@ -2143,17 +2133,6 @@
     if (event.key === 'Escape') closeMobileMenu();
   });
   document.querySelectorAll('.sb-item').forEach((item) => item.addEventListener('click', () => closeMobileMenu({ restoreFocus: false })));
-  document.querySelectorAll('.sb-mobile-action').forEach((action) => {
-    action.addEventListener('click', (event) => {
-      event.preventDefault();
-      const target = document.getElementById(action.dataset.mobileTarget || 'card-quick');
-      const hash = action.getAttribute('href')?.split('#')[1];
-      if (hash && window.location.hash !== `#${hash}`) history.pushState(null, '', `#${hash}`);
-      closeMobileMenu({ restoreFocus: false });
-      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
-  });
-
   document.querySelectorAll('[data-lobby-section]').forEach((link) => {
     link.addEventListener('click', (event) => {
       event.preventDefault();
